@@ -2,7 +2,6 @@ import { configureStore } from '@reduxjs/toolkit'
 import userReducer from '../store/features/users/userSlice'
 import adminReducer from '../store/features/admin/adminSlice'
 import invoiceReducer from '../store/features/invoices/invoiceSlice'
-import subscriptionReducer from '../store/features/subscriptions/subscriptionSlice'
 import dashboardReducer from '../store/features/dashboard/dashboardSlice'
 
 export const store = configureStore({
@@ -10,7 +9,6 @@ export const store = configureStore({
     users:userReducer,
     admin:adminReducer,
     invoices:invoiceReducer,
-    subscriptions: subscriptionReducer,
     dashboard: dashboardReducer,
   },
 })

@@ -53,7 +53,7 @@ export const displayValidTill = (validDate: string, validTime?: string) => {
     }
 
 
-    export function convert12HourTo24Hour(formattedTime) {
+    export function convert12HourTo24Hour(formattedTime: string) {
       // Regular expression to match "HH:MM AM/PM" format
       const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
       const match = formattedTime.match(timeRegex);
