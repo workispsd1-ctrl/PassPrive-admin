@@ -121,6 +121,8 @@ function UsersPage() {
           onPlanFilterChange={setPlanFilter}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          placeholder="Search by name, email, or phone no..."
+
         />
 
         <Card className="border border-gray-200 shadow-sm w-full overflow-x-auto">

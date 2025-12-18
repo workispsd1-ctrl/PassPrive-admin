@@ -23,6 +23,7 @@ const pathName: any = {
   "/dashboard/manage-restaurants": "Restaurant Management",
   "/dashboard/manage-stores": "Stores Management",
   "/dashboard/offers": "Offer Management",
+  "/dashboard/manage-restaurants/add":" Add Restaurant",
   "/dashboard/spotlight": "Spotlight Management",
   "/dashboard/users/[id]": "User Subscription",
   "/dashboard/subscription": "Manage Subscription",
