@@ -23,7 +23,7 @@ const pathName: any = {
   "/dashboard/manage-restaurants": "Restaurant Management",
   "/dashboard/manage-stores": "Stores Management",
   "/dashboard/offers": "Offer Management",
-  "/dashboard/manage-restaurants/add":" Add Restaurant",
+  "/dashboard/manage-restaurants/add": " Add Restaurant",
   "/dashboard/spotlight": "Spotlight Management",
   "/dashboard/users/[id]": "User Subscription",
   "/dashboard/subscription": "Manage Subscription",
@@ -35,10 +35,10 @@ const pathName: any = {
   "/dashboard/admin": "Admin Management",
   "/dashboard/users/[id]/edit": "Edit User Details",
   "/dashboard/subscription-plans": "Subscription Plans",
-   "/dashboard/users/[id]/leads": "Edit Leads",
-   "/dashboard/leads" :"Leads",
-   "/dashboard/invoices":"Invoices",
-   "/dashboard/webhook":"Webhook"
+  "/dashboard/users/[id]/leads": "Edit Leads",
+  "/dashboard/leads": "Leads",
+  "/dashboard/invoices": "Invoices",
+  "/dashboard/webhook": "Webhook",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
@@ -61,7 +61,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       const { data, error, count } = await supabaseBrowser
         .from("users")
         .select("*", { count: "exact" })
-         .eq("role", "user")
+        .eq("role", "user")
         .order("created_at", { ascending: false });
       if (error) {
         throw new Error("Something went wrong!");
@@ -75,24 +75,23 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
     }
   };
   const handleExportAdminFile = async () => {
-  try {
-    const { data, error, count } = await supabaseBrowser
-      .from("users")
-      .select("*", { count: "exact" })
-      .neq("role", "user") // 👈 exclude normal users
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error, count } = await supabaseBrowser
+        .from("users")
+        .select("*", { count: "exact" })
+        .neq("role", "user") // 👈 exclude normal users
+        .order("created_at", { ascending: false });
 
-    if (error) throw new Error("Something went wrong!");
+      if (error) throw new Error("Something went wrong!");
 
-    await exportToExcel(data, "admins");
-  } catch (error) {
-    showToast({
-      title: "Error",
-      description: "Something went wrong!",
-    });
-  }
-};
-
+      await exportToExcel(data, "admins");
+    } catch (error) {
+      showToast({
+        title: "Error",
+        description: "Something went wrong!",
+      });
+    }
+  };
 
   const handleExportSubscriptionFile = async () => {
     try {
@@ -151,8 +150,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       });
     }
   };
-
-  
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -366,7 +363,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       return await handleExportUserFile();
     } else if (pathname === "/dashboard/subscription") {
       await handleExportSubscriptionFile();
-      }  else if (pathname === "/dashboard/admin") {
+    } else if (pathname === "/dashboard/admin") {
       return await handleExportAdminFile();
     } else if (pathname === "/dashboard/invoices") {
       await handleExportInvoiceFile();
@@ -380,7 +377,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       await handleExportToolFile();
     } else if (pathname === "/dashboard/recycle") {
       await handleExportRecycleBinFile();
-      
     } else if (pathname === "/dashboard/details") {
       const codeType = localStorage.getItem("subRoute");
       if (codeType === "registration") {
@@ -427,7 +423,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
             ) {
               title = pathName["/dashboard/users/[id]/edit"];
             }
-              if (
+            if (
               pathname.startsWith("/dashboard/users/") &&
               pathname.endsWith("/leads")
             ) {
@@ -438,6 +434,21 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
               return `${title} - ${
                 userRole.charAt(0).toUpperCase() + userRole.slice(1)
               }`;
+            }
+            // Handle Store Details page
+            if (
+              pathname.startsWith("/dashboard/manage-stores/") &&
+              pathname.split("/").length === 4
+            ) {
+              title = "Store Details";
+            }
+
+            // Handle Restaurant Details page (if you want similar)
+            if (
+              pathname.startsWith("/dashboard/manage-restaurants/") &&
+              pathname.split("/").length === 4
+            ) {
+              title = "Restaurant Details";
             }
 
             return title;
