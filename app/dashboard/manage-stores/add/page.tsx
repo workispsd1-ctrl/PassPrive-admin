@@ -1,15 +1,12 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 
-import {
-  DAYS,
-  PRIMARY_BTN,
-} from "@/app/dashboard/_components/StoreComponents/constants";
+import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
 
 import type {
   DayHours,
@@ -18,10 +15,7 @@ import type {
   StoreFormState,
 } from "@/app/dashboard/_components/StoreComponents/types";
 
-import {
-  safeNumberOrNull,
-  slugify,
-} from "@/app/dashboard/_components/StoreComponents/utils";
+import { safeNumberOrNull, slugify } from "@/app/dashboard/_components/StoreComponents/utils";
 
 import { usePreserveScroll } from "@/app/dashboard/_components/StoreComponents/hooks/usePreserveScroll";
 import { useStoreOffers } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreOffers";
@@ -37,8 +31,53 @@ import DiscountsSection from "@/app/dashboard/_components/StoreComponents/sectio
 import PaymentSection from "@/app/dashboard/_components/StoreComponents/sections/PaymentSection";
 import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
 
+/* -------------------------------------------------------
+  ✅ INDUSTRIAL HELPERS (safe ids + uploads)
+------------------------------------------------------- */
+
+function uuid() {
+  // modern browsers
+  // @ts-ignore
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  // fallback
+  return `id_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`;
+}
+
+function getExt(file: File) {
+  const nameExt = file.name.split(".").pop()?.toLowerCase();
+  if (nameExt) return nameExt;
+  const mimeExt = file.type.split("/")[1]?.toLowerCase();
+  return mimeExt || "bin";
+}
+
+function isImage(file?: File | null) {
+  return !!file?.type?.startsWith("image/");
+}
+
+function isVideo(file?: File | null) {
+  return !!file?.type?.startsWith("video/");
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T, idx: number) => Promise<void>
+) {
+  const queue = items.map((item, idx) => ({ item, idx }));
+  const runners = Array.from({ length: Math.max(1, limit) }).map(async () => {
+    while (queue.length) {
+      const next = queue.shift();
+      if (!next) return;
+      await worker(next.item, next.idx);
+    }
+  });
+  await Promise.all(runners);
+}
+
 export default function AddStorePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [loading, setLoading] = useState(false);
 
   // Media
@@ -54,9 +93,7 @@ export default function AddStorePage() {
   const setOpenSectionStable = (next: OpenSection) => {
     const y = scrollYRef.current;
     setOpenSection(next);
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: y, behavior: "auto" });
-    });
+    requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "auto" }));
   };
 
   const toggleSectionStable = (key: Exclude<OpenSection, null>) => {
@@ -125,82 +162,108 @@ export default function AddStorePage() {
   });
 
   const tagsArray = useMemo(() => {
-    return form.tags
-      ? form.tags.split(",").map((v) => v.trim()).filter(Boolean)
-      : [];
+    return form.tags ? form.tags.split(",").map((v) => v.trim()).filter(Boolean) : [];
   }, [form.tags]);
 
   const offersApi = useStoreOffers(preserveScroll);
   const catalogueApi = useStoreCatalogue(preserveScroll);
 
   /* ---------------------------------------------
-     STORAGE UPLOAD HELPERS
+     ✅ STORAGE UPLOAD HELPERS (robust)
+     Bucket: stores
+     Paths:
+      - logo/{storeId}/{uuid}.{ext}
+      - cover/{storeId}/{uuid}.{ext}
+      - gallery/{storeId}/{uuid}.{ext}
+      - catalogue/{storeId}/{categoryId}/{itemId}-{uuid}.{ext}
   --------------------------------------------- */
-  const uploadSingle = async (
-    storeId: string,
-    file: File | null,
-    folder: "logo" | "cover_video" | "cover_image"
-  ) => {
-    if (!file) return null;
 
-    const ext = file.name.split(".").pop();
-    const path = `${folder}/${storeId}/${Date.now()}.${ext}`;
+  const uploadedPaths: string[] = [];
 
+  const uploadToBucket = async (path: string, file: File) => {
     const { error } = await supabaseBrowser.storage
       .from("stores")
-      .upload(path, file);
+      .upload(path, file, { upsert: false });
 
     if (error) throw error;
+
+    uploadedPaths.push(path);
 
     const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
     return data.publicUrl;
   };
 
-  const uploadMultiple = async (
+  const uploadSingle = async (
     storeId: string,
-    files: File[],
-    folder: "gallery"
+    file: File | null,
+    folder: "logo" | "cover"
   ) => {
-    const urls: string[] = [];
-    for (const file of files) {
-      const ext = file.name.split(".").pop();
-      const path = `${folder}/${storeId}/${Date.now()}-${Math.random()
-        .toString(16)
-        .slice(2)}.${ext}`;
+    if (!file) return null;
+    const ext = getExt(file);
+    const path = `${folder}/${storeId}/${uuid()}.${ext}`;
+    return uploadToBucket(path, file);
+  };
 
-      const { error } = await supabaseBrowser.storage
-        .from("stores")
-        .upload(path, file);
+  const uploadGallery = async (storeId: string, files: File[]) => {
+    const urls: string[] = new Array(files.length).fill("");
 
-      if (error) throw error;
+    // ✅ concurrency limit to avoid browser/network issues
+    await runWithConcurrency(files, 3, async (file, idx) => {
+      const ext = getExt(file);
+      const path = `gallery/${storeId}/${uuid()}.${ext}`;
+      const url = await uploadToBucket(path, file);
+      urls[idx] = url;
+    });
 
-      const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
-      urls.push(data.publicUrl);
-    }
-    return urls;
+    // remove empty just in case
+    return urls.filter(Boolean);
   };
 
   const uploadCatalogueImage = async (
     storeId: string,
-    categoryId: string,
-    itemId: string,
+    categoryId: string, // uuid
+    itemId: string, // uuid
     file: File
   ) => {
-    const ext = file.name.split(".").pop();
-    const path = `catalogue/${storeId}/${categoryId}/${itemId}-${Date.now()}.${ext}`;
+    const ext = getExt(file);
+    const path = `catalogue/${storeId}/${categoryId}/${itemId}-${uuid()}.${ext}`;
+    return uploadToBucket(path, file);
+  };
 
-    const { error } = await supabaseBrowser.storage
-      .from("stores")
-      .upload(path, file);
-
-    if (error) throw error;
-
-    const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
-    return data.publicUrl;
+  const cleanupUploads = async () => {
+    if (!uploadedPaths.length) return;
+    // best-effort cleanup
+    await supabaseBrowser.storage.from("stores").remove(uploadedPaths);
   };
 
   /* ---------------------------------------------
-     SUBMIT
+     ✅ STORE OWNER ID RESOLUTION
+     - If superadmin creates store for merchant, pass ?storeOwnerId=<uuid>
+     - Else fallback to current logged in user id
+  --------------------------------------------- */
+  const resolveStoreOwnerId = async () => {
+    const fromQuery =
+      searchParams.get("storeOwnerId") ||
+      searchParams.get("store_owner_id") ||
+      searchParams.get("storeId") ||
+      searchParams.get("store_id");
+
+    if (fromQuery) return fromQuery;
+
+    const { data, error } = await supabaseBrowser.auth.getUser();
+    if (error) throw error;
+    const id = data.user?.id;
+    if (!id) throw new Error("No authenticated user found. Pass ?storeOwnerId=<uuid> if creating store for a merchant.");
+    return id;
+  };
+
+  /* ---------------------------------------------
+     ✅ SUBMIT (normalized tables)
+     Tables used:
+      - stores (id = auth.users.id)
+      - store_payment_details (store_id)
+      - store_catalogue_categories (store_id)
+      - store_catalogue_items (store_id, category_id)
   --------------------------------------------- */
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -233,9 +296,22 @@ export default function AddStorePage() {
       return;
     }
 
+    // ✅ cover validation
+    if (coverMediaFile && !isImage(coverMediaFile) && !isVideo(coverMediaFile)) {
+      showToast({
+        type: "error",
+        title: "Cover media must be an Image or Video",
+        description: "Please upload a valid image/* or video/* file.",
+      });
+      setOpenSectionStable("media");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const storeId = await resolveStoreOwnerId();
+
       const hours = DAYS.map((day) => {
         const d = openingHours[day];
         const closed = !!d.closed || (!d.open && !d.close);
@@ -270,188 +346,231 @@ export default function AddStorePage() {
           start_at: o.start_at || null,
           end_at: o.end_at || null,
           requires_pass: !!o.requires_pass,
-          pass_tiers: o.pass_tiers
-            ? o.pass_tiers.split(",").map((x) => x.trim()).filter(Boolean)
-            : [],
+          pass_tiers: o.pass_tiers ? o.pass_tiers.split(",").map((x) => x.trim()).filter(Boolean) : [],
           coupon_code: o.coupon_code?.trim() || null,
           stackable: !!o.stackable,
           terms: o.terms?.trim() || null,
         }))
         .filter((o) => o.title);
 
-      const enabledCatalogueDraft = catalogueApi.catalogueCategories
-        .filter((c) => c.enabled)
-        .map((c) => ({
-          id: c.id,
-          title: c.title.trim(),
-          startingFrom: c.starting_from ? Number(c.starting_from) : null,
-          items: c.items.map((it) => ({
-            id: it.id,
-            title: it.title.trim(),
-            price: it.price ? Number(it.price) : null,
-            sku: it.sku?.trim() || null,
-            description: it.description?.trim() || null,
-            isAvailable: !!it.is_available,
-            imageUrl: null as string | null,
-          })),
-        }))
-        .filter((c) => c.title);
+      const coverType = coverMediaFile ? (isVideo(coverMediaFile) ? "video" : "image") : null;
 
-      const coverType =
-        coverMediaFile?.type?.startsWith("video/")
-          ? "video"
-          : coverMediaFile?.type?.startsWith("image/")
-          ? "image"
-          : null;
+      // ✅ slug: if store already exists, keep old slug to avoid unique conflicts
+      let finalSlug: string | null = null;
+      {
+        const { data: existing, error: exErr } = await supabaseBrowser
+          .from("stores")
+          .select("slug")
+          .eq("id", storeId)
+          .maybeSingle();
 
-      const metadataDraft = {
-        payment_details: {
-          ...payment,
-          commission_percent: payment.commission_percent
-            ? Number(payment.commission_percent)
-            : null,
-        },
-        catalogue: { version: 1, categories: enabledCatalogueDraft },
-        cover_media: {
-          type: coverType,
-          url: null as string | null,
-        },
-      };
-
-      const uniqueSlug = `${slugify(form.name)}-${Math.random()
-        .toString(16)
-        .slice(2, 6)}`;
-
-      const { data: store, error } = await supabaseBrowser
-        .from("stores")
-        .insert({
-          name: form.name.trim(),
-          slug: uniqueSlug,
-          description: form.description?.trim() || null,
-
-          category: form.category?.trim() || null,
-          subcategory: form.subcategory?.trim() || null,
-          tags: tagsArray,
-
-          phone: form.phone?.trim() || null,
-          whatsapp: form.whatsapp?.trim() || null,
-          email: form.email?.trim() || null,
-          website: form.website?.trim() || null,
-
-          social_links,
-
-          location_name: form.location_name?.trim() || null,
-          address_line1: form.address_line1?.trim() || null,
-          address_line2: form.address_line2?.trim() || null,
-          city: form.city?.trim() || null,
-          region: form.region?.trim() || null,
-          postal_code: form.postal_code?.trim() || null,
-          country: "Mauritius",
-
-          lat,
-          lng,
-          google_place_id: form.google_place_id?.trim() || null,
-
-          hours,
-
-          logo_url: null,
-          cover_image_url: null,
-          gallery_urls: [],
-
-          amenities: {},
-          services: {},
-          pricing: {},
-
-          offers: offersFinal,
-          metadata: metadataDraft,
-
-          is_active: !!form.is_active,
-          is_featured: !!form.is_featured,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const logoUrl = await uploadSingle(store.id, logoFile, "logo");
-
-      // ✅ cover media upload (video OR image)
-      let coverMediaUrl: string | null = null;
-      if (coverMediaFile) {
-        const folder: "cover_video" | "cover_image" =
-          coverMediaFile.type.startsWith("video/") ? "cover_video" : "cover_image";
-        coverMediaUrl = await uploadSingle(store.id, coverMediaFile, folder);
+        if (exErr) throw exErr;
+        finalSlug = existing?.slug || `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
       }
 
-      const galleryUrls = await uploadMultiple(store.id, galleryFiles, "gallery");
+      // ✅ 1) Upsert stores (base info first)
+      const { error: upsertStoreErr } = await supabaseBrowser
+        .from("stores")
+        .upsert(
+          {
+            id: storeId, // 🔥 store id = auth.users.id (merchant)
+            name: form.name.trim(),
+            slug: finalSlug,
+            description: form.description?.trim() || null,
 
-      // Upload catalogue item images
-      const categoriesWithImages = await Promise.all(
-        catalogueApi.catalogueCategories.map(async (cat) => {
-          if (!cat.enabled) return cat;
+            category: form.category?.trim() || null,
+            subcategory: form.subcategory?.trim() || null,
+            tags: tagsArray,
 
-          const updatedItems = await Promise.all(
-            cat.items.map(async (it) => {
-              if (!it.imageFile) return it;
-              const url = await uploadCatalogueImage(store.id, cat.id, it.id, it.imageFile);
-              return { ...it, imageUrl: url };
-            })
-          );
+            phone: form.phone?.trim() || null,
+            whatsapp: form.whatsapp?.trim() || null,
+            email: form.email?.trim() || null,
+            website: form.website?.trim() || null,
 
-          return { ...cat, items: updatedItems };
-        })
-      );
+            social_links,
 
-      const enabledCatalogueFinal = categoriesWithImages
-        .filter((c) => c.enabled)
-        .map((c) => ({
-          id: c.id,
-          title: c.title.trim(),
-          startingFrom: c.starting_from ? Number(c.starting_from) : null,
-          items: c.items
-            .filter((it) => it.title.trim() || it.price)
-            .map((it) => ({
-              id: it.id,
-              title: it.title.trim(),
-              price: it.price ? Number(it.price) : null,
-              sku: it.sku?.trim() || null,
-              description: it.description?.trim() || null,
-              isAvailable: !!it.is_available,
-              imageUrl: it.imageUrl || null,
-            })),
-        }))
-        .filter((c) => c.title);
+            location_name: form.location_name?.trim() || null,
+            address_line1: form.address_line1?.trim() || null,
+            address_line2: form.address_line2?.trim() || null,
+            city: form.city?.trim() || null,
+            region: form.region?.trim() || null,
+            postal_code: form.postal_code?.trim() || null,
+            country: "Mauritius",
 
-      const metadataFinal = {
-        ...metadataDraft,
-        catalogue: { version: 1, categories: enabledCatalogueFinal },
-        cover_media: {
-          type: coverType,
-          url: coverMediaUrl,
-        },
-      };
+            lat,
+            lng,
+            google_place_id: form.google_place_id?.trim() || null,
 
-      const coverImageUrl =
-        coverMediaFile?.type?.startsWith("image/") ? coverMediaUrl : null;
+            hours,
 
-      const { error: upErr } = await supabaseBrowser
+            // media set after upload
+            offers: offersFinal,
+
+            is_active: !!form.is_active,
+            is_featured: !!form.is_featured,
+          },
+          { onConflict: "id" }
+        );
+
+      if (upsertStoreErr) throw upsertStoreErr;
+
+      // ✅ 2) Upload media then update stores media columns
+      const logoUrl = await uploadSingle(storeId, logoFile, "logo");
+
+      let coverMediaUrl: string | null = null;
+      if (coverMediaFile) {
+        coverMediaUrl = await uploadSingle(storeId, coverMediaFile, "cover");
+      }
+
+      const galleryUrls = await uploadGallery(storeId, galleryFiles);
+
+      const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
+
+      // NOTE: this assumes you added these columns to stores:
+      // cover_media_type text null, cover_media_url text null
+      // If you did NOT add them yet, remove these 2 fields and keep only cover_image_url.
+      const { error: mediaErr } = await supabaseBrowser
         .from("stores")
         .update({
           logo_url: logoUrl,
-          cover_image_url: coverImageUrl, // ✅ only if image
+          cover_image_url: coverImageUrl, // legacy (only image)
+          cover_media_type: coverType, // ✅ new
+          cover_media_url: coverMediaUrl, // ✅ new
           gallery_urls: galleryUrls,
-          metadata: metadataFinal,
         })
-        .eq("id", store.id);
+        .eq("id", storeId);
 
-      if (upErr) throw upErr;
+      if (mediaErr) throw mediaErr;
 
-      showToast({ type: "success", title: "Store added successfully" });
+      // ✅ 3) Payment details in separate table
+      const { error: payErr } = await supabaseBrowser
+        .from("store_payment_details")
+        .upsert(
+          {
+            store_id: storeId,
+            legal_business_name: payment.legal_business_name.trim(),
+            display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
+
+            payout_method: payment.payout_method,
+            beneficiary_name: payment.beneficiary_name?.trim() || null,
+            bank_name: payment.bank_name?.trim() || null,
+            account_number: payment.account_number?.trim() || null,
+            ifsc: payment.ifsc?.trim() || null,
+            iban: payment.iban?.trim() || null,
+            swift: payment.swift?.trim() || null,
+            payout_upi_id: payment.payout_upi_id?.trim() || null,
+
+            settlement_cycle: payment.settlement_cycle,
+            commission_percent: payment.commission_percent ? Number(payment.commission_percent) : null,
+            currency: payment.currency || "MUR",
+
+            tax_id_label: payment.tax_id_label || null,
+            tax_id_value: payment.tax_id_value?.trim() || null,
+
+            billing_email: payment.billing_email?.trim() || null,
+            billing_phone: payment.billing_phone?.trim() || null,
+
+            kyc_status: payment.kyc_status,
+            notes: payment.notes?.trim() || null,
+          },
+          { onConflict: "store_id" }
+        );
+
+      if (payErr) throw payErr;
+
+      // ✅ 4) Catalogue tables (replace all for this store)
+      // Delete items first (FK), then categories
+      const { error: delItemsErr } = await supabaseBrowser
+        .from("store_catalogue_items")
+        .delete()
+        .eq("store_id", storeId);
+      if (delItemsErr) throw delItemsErr;
+
+      const { error: delCatsErr } = await supabaseBrowser
+        .from("store_catalogue_categories")
+        .delete()
+        .eq("store_id", storeId);
+      if (delCatsErr) throw delCatsErr;
+
+      const enabledCats = catalogueApi.catalogueCategories
+        .filter((c) => c.enabled && c.title.trim())
+        .map((c, idx) => ({
+          draftId: c.id, // local draft id
+          id: uuid(), // real uuid for DB
+          store_id: storeId,
+          title: c.title.trim(),
+          starting_from: c.starting_from ? Number(c.starting_from) : null,
+          enabled: true,
+          sort_order: idx,
+          items: c.items,
+        }));
+
+      if (enabledCats.length) {
+        const { error: insCatsErr } = await supabaseBrowser
+          .from("store_catalogue_categories")
+          .insert(
+            enabledCats.map((c) => ({
+              id: c.id,
+              store_id: c.store_id,
+              title: c.title,
+              starting_from: c.starting_from,
+              enabled: c.enabled,
+              sort_order: c.sort_order,
+            }))
+          );
+        if (insCatsErr) throw insCatsErr;
+      }
+
+      // Insert items (upload images first so image_url is final)
+      const itemsToInsert: any[] = [];
+
+      for (const cat of enabledCats) {
+        for (let i = 0; i < cat.items.length; i++) {
+          const it = cat.items[i];
+          const title = (it.title || "").trim();
+          const priceNum = it.price ? Number(it.price) : null;
+
+          // skip blank rows
+          if (!title && !priceNum) continue;
+
+          const itemId = uuid();
+
+          let imageUrl: string | null = null;
+          if (it.imageFile) {
+            imageUrl = await uploadCatalogueImage(storeId, cat.id, itemId, it.imageFile);
+          }
+
+          itemsToInsert.push({
+            id: itemId,
+            store_id: storeId,
+            category_id: cat.id,
+            title: title || "Untitled",
+            price: Number.isFinite(priceNum as any) ? priceNum : null,
+            sku: it.sku?.trim() || null,
+            description: it.description?.trim() || null,
+            is_available: !!it.is_available,
+            image_url: imageUrl,
+            sort_order: i,
+          });
+        }
+      }
+
+      if (itemsToInsert.length) {
+        const { error: insItemsErr } = await supabaseBrowser
+          .from("store_catalogue_items")
+          .insert(itemsToInsert);
+        if (insItemsErr) throw insItemsErr;
+      }
+
+      showToast({ type: "success", title: "Store saved successfully" });
       router.push("/dashboard/manage-stores");
     } catch (err: any) {
+      // best-effort cleanup for newly uploaded media when something fails
+      await cleanupUploads();
+
       showToast({
         type: "error",
-        title: "Failed to add store",
+        title: "Failed to save store",
         description: err?.message ?? "Unknown error",
       });
     } finally {
