@@ -36,10 +36,8 @@ import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sectio
 ------------------------------------------------------- */
 
 function uuid() {
-  // modern browsers
   // @ts-ignore
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  // fallback
   return `id_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`;
 }
 
@@ -74,7 +72,7 @@ async function runWithConcurrency<T>(
   await Promise.all(runners);
 }
 
-export default function AddStorePage() {
+export default function AddStoreClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -87,7 +85,6 @@ export default function AddStorePage() {
 
   const { preserveScroll, scrollYRef } = usePreserveScroll();
 
-  // ✅ Only one section expanded at a time
   const [openSection, setOpenSection] = useState<OpenSection>("basic");
 
   const setOpenSectionStable = (next: OpenSection) => {
@@ -169,16 +166,11 @@ export default function AddStorePage() {
   const catalogueApi = useStoreCatalogue(preserveScroll);
 
   /* ---------------------------------------------
-     ✅ STORAGE UPLOAD HELPERS (robust)
-     Bucket: stores
-     Paths:
-      - logo/{storeId}/{uuid}.{ext}
-      - cover/{storeId}/{uuid}.{ext}
-      - gallery/{storeId}/{uuid}.{ext}
-      - catalogue/{storeId}/{categoryId}/{itemId}-{uuid}.{ext}
+     ✅ STORAGE UPLOAD HELPERS
   --------------------------------------------- */
 
-  const uploadedPaths: string[] = [];
+  const uploadedPathsRef = React.useRef<string[]>([]);
+  const pushUploaded = (p: string) => uploadedPathsRef.current.push(p);
 
   const uploadToBucket = async (path: string, file: File) => {
     const { error } = await supabaseBrowser.storage
@@ -187,17 +179,13 @@ export default function AddStorePage() {
 
     if (error) throw error;
 
-    uploadedPaths.push(path);
+    pushUploaded(path);
 
     const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
     return data.publicUrl;
   };
 
-  const uploadSingle = async (
-    storeId: string,
-    file: File | null,
-    folder: "logo" | "cover"
-  ) => {
+  const uploadSingle = async (storeId: string, file: File | null, folder: "logo" | "cover") => {
     if (!file) return null;
     const ext = getExt(file);
     const path = `${folder}/${storeId}/${uuid()}.${ext}`;
@@ -207,7 +195,6 @@ export default function AddStorePage() {
   const uploadGallery = async (storeId: string, files: File[]) => {
     const urls: string[] = new Array(files.length).fill("");
 
-    // ✅ concurrency limit to avoid browser/network issues
     await runWithConcurrency(files, 3, async (file, idx) => {
       const ext = getExt(file);
       const path = `gallery/${storeId}/${uuid()}.${ext}`;
@@ -215,31 +202,23 @@ export default function AddStorePage() {
       urls[idx] = url;
     });
 
-    // remove empty just in case
     return urls.filter(Boolean);
   };
 
-  const uploadCatalogueImage = async (
-    storeId: string,
-    categoryId: string, // uuid
-    itemId: string, // uuid
-    file: File
-  ) => {
+  const uploadCatalogueImage = async (storeId: string, categoryId: string, itemId: string, file: File) => {
     const ext = getExt(file);
     const path = `catalogue/${storeId}/${categoryId}/${itemId}-${uuid()}.${ext}`;
     return uploadToBucket(path, file);
   };
 
   const cleanupUploads = async () => {
-    if (!uploadedPaths.length) return;
-    // best-effort cleanup
-    await supabaseBrowser.storage.from("stores").remove(uploadedPaths);
+    const paths = uploadedPathsRef.current;
+    if (!paths.length) return;
+    await supabaseBrowser.storage.from("stores").remove(paths);
   };
 
   /* ---------------------------------------------
      ✅ STORE OWNER ID RESOLUTION
-     - If superadmin creates store for merchant, pass ?storeOwnerId=<uuid>
-     - Else fallback to current logged in user id
   --------------------------------------------- */
   const resolveStoreOwnerId = async () => {
     const fromQuery =
@@ -258,12 +237,7 @@ export default function AddStorePage() {
   };
 
   /* ---------------------------------------------
-     ✅ SUBMIT (normalized tables)
-     Tables used:
-      - stores (id = auth.users.id)
-      - store_payment_details (store_id)
-      - store_catalogue_categories (store_id)
-      - store_catalogue_items (store_id, category_id)
+     ✅ SUBMIT
   --------------------------------------------- */
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -296,7 +270,6 @@ export default function AddStorePage() {
       return;
     }
 
-    // ✅ cover validation
     if (coverMediaFile && !isImage(coverMediaFile) && !isVideo(coverMediaFile)) {
       showToast({
         type: "error",
@@ -355,7 +328,7 @@ export default function AddStorePage() {
 
       const coverType = coverMediaFile ? (isVideo(coverMediaFile) ? "video" : "image") : null;
 
-      // ✅ slug: if store already exists, keep old slug to avoid unique conflicts
+      // keep slug if exists
       let finalSlug: string | null = null;
       {
         const { data: existing, error: exErr } = await supabaseBrowser
@@ -368,12 +341,12 @@ export default function AddStorePage() {
         finalSlug = existing?.slug || `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
       }
 
-      // ✅ 1) Upsert stores (base info first)
+      // 1) upsert store base
       const { error: upsertStoreErr } = await supabaseBrowser
         .from("stores")
         .upsert(
           {
-            id: storeId, // 🔥 store id = auth.users.id (merchant)
+            id: storeId,
             name: form.name.trim(),
             slug: finalSlug,
             description: form.description?.trim() || null,
@@ -402,8 +375,6 @@ export default function AddStorePage() {
             google_place_id: form.google_place_id?.trim() || null,
 
             hours,
-
-            // media set after upload
             offers: offersFinal,
 
             is_active: !!form.is_active,
@@ -414,35 +385,30 @@ export default function AddStorePage() {
 
       if (upsertStoreErr) throw upsertStoreErr;
 
-      // ✅ 2) Upload media then update stores media columns
+      // 2) uploads
       const logoUrl = await uploadSingle(storeId, logoFile, "logo");
 
       let coverMediaUrl: string | null = null;
-      if (coverMediaFile) {
-        coverMediaUrl = await uploadSingle(storeId, coverMediaFile, "cover");
-      }
+      if (coverMediaFile) coverMediaUrl = await uploadSingle(storeId, coverMediaFile, "cover");
 
       const galleryUrls = await uploadGallery(storeId, galleryFiles);
 
       const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
 
-      // NOTE: this assumes you added these columns to stores:
-      // cover_media_type text null, cover_media_url text null
-      // If you did NOT add them yet, remove these 2 fields and keep only cover_image_url.
       const { error: mediaErr } = await supabaseBrowser
         .from("stores")
         .update({
           logo_url: logoUrl,
-          cover_image_url: coverImageUrl, // legacy (only image)
-          cover_media_type: coverType, // ✅ new
-          cover_media_url: coverMediaUrl, // ✅ new
+          cover_image_url: coverImageUrl,
+          cover_media_type: coverType,
+          cover_media_url: coverMediaUrl,
           gallery_urls: galleryUrls,
         })
         .eq("id", storeId);
 
       if (mediaErr) throw mediaErr;
 
-      // ✅ 3) Payment details in separate table
+      // 3) payment table
       const { error: payErr } = await supabaseBrowser
         .from("store_payment_details")
         .upsert(
@@ -450,7 +416,6 @@ export default function AddStorePage() {
             store_id: storeId,
             legal_business_name: payment.legal_business_name.trim(),
             display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
-
             payout_method: payment.payout_method,
             beneficiary_name: payment.beneficiary_name?.trim() || null,
             bank_name: payment.bank_name?.trim() || null,
@@ -459,17 +424,13 @@ export default function AddStorePage() {
             iban: payment.iban?.trim() || null,
             swift: payment.swift?.trim() || null,
             payout_upi_id: payment.payout_upi_id?.trim() || null,
-
             settlement_cycle: payment.settlement_cycle,
             commission_percent: payment.commission_percent ? Number(payment.commission_percent) : null,
             currency: payment.currency || "MUR",
-
             tax_id_label: payment.tax_id_label || null,
             tax_id_value: payment.tax_id_value?.trim() || null,
-
             billing_email: payment.billing_email?.trim() || null,
             billing_phone: payment.billing_phone?.trim() || null,
-
             kyc_status: payment.kyc_status,
             notes: payment.notes?.trim() || null,
           },
@@ -478,8 +439,7 @@ export default function AddStorePage() {
 
       if (payErr) throw payErr;
 
-      // ✅ 4) Catalogue tables (replace all for this store)
-      // Delete items first (FK), then categories
+      // 4) catalogue tables replace all
       const { error: delItemsErr } = await supabaseBrowser
         .from("store_catalogue_items")
         .delete()
@@ -495,8 +455,7 @@ export default function AddStorePage() {
       const enabledCats = catalogueApi.catalogueCategories
         .filter((c) => c.enabled && c.title.trim())
         .map((c, idx) => ({
-          draftId: c.id, // local draft id
-          id: uuid(), // real uuid for DB
+          id: uuid(),
           store_id: storeId,
           title: c.title.trim(),
           starting_from: c.starting_from ? Number(c.starting_from) : null,
@@ -521,21 +480,18 @@ export default function AddStorePage() {
         if (insCatsErr) throw insCatsErr;
       }
 
-      // Insert items (upload images first so image_url is final)
       const itemsToInsert: any[] = [];
-
       for (const cat of enabledCats) {
         for (let i = 0; i < cat.items.length; i++) {
           const it = cat.items[i];
           const title = (it.title || "").trim();
           const priceNum = it.price ? Number(it.price) : null;
 
-          // skip blank rows
           if (!title && !priceNum) continue;
 
           const itemId = uuid();
-
           let imageUrl: string | null = null;
+
           if (it.imageFile) {
             imageUrl = await uploadCatalogueImage(storeId, cat.id, itemId, it.imageFile);
           }
@@ -565,9 +521,7 @@ export default function AddStorePage() {
       showToast({ type: "success", title: "Store saved successfully" });
       router.push("/dashboard/manage-stores");
     } catch (err: any) {
-      // best-effort cleanup for newly uploaded media when something fails
       await cleanupUploads();
-
       showToast({
         type: "error",
         title: "Failed to save store",
@@ -590,29 +544,9 @@ export default function AddStorePage() {
       />
 
       <div className="space-y-5">
-        <BasicSection
-          openSection={openSection}
-          onToggle={toggleSectionStable}
-          preserveScroll={preserveScroll}
-          form={form}
-          setForm={setForm}
-        />
-
-        <ContactSection
-          openSection={openSection}
-          onToggle={toggleSectionStable}
-          preserveScroll={preserveScroll}
-          form={form}
-          setForm={setForm}
-        />
-
-        <LocationSection
-          openSection={openSection}
-          onToggle={toggleSectionStable}
-          preserveScroll={preserveScroll}
-          form={form}
-          setForm={setForm}
-        />
+        <BasicSection openSection={openSection} onToggle={toggleSectionStable} preserveScroll={preserveScroll} form={form} setForm={setForm} />
+        <ContactSection openSection={openSection} onToggle={toggleSectionStable} preserveScroll={preserveScroll} form={form} setForm={setForm} />
+        <LocationSection openSection={openSection} onToggle={toggleSectionStable} preserveScroll={preserveScroll} form={form} setForm={setForm} />
 
         <MediaSection
           openSection={openSection}
@@ -626,13 +560,7 @@ export default function AddStorePage() {
           setGalleryFiles={setGalleryFiles}
         />
 
-        <HoursSection
-          openSection={openSection}
-          onToggle={toggleSectionStable}
-          preserveScroll={preserveScroll}
-          openingHours={openingHours}
-          setOpeningHours={setOpeningHours}
-        />
+        <HoursSection openSection={openSection} onToggle={toggleSectionStable} preserveScroll={preserveScroll} openingHours={openingHours} setOpeningHours={setOpeningHours} />
 
         <DiscountsSection
           openSection={openSection}
@@ -646,13 +574,7 @@ export default function AddStorePage() {
           typeLabel={offersApi.typeLabel}
         />
 
-        <PaymentSection
-          openSection={openSection}
-          onToggle={toggleSectionStable}
-          preserveScroll={preserveScroll}
-          payment={payment}
-          setPayment={setPayment}
-        />
+        <PaymentSection openSection={openSection} onToggle={toggleSectionStable} preserveScroll={preserveScroll} payment={payment} setPayment={setPayment} />
 
         <CatalogueSection
           openSection={openSection}
@@ -674,22 +596,12 @@ export default function AddStorePage() {
         />
       </div>
 
-      {/* ACTIONS */}
       <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={loading}
-          className="bg-red-700 hover:bg-red-600 text-white"
-        >
+        <Button variant="outline" onClick={() => router.back()} disabled={loading} className="bg-red-700 hover:bg-red-600 text-white">
           Cancel
         </Button>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className={[PRIMARY_BTN, "cursor-pointer"].join(" ")}
-        >
+        <Button onClick={handleSubmit} disabled={loading} className={[PRIMARY_BTN, "cursor-pointer"].join(" ")}>
           {loading ? "Saving..." : "Save Store"}
         </Button>
       </div>
