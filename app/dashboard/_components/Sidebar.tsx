@@ -80,7 +80,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       icon: Store,
     },
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
-    //{ title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
+    { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
     { title: "User Management", href: "/dashboard/users", icon: Users },
 
     {
