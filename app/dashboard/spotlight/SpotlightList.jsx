@@ -6,10 +6,10 @@ import {
   Trash2,
   Image as ImageIcon,
   Video as VideoIcon,
-  RefreshCw,
   Tag,
   Filter,
   Search,
+  RefreshCw,
 } from "lucide-react";
 
 const MODULE_BADGE = {
@@ -22,19 +22,46 @@ const MODULE_BADGE = {
 export default function SpotlightList({ onEdit }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   const [query, setQuery] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
 
+  const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const fetchItems = async () => {
     setLoading(true);
+    setApiError("");
+
     try {
-      const res = await fetch("/api/spotlight", { cache: "no-store" });
+      if (!BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL in .env.local");
+
+      const url =
+        moduleFilter === "all"
+          ? `${BASE}/api/spotlight`
+          : `${BASE}/api/spotlight?module_type=${encodeURIComponent(moduleFilter)}`;
+
+      const res = await fetch(url, { cache: "no-store" });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Spotlight API failed:", res.status, text);
+        throw new Error(`API error ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Expected JSON, got:", contentType, text);
+        throw new Error("API did not return JSON");
+      }
+
       const data = await res.json();
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
       setItems([]);
+      setApiError(e?.message || "Failed to load spotlight items");
     } finally {
       setLoading(false);
     }
@@ -42,7 +69,8 @@ export default function SpotlightList({ onEdit }) {
 
   useEffect(() => {
     fetchItems();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduleFilter]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -51,20 +79,26 @@ export default function SpotlightList({ onEdit }) {
         !q ||
         (it.title || "").toLowerCase().includes(q) ||
         (it.subtitle || "").toLowerCase().includes(q);
-
-      const matchesModule =
-        moduleFilter === "all" || it.module_type === moduleFilter;
-
-      return matchesQuery && matchesModule;
+      return matchesQuery;
     });
-  }, [items, query, moduleFilter]);
+  }, [items, query]);
 
   const handleDelete = async (id) => {
     const ok = confirm("Delete this spotlight item? This cannot be undone.");
     if (!ok) return;
 
     try {
-      await fetch(`/api/spotlight/${id}`, { method: "DELETE" });
+      if (!BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL in .env.local");
+
+      const res = await fetch(`${BASE}/api/spotlight/${id}`, { method: "DELETE" });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Delete failed:", res.status, text);
+        alert("Delete failed");
+        return;
+      }
+
       fetchItems();
     } catch (e) {
       console.error(e);
@@ -89,7 +123,7 @@ export default function SpotlightList({ onEdit }) {
           </div>
 
           {/* Filter */}
-          <div className="relative w-full">
+          <div className="relative w-52">
             <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <select
               value={moduleFilter}
@@ -105,6 +139,13 @@ export default function SpotlightList({ onEdit }) {
           </div>
         </div>
       </div>
+
+      {/* Error */}
+      {!!apiError && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {apiError}
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {loading && (
@@ -157,7 +198,6 @@ export default function SpotlightList({ onEdit }) {
                 {/* Thumbnail */}
                 <div className="flex items-center gap-3">
                   <div className="relative h-[72px] w-[120px] overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.thumbnail_url || item.media_url}
                       alt={item.title}
@@ -165,7 +205,6 @@ export default function SpotlightList({ onEdit }) {
                     />
                   </div>
 
-                  {/* Media type icon */}
                   <div className="hidden sm:flex">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 ring-1 ring-gray-200">
                       {item.media_type === "video" ? (
