@@ -3,10 +3,14 @@
 import React, { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 
-import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
+import {
+  DAYS,
+  PRIMARY_BTN,
+} from "@/app/dashboard/_components/StoreComponents/constants";
 
 import type {
   DayHours,
@@ -15,7 +19,10 @@ import type {
   StoreFormState,
 } from "@/app/dashboard/_components/StoreComponents/types";
 
-import { safeNumberOrNull, slugify } from "@/app/dashboard/_components/StoreComponents/utils";
+import {
+  safeNumberOrNull,
+  slugify,
+} from "@/app/dashboard/_components/StoreComponents/utils";
 
 import { usePreserveScroll } from "@/app/dashboard/_components/StoreComponents/hooks/usePreserveScroll";
 import { useStoreOffers } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreOffers";
@@ -32,14 +39,17 @@ import PaymentSection from "@/app/dashboard/_components/StoreComponents/sections
 import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
 
 /* -------------------------------------------------------
+  ✅ CONSTANTS
+------------------------------------------------------- */
+const STORE_ROLE = "storepartner" as const;
+
+/* -------------------------------------------------------
   ✅ INDUSTRIAL HELPERS (safe ids + uploads)
 ------------------------------------------------------- */
 
 function uuid() {
-  // modern browsers
   // @ts-ignore
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  // fallback
   return `id_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`;
 }
 
@@ -84,14 +94,18 @@ function AddStorePageInner() {
 
   const [loading, setLoading] = useState(false);
 
+  // ✅ NEW: Partner login credentials (frontend create)
+  const [partnerEmail, setPartnerEmail] = useState("");
+  const [partnerPassword, setPartnerPassword] = useState("");
+
   // Media
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [coverMediaFile, setCoverMediaFile] = useState<File | null>(null); // ✅ video OR image
+  const [coverMediaFile, setCoverMediaFile] = useState<File | null>(null); // video OR image
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
 
   const { preserveScroll, scrollYRef } = usePreserveScroll();
 
-  // ✅ Only one section expanded at a time
+  // Only one section expanded at a time
   const [openSection, setOpenSection] = useState<OpenSection>("basic");
 
   const setOpenSectionStable = (next: OpenSection) => {
@@ -114,7 +128,7 @@ function AddStorePageInner() {
 
     phone: "",
     whatsapp: "",
-    email: "",
+    email: "", // store contact email (not login)
     website: "",
 
     location_name: "",
@@ -173,13 +187,7 @@ function AddStorePageInner() {
   const catalogueApi = useStoreCatalogue(preserveScroll);
 
   /* ---------------------------------------------
-     ✅ STORAGE UPLOAD HELPERS (robust)
-     Bucket: stores
-     Paths:
-      - logo/{storeId}/{uuid}.{ext}
-      - cover/{storeId}/{uuid}.{ext}
-      - gallery/{storeId}/{uuid}.{ext}
-      - catalogue/{storeId}/{categoryId}/{itemId}-{uuid}.{ext}
+     ✅ STORAGE UPLOAD HELPERS
   --------------------------------------------- */
 
   const uploadedPaths: string[] = [];
@@ -197,7 +205,11 @@ function AddStorePageInner() {
     return data.publicUrl;
   };
 
-  const uploadSingle = async (storeId: string, file: File | null, folder: "logo" | "cover") => {
+  const uploadSingle = async (
+    storeId: string,
+    file: File | null,
+    folder: "logo" | "cover"
+  ) => {
     if (!file) return null;
     const ext = getExt(file);
     const path = `${folder}/${storeId}/${uuid()}.${ext}`;
@@ -207,7 +219,6 @@ function AddStorePageInner() {
   const uploadGallery = async (storeId: string, files: File[]) => {
     const urls: string[] = new Array(files.length).fill("");
 
-    // ✅ concurrency limit to avoid browser/network issues
     await runWithConcurrency(files, 3, async (file, idx) => {
       const ext = getExt(file);
       const path = `gallery/${storeId}/${uuid()}.${ext}`;
@@ -218,7 +229,12 @@ function AddStorePageInner() {
     return urls.filter(Boolean);
   };
 
-  const uploadCatalogueImage = async (storeId: string, categoryId: string, itemId: string, file: File) => {
+  const uploadCatalogueImage = async (
+    storeId: string,
+    categoryId: string,
+    itemId: string,
+    file: File
+  ) => {
     const ext = getExt(file);
     const path = `catalogue/${storeId}/${categoryId}/${itemId}-${uuid()}.${ext}`;
     return uploadToBucket(path, file);
@@ -226,12 +242,86 @@ function AddStorePageInner() {
 
   const cleanupUploads = async () => {
     if (!uploadedPaths.length) return;
-    // best-effort cleanup
     await supabaseBrowser.storage.from("stores").remove(uploadedPaths);
   };
 
   /* ---------------------------------------------
+     ✅ CREATE STORE PARTNER LOGIN (Frontend)
+     - creates auth user
+     - inserts row into public.users with role=storepartner
+     - tries to preserve current session
+  --------------------------------------------- */
+  const createStorePartnerAccount = async () => {
+    const email = partnerEmail.trim().toLowerCase();
+    const password = partnerPassword;
+
+    if (!email) throw new Error("Login email is required");
+    if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
+
+    // Save current admin session (best effort)
+    const { data: prevSession } = await supabaseBrowser.auth.getSession();
+
+    const { data: signUpData, error: signUpError } = await supabaseBrowser.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: form.name?.trim() || null,
+          phone: form.phone?.trim() || null,
+          role: STORE_ROLE,
+        },
+        // keep your redirect if you want
+        emailRedirectTo: `fb-marketplace-bot.web.app/callback`,
+      },
+    });
+
+    if (signUpError) throw new Error(signUpError.message);
+
+    const newUserId = signUpData.user?.id;
+    if (!newUserId) {
+      throw new Error("User created, but missing user id in response.");
+    }
+
+    // Insert into public.users (matches your schema)
+    // NOTE: This requires RLS policy allowing the current admin to insert.
+    const { error: usersInsertErr } = await supabaseBrowser.from("users").insert({
+      id: newUserId,
+      email,
+      full_name: form.name?.trim() || null,
+      phone: form.phone?.trim() || null,
+      role: STORE_ROLE,
+      notifications_enabled: true,
+      veg_mode: false,
+      membership_tier: "none",
+    });
+
+    if (usersInsertErr) {
+      // Can't delete auth user from frontend. Tell clearly what happened.
+      throw new Error(
+        `Auth user created, but failed to insert into public.users: ${usersInsertErr.message}. ` +
+          `Fix RLS policy for users table or insert via service role.`
+      );
+    }
+
+    // Restore previous session if signup returned a session (rare if email confirmation enabled)
+    try {
+      if (signUpData.session && prevSession?.session) {
+        await supabaseBrowser.auth.setSession({
+          access_token: prevSession.session.access_token,
+          refresh_token: prevSession.session.refresh_token,
+        });
+      }
+    } catch {
+      // ignore best-effort session restore errors
+    }
+
+    return { userId: newUserId, email };
+  };
+
+  /* ---------------------------------------------
      ✅ STORE OWNER ID RESOLUTION
+     - If ?storeOwnerId= exists -> uses it
+     - Else -> creates new storepartner login from frontend
   --------------------------------------------- */
   const resolveStoreOwnerId = async () => {
     const fromQuery =
@@ -242,18 +332,18 @@ function AddStorePageInner() {
 
     if (fromQuery) return fromQuery;
 
-    const { data, error } = await supabaseBrowser.auth.getUser();
-    if (error) throw error;
-    const id = data.user?.id;
-    if (!id)
-      throw new Error(
-        "No authenticated user found. Pass ?storeOwnerId=<uuid> if creating store for a merchant."
-      );
-    return id;
+    // Create login for this store
+    const created = await createStorePartnerAccount();
+    showToast({
+      title: "Store Login Created",
+      description: `Login: ${created.email}`,
+    });
+
+    return created.userId;
   };
 
   /* ---------------------------------------------
-     ✅ SUBMIT (normalized tables)
+     ✅ SUBMIT
   --------------------------------------------- */
   const handleSubmit = async () => {
     if (!form.name.trim()) {
@@ -286,7 +376,7 @@ function AddStorePageInner() {
       return;
     }
 
-    // ✅ cover validation
+    // cover validation
     if (coverMediaFile && !isImage(coverMediaFile) && !isVideo(coverMediaFile)) {
       showToast({
         type: "error",
@@ -295,6 +385,30 @@ function AddStorePageInner() {
       });
       setOpenSectionStable("media");
       return;
+    }
+
+    // ✅ NEW: enforce login creds for store creation (unless storeOwnerId is provided via query)
+    const hasOwnerInQuery =
+      !!(
+        searchParams.get("storeOwnerId") ||
+        searchParams.get("store_owner_id") ||
+        searchParams.get("storeId") ||
+        searchParams.get("store_id")
+      );
+
+    if (!hasOwnerInQuery) {
+      if (!partnerEmail.trim()) {
+        showToast({ type: "error", title: "Store Login Email is required" });
+        return;
+      }
+      if (!partnerPassword || partnerPassword.length < 6) {
+        showToast({
+          type: "error",
+          title: "Store Login Password is required",
+          description: "Password must be at least 6 characters.",
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -343,9 +457,13 @@ function AddStorePageInner() {
         }))
         .filter((o) => o.title);
 
-      const coverType = coverMediaFile ? (isVideo(coverMediaFile) ? "video" : "image") : null;
+      const coverType = coverMediaFile
+        ? isVideo(coverMediaFile)
+          ? "video"
+          : "image"
+        : null;
 
-      // ✅ slug: if store already exists, keep old slug to avoid unique conflicts
+      // slug
       let finalSlug: string | null = null;
       {
         const { data: existing, error: exErr } = await supabaseBrowser
@@ -355,10 +473,13 @@ function AddStorePageInner() {
           .maybeSingle();
 
         if (exErr) throw exErr;
-        finalSlug = existing?.slug || `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
+
+        finalSlug =
+          existing?.slug ||
+          `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
       }
 
-      // ✅ 1) Upsert stores (base info first)
+      // 1) Upsert stores
       const { error: upsertStoreErr } = await supabaseBrowser
         .from("stores")
         .upsert(
@@ -392,7 +513,6 @@ function AddStorePageInner() {
             google_place_id: form.google_place_id?.trim() || null,
 
             hours,
-
             offers: offersFinal,
 
             is_active: !!form.is_active,
@@ -403,7 +523,7 @@ function AddStorePageInner() {
 
       if (upsertStoreErr) throw upsertStoreErr;
 
-      // ✅ 2) Upload media then update stores media columns
+      // 2) Upload media then update
       const logoUrl = await uploadSingle(storeId, logoFile, "logo");
 
       let coverMediaUrl: string | null = null;
@@ -428,7 +548,7 @@ function AddStorePageInner() {
 
       if (mediaErr) throw mediaErr;
 
-      // ✅ 3) Payment details in separate table
+      // 3) Payment
       const { error: payErr } = await supabaseBrowser
         .from("store_payment_details")
         .upsert(
@@ -447,7 +567,9 @@ function AddStorePageInner() {
             payout_upi_id: payment.payout_upi_id?.trim() || null,
 
             settlement_cycle: payment.settlement_cycle,
-            commission_percent: payment.commission_percent ? Number(payment.commission_percent) : null,
+            commission_percent: payment.commission_percent
+              ? Number(payment.commission_percent)
+              : null,
             currency: payment.currency || "MUR",
 
             tax_id_label: payment.tax_id_label || null,
@@ -464,8 +586,11 @@ function AddStorePageInner() {
 
       if (payErr) throw payErr;
 
-      // ✅ 4) Catalogue tables (replace all for this store)
-      const { error: delItemsErr } = await supabaseBrowser.from("store_catalogue_items").delete().eq("store_id", storeId);
+      // 4) Catalogue (replace all)
+      const { error: delItemsErr } = await supabaseBrowser
+        .from("store_catalogue_items")
+        .delete()
+        .eq("store_id", storeId);
       if (delItemsErr) throw delItemsErr;
 
       const { error: delCatsErr } = await supabaseBrowser
@@ -488,16 +613,18 @@ function AddStorePageInner() {
         }));
 
       if (enabledCats.length) {
-        const { error: insCatsErr } = await supabaseBrowser.from("store_catalogue_categories").insert(
-          enabledCats.map((c) => ({
-            id: c.id,
-            store_id: c.store_id,
-            title: c.title,
-            starting_from: c.starting_from,
-            enabled: c.enabled,
-            sort_order: c.sort_order,
-          }))
-        );
+        const { error: insCatsErr } = await supabaseBrowser
+          .from("store_catalogue_categories")
+          .insert(
+            enabledCats.map((c) => ({
+              id: c.id,
+              store_id: c.store_id,
+              title: c.title,
+              starting_from: c.starting_from,
+              enabled: c.enabled,
+              sort_order: c.sort_order,
+            }))
+          );
         if (insCatsErr) throw insCatsErr;
       }
 
@@ -534,7 +661,9 @@ function AddStorePageInner() {
       }
 
       if (itemsToInsert.length) {
-        const { error: insItemsErr } = await supabaseBrowser.from("store_catalogue_items").insert(itemsToInsert);
+        const { error: insItemsErr } = await supabaseBrowser
+          .from("store_catalogue_items")
+          .insert(itemsToInsert);
         if (insItemsErr) throw insItemsErr;
       }
 
@@ -563,6 +692,42 @@ function AddStorePageInner() {
         setIsFeatured={(v) => setForm((p) => ({ ...p, is_featured: v }))}
         preserveScroll={preserveScroll}
       />
+
+      {/* ✅ NEW: LOGIN SECTION (always visible, doesn't touch your accordion sections) */}
+      <div className="rounded-xl border bg-white p-4 mb-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold">Store Partner Login</div>
+            <div className="text-xs text-muted-foreground">
+              This creates the login account for the store owner.
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+          <div className="space-y-1">
+            <label className="text-xs font-medium">Login Email</label>
+            <Input
+              type="email"
+              value={partnerEmail}
+              onChange={(e) => setPartnerEmail(e.target.value)}
+              placeholder="owner@store.com"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium">Login Password</label>
+            <Input
+              type="password"
+              value={partnerPassword}
+              onChange={(e) => setPartnerPassword(e.target.value)}
+              placeholder="Min 6 characters"
+              disabled={loading}
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-5">
         <BasicSection
@@ -660,7 +825,11 @@ function AddStorePageInner() {
           Cancel
         </Button>
 
-        <Button onClick={handleSubmit} disabled={loading} className={[PRIMARY_BTN, "cursor-pointer"].join(" ")}>
+        <Button
+          onClick={handleSubmit}
+          disabled={loading}
+          className={[PRIMARY_BTN, "cursor-pointer"].join(" ")}
+        >
           {loading ? "Saving..." : "Save Store"}
         </Button>
       </div>

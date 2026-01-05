@@ -9,7 +9,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       className={cn(
         // BASE
         "file:text-foreground selection:bg-primary selection:text-primary-foreground",
-        "dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1",
+        "dark:bg-input/30 border-gray-300 flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1",
         "text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm",
 
         // FIX: ADD TEXT & PLACEHOLDER COLOR

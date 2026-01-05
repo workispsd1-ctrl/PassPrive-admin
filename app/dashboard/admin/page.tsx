@@ -68,7 +68,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isOpenDeleted, setIsOpenDeleted] = useState(false);
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [newSem, setNewSem] = useState<User>({
     id: crypto.randomUUID(),
     email: "",
@@ -136,17 +136,17 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok) {
         showToast({
-        title: "Error",
-        description: `Failed to delete user`,
-        type:"error"
-      });
+          title: "Error",
+          description: `Failed to delete user`,
+          type: "error",
+        });
         return;
       }
 
       showToast({
-        title:"Success",
-        description:`Admin deleted successfully`,
-      })
+        title: "Success",
+        description: `Admin deleted successfully`,
+      });
       handleRefresh();
       setIsConfirmOpen(false);
       setRowData(null);
@@ -160,14 +160,13 @@ export default function AdminPage() {
     }
   };
 
-
   const handleFetchuser = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabaseBrowser
         .from("users")
         .select("*", { count: "exact" })
-        .in("role", ["admin", "superadmin"]);
+        .in("role", ["admin", "superadmin", "restaurantpartner", "storepartner"]);
 
       if (searchTerm) {
         query = query.or(
@@ -346,70 +345,7 @@ export default function AdminPage() {
       if (signUpError) {
         throw new Error(signUpError.message);
       }
-
-      const status = "active";
-      const prompt = `Go through the transcript and reply according to the following rules:
-
-If the Client has already shared his phone number then reply him that one our reps will contact him and generate a unique line every time.
-Use this message : "One of my team members will contact you and discuss details soon."
-
-If the Client has not shared his phone number then ask him to share his phone number so that one of our reps can contact him.
-Use this message : "Hi {{name}}, please leave your number and my team will contact you."
-
-If the Client has already shared his phone number and the last reply is something else like ‘ok’ or ‘thanks’ or something that is ending the conversation then reply him ‘👍’ or ‘Your Welcome’ or ‘Ok’ or something simple and positive.`;
-
-      const aiId = process.env.NEXT_PUBLIC_OPEN_AI_ID;
-      const webHook =
-        "https://hook.eu2.make.com/dx022ckz4pzpcnhdksgbn277fmf1ca7u";
-
-      if (signUpData?.user?.id) {
-        const { error: insertError } = await supabaseBrowser
-          .from("users")
-          .insert({
-            id: signUpData.user.id,
-            email: newSem.email,
-            name: newSem.name,
-            phone: newSem.phone,
-            role: newSem.role,
-            status,
-            fb_chatbot_prompt: prompt,
-            fb_chatbot_open_ai_id: aiId,
-            fb_chatbot_webhook: webHook,
-            fb_chatbot_subscription_active: false,
-            fb_chatbot_trail_active: false,
-            new_user: true,
-            is_anonymous: false,
-            fb_chatbot_user_blocked: false,
-            
-          });
-
-        if (insertError) {
-          console.error(
-            "Error inserting user profile in 'users' table:",
-            insertError
-          );
-          throw new Error("Failed to set admin role or phone number!");
-        }
-        try {
-          await fetch(
-            "https://hook.eu2.make.com/dx022ckz4pzpcnhdksgbn277fmf1ca7u",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                id: signUpData.user.id,
-                email: newSem.email,
-              }),
-            }
-          );
-        } catch (webhookError) {
-          console.error("Webhook call failed:", webhookError);
-        }
-      } else {
-        throw new Error("User creation succeeded but no user ID returned.");
-      }
+     
 
       setNewSem({
         id: crypto.randomUUID(),
@@ -420,7 +356,7 @@ If the Client has already shared his phone number and the last reply is somethin
         phone: "",
         created_at: "",
         subscription: "",
-        status: "",
+        status: "active",
         city: "",
         state: "",
         zipCode: "",
@@ -501,12 +437,20 @@ If the Client has already shared his phone number and the last reply is somethin
     }
   };
 
-  const formatRole = (role: string | undefined) => {
-    if (!role) return "";
-    return role === "superadmin"
-      ? "Super Admin"
-      : role.charAt(0).toUpperCase() + role.slice(1);
+const formatRole = (role?: string) => {
+  if (!role) return "";
+
+  const map: Record<string, string> = {
+    superadmin: "Super Admin",
+    admin: "Admin",
+    restaurantpartner: "Restaurant Partner",
+    storepartner: "Store Partner",
+    user: "User",
   };
+
+  return map[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
+};
+
 
   return (
     <>
@@ -677,11 +621,10 @@ If the Client has already shared his phone number and the last reply is somethin
                 setLimit={setLimit}
               />
             </div>
-            
           </div>
         )}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg bg-white border-gray-300">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 Create New Admin
@@ -739,7 +682,7 @@ If the Client has already shared his phone number and the last reply is somethin
               <div className="space-y-1">
                 <label className="text-sm font-medium">Phone</label>
                 <PhoneInput
-                  country="ca"
+                  country="in"
                   value={newSem.phone}
                   onChange={(val, data: any) => {
                     const finalVal = val.startsWith("+") ? val : `+${val}`;
@@ -783,6 +726,7 @@ If the Client has already shared his phone number and the last reply is somethin
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
                 disabled={saving}
+                className="border-gray-300"
               >
                 Cancel
               </Button>
@@ -843,32 +787,27 @@ If the Client has already shared his phone number and the last reply is somethin
         </Dialog>
       </div>
 
-       <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)}>
-        
-          <h2 className="text-lg font-semibold mb-2">
-            Are you sure?
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-           This action cannot be undone.
-      
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setIsConfirmOpen(false)}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteUser}
-              disabled={loading}
-            >
-              {loading ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
-       
+      <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)}>
+        <h2 className="text-lg font-semibold mb-2">Are you sure?</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setIsConfirmOpen(false)}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteUser}
+            disabled={loading}
+          >
+            {loading ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
       </Modal>
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
@@ -900,7 +839,7 @@ If the Client has already shared his phone number and the last reply is somethin
       </Modal>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-white border-gray-300">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Edit Admin
@@ -960,7 +899,7 @@ If the Client has already shared his phone number and the last reply is somethin
             <div className="space-y-1">
               <label className="text-sm font-medium">Phone</label>
               <PhoneInput
-                country="ca"
+                country="in"
                 value={editSem.phone}
                 onChange={(val, data: any) => {
                   const finalVal = val.startsWith("+") ? val : `+${val}`;
