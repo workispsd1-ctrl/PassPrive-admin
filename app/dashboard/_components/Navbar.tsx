@@ -39,6 +39,7 @@ const pathName: any = {
   "/dashboard/leads": "Leads",
   "/dashboard/invoices": "Invoices",
   "/dashboard/webhook": "Webhook",
+  "/dashboard/offers/new": "Add New Offer",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {

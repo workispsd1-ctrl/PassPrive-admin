@@ -25,8 +25,8 @@ export default function OffersPage() {
       <h1 className="text-3xl font-semibold mb-6">🎁 Home Hero Offers</h1>
 
       <a
-        href="/admin/offers/new"
-        className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
+        href="/dashboard/offers/new"
+        className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700 text-white"
       >
         + Add New Offer
       </a>
@@ -38,7 +38,7 @@ export default function OffersPage() {
         ) : (
           <table className="w-full border-collapse border border-gray-700">
             <thead>
-              <tr className="bg-[#1A1A1A]">
+              <tr className="">
                 <th className="border border-gray-700 p-3">ID</th>
                 <th className="border border-gray-700 p-3">Type</th>
                 <th className="border border-gray-700 p-3">Media</th>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import axios from "axios";
+import { ChevronLeft } from 'lucide-react';
+import Link from "next/link";
 
 export default function AddOfferPage() {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -39,7 +41,7 @@ export default function AddOfferPage() {
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-semibold mb-6">➕ Add New Offer</h1>
+      <div className="py-5">  <Link href="/dashboard/offers"><ChevronLeft  /></Link></div>
 
       <div className="space-y-4">
 
@@ -47,14 +49,14 @@ export default function AddOfferPage() {
         <input
           type="text"
           placeholder="Offer title"
-          className="w-full p-3 rounded bg-[#1A1A1A]"
+          className="w-full p-3 rounded border border-gray-300"
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
         />
 
         {/* Type */}
         <select
-          className="w-full p-3 bg-[#1A1A1A] rounded"
+          className="w-full p-3 rounded border border-gray-300"
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value })}
         >
@@ -68,7 +70,7 @@ export default function AddOfferPage() {
           type="file"
           accept={form.type === "video" ? "video/*" : form.type === "image" ? "image/*" : ".json"}
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="w-full p-3 bg-[#1A1A1A] rounded"
+          className="w-full p-3 rounded border border-gray-300"
         />
 
         {/* Preview */}
@@ -94,7 +96,7 @@ export default function AddOfferPage() {
         {/* Priority */}
         <input
           type="number"
-          className="w-full p-3 rounded bg-[#1A1A1A]"
+          className="w-full p-3 rounded border border-gray-300"
           value={form.priority}
           onChange={(e) =>
             setForm({ ...form, priority: Number(e.target.value) })
@@ -103,7 +105,7 @@ export default function AddOfferPage() {
 
         <button
           onClick={onSubmit}
-          className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+          className="px-4 py-2 bg-green-600 rounded hover:bg-green-700 text-white"
         >
           Save Offer
         </button>

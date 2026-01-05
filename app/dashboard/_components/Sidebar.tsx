@@ -80,7 +80,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       icon: Store,
     },
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
-    { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
+    //{ title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
     { title: "User Management", href: "/dashboard/users", icon: Users },
 
     {
@@ -89,22 +89,22 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       icon: BookUser,
     },
 
-    {
-      title: "Manage Subscription",
-      href: "/dashboard/subscription",
-      icon: CreditCard,
-    },
+    //{
+      //title: "Manage Subscription",
+      //href: "/dashboard/subscription",
+      //icon: CreditCard,
+    //},
 
-    { title: "Reports", href: "/dashboard/reports", icon: BarChart3 },
-    {
-      title: "Subscriptions",
-      href: "/dashboard/subscription-plans",
-      icon: WalletMinimal,
-    },
+    //{ title: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+    //{
+      //title: "Subscriptions",
+      //href: "/dashboard/subscription-plans",
+      //icon: WalletMinimal,
+    //},
 
-    { title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
-    { title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
-    { title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
+    //{ title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
+    //{ title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
+    //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
   ];
 
   return (
