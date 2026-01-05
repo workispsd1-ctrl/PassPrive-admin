@@ -557,7 +557,7 @@ const formatRole = (role?: string) => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {admins.map((admmin) => (
                   <tr key={admmin.id} className="hover:bg-gray-50">
-                    <td className="break-words px-6 py-4 text-sm font-medium text-gray-900">
+                    <td className="wrap-break-word px-6 py-4 text-sm font-medium text-gray-900">
                       {admmin?.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

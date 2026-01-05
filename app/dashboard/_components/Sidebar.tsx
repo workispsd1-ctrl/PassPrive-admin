@@ -96,13 +96,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     //},
 
     //{ title: "Reports", href: "/dashboard/reports", icon: BarChart3 },
-    //{
-      //title: "Subscriptions",
-      //href: "/dashboard/subscription-plans",
-      //icon: WalletMinimal,
-    //},
+    {
+      title: "Subscriptions",
+      href: "/dashboard/subscription-plans",
+      icon: WalletMinimal,
+    },
 
-    //{ title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
+    { title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
     //{ title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
     //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
   ];
