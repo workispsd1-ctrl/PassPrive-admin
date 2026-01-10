@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LoadingSkeleton } from "@/components/userComponents/LoadingSkeleton";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -23,6 +22,70 @@ function useDebounced<T>(value: T, ms = 350) {
   return v;
 }
 
+/* -------------------------- SKELETON (LOADING ONLY) -------------------------- */
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-gray-200/70 ${className}`} />;
+}
+
+function RestaurantsTableSkeleton() {
+  return (
+    <div className="p-4">
+      {/* header-ish row */}
+      <div className="mb-4 flex items-center justify-between">
+        <Skeleton className="h-5 w-44" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-28 rounded-xl" />
+          <Skeleton className="h-9 w-24 rounded-xl" />
+        </div>
+      </div>
+
+      {/* table header */}
+      <div className="grid grid-cols-12 gap-3 border-b border-gray-100 pb-3">
+        <Skeleton className="col-span-3 h-4 w-24" />
+        <Skeleton className="col-span-2 h-4 w-20" />
+        <Skeleton className="col-span-2 h-4 w-20" />
+        <Skeleton className="col-span-2 h-4 w-16" />
+        <Skeleton className="col-span-3 h-4 w-24" />
+      </div>
+
+      {/* rows */}
+      <div className="mt-3 space-y-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-12 items-center gap-3 rounded-xl border border-gray-100 bg-white p-3"
+          >
+            <div className="col-span-3 space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <div className="col-span-2">
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <div className="col-span-2">
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <div className="col-span-2">
+              <Skeleton className="h-4 w-16" />
+            </div>
+            
+          </div>
+        ))}
+      </div>
+
+      {/* pagination-ish */}
+      <div className="mt-5 flex items-center justify-between">
+        <Skeleton className="h-4 w-40" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-24 rounded-xl" />
+          <Skeleton className="h-9 w-24 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RestaurantsPage() {
   const router = useRouter();
 
@@ -35,6 +98,7 @@ export default function RestaurantsPage() {
   const [refresh, setRefresh] = useState<any>(null);
 
   const debouncedSearch = useDebounced(searchTerm);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / limit)),
     [total, limit]
@@ -64,6 +128,8 @@ export default function RestaurantsPage() {
           title: "Failed to load restaurants",
           description: error.message,
         });
+        setRestaurants([]);
+        setTotal(0);
       } else {
         setRestaurants(data || []);
         setTotal(count || 0);
@@ -83,15 +149,12 @@ export default function RestaurantsPage() {
           onSearchChange={setSearchTerm}
           variant="search-only"
           placeholder="Search restaurants by name, city, or area..."
-
         />
 
-        <Card className="border border-gray-200 shadow-sm w-full overflow-x-auto">
+        <Card className="w-full overflow-x-auto border border-gray-200 shadow-sm">
           <CardContent className="p-0">
             {loading ? (
-              <div className="p-4">
-                <LoadingSkeleton />
-              </div>
+              <RestaurantsTableSkeleton />
             ) : restaurants.length === 0 ? (
               <div className="p-6">
                 <ComingSoon />
@@ -117,12 +180,10 @@ export default function RestaurantsPage() {
 
       {/* Floating Add Button */}
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
-        onClick={() =>
-          router.push("/dashboard/manage-restaurants/add")
-        }
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700"
+        onClick={() => router.push("/dashboard/manage-restaurants/add")}
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="h-6 w-6" />
       </Button>
     </>
   );

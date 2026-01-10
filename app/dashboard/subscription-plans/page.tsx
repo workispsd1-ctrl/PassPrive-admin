@@ -130,7 +130,7 @@ export default function SubscriptionPlansPage() {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-full">
       <div className="flex items-center justify-between mb-6">
         <div></div>
         <Button

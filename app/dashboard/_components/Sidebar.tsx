@@ -171,7 +171,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       </nav>
 
       {/* ────────────────── LOG-OUT ────────────────── */}
-      <div className="p-2 border-t">
+      <div className="p-2 border-t border-gray-300">
         {collapsed ? (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>

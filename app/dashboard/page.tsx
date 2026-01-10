@@ -1,13 +1,7 @@
 "use client";
-import React, { useEffect, useState, useMemo, useRef } from "react";
-import {
-  Users,
-  Hotel,
-  Store,
-  Coins,
-  BarChart3,
-  Building2,
-} from "lucide-react";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { Users, Hotel, Store, Coins } from "lucide-react";
 
 import {
   Chart as ChartJS,
@@ -20,15 +14,15 @@ import {
   Title,
   Tooltip,
   Legend,
+  ChartArea,
 } from "chart.js";
 
 import { Bar, Line } from "react-chartjs-2";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { AppDispatch } from "@/store/store";
+import type { AppDispatch } from "@/store/store";
 import { useDispatch } from "react-redux";
 import { setDashboardStats } from "@/store/features/dashboard/dashboardSlice";
-import { LoadingSkeleton } from "@/components/userComponents/LoadingSkeleton";
 
 ChartJS.register(
   CategoryScale,
@@ -43,15 +37,35 @@ ChartJS.register(
 );
 
 const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
+
+const WEEKLY_LABELS = ["W1", "W2", "W3", "W4", "W5", "W6"] as const;
+
+type Stats = {
+  totalUsers: number;
+  activeSubscribers: number;
+  totalRestaurants: number;
+  totalStores: number;
+  totalRevenue: number;
+};
 
 export default function AdminDashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const [loading, setLoading] = useState(true);
 
-  const [stats, setStats] = useState<any>({
+  const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     activeSubscribers: 0,
     totalRestaurants: 0,
@@ -65,10 +79,7 @@ export default function AdminDashboard() {
   const [monthlyLabels, setMonthlyLabels] = useState<string[]>([]);
   const [monthlyCounts, setMonthlyCounts] = useState<number[]>([]);
 
-  const restaurantRef = useRef<any>(null);
-  const storeRef = useRef<any>(null);
-
-  const parseAmount = (raw: any) => {
+  const parseAmount = (raw: unknown) => {
     if (!raw) return 0;
     if (typeof raw === "number") return raw;
 
@@ -81,7 +92,10 @@ export default function AdminDashboard() {
   /* ----------------------------------------------------------------------------- */
   /* WEEKLY COUNT CALCULATOR */
   /* ----------------------------------------------------------------------------- */
-  const computeWeeklyCounts = (rows: any[], weeks = 6) => {
+  const computeWeeklyCounts = (
+    rows: Array<{ created_at: string }>,
+    weeks = 6
+  ) => {
     const res = new Array(weeks).fill(0);
     const now = new Date();
 
@@ -127,8 +141,8 @@ export default function AdminDashboard() {
           .from("stores")
           .select("created_at");
 
-        setWeeklyRestaurants(computeWeeklyCounts(rdata || []));
-        setWeeklyStores(computeWeeklyCounts(sdata || []));
+        setWeeklyRestaurants(computeWeeklyCounts((rdata as any[]) || []));
+        setWeeklyStores(computeWeeklyCounts((sdata as any[]) || []));
 
         const { count: restaurantsCount } = await supabaseBrowser
           .from("restaurants")
@@ -144,7 +158,7 @@ export default function AdminDashboard() {
           .from("invoice")
           .select("amount, payment_provider");
 
-        invoiceData?.forEach((inv: any) => {
+        (invoiceData as any[] | null)?.forEach((inv) => {
           const amt = parseAmount(inv.amount);
           if (inv.payment_provider === "razorpay") totalINR += amt;
         });
@@ -161,7 +175,7 @@ export default function AdminDashboard() {
           .lte("created_at", `${year}-12-31T23:59:59Z`);
 
         const counts = Array(12).fill(0);
-        (monthlyData || []).forEach((row) => {
+        (monthlyData as any[] | null)?.forEach((row) => {
           const m = new Date(row.created_at).getMonth();
           counts[m] += 1;
         });
@@ -177,14 +191,16 @@ export default function AdminDashboard() {
         ]);
 
         /* FINAL STATS */
-        setStats({
+        const nextStats: Stats = {
           totalUsers: usersCount || 0,
           activeSubscribers: activeCount || 0,
           totalRestaurants: restaurantsCount || 0,
           totalStores: storesCount || 0,
           totalRevenue: totalINR,
-        });
+        };
 
+        setStats(nextStats);
+        dispatch(setDashboardStats(nextStats as any));
       } catch (err) {
         console.error(err);
       } finally {
@@ -193,87 +209,110 @@ export default function AdminDashboard() {
     };
 
     load();
-  }, []);
-
-  const weeklyLabels = ["W1", "W2", "W3", "W4", "W5", "W6"];
+  }, [dispatch]);
 
   /* ----------------------------------------------------------------------------- */
-  /* RESTAURANT WEEKLY CHART DATA (useMemo) */
+  /* CHART DATA — FIXED (NO REFS, SCRIPTABLE GRADIENT) */
   /* ----------------------------------------------------------------------------- */
   const restaurantChartData = useMemo(() => {
-    if (!restaurantRef.current) return { labels: weeklyLabels, datasets: [] };
-
-    const ctx = restaurantRef.current.ctx;
-    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
-    gradient.addColorStop(0, "#DA322444");
-    gradient.addColorStop(1, "#DA322400");
-
     return {
-      labels: weeklyLabels,
+      labels: [...WEEKLY_LABELS],
       datasets: [
         {
           label: "Restaurants",
           data: weeklyRestaurants,
-          fill: true,
+          fill: true as const,
           borderColor: "#DA3224",
-          backgroundColor: gradient,
-          tension: 0.4,
           borderWidth: 2,
+          tension: 0.4,
           pointRadius: 5,
+          backgroundColor: (context: any) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart as {
+              ctx: CanvasRenderingContext2D;
+              chartArea?: ChartArea;
+            };
+            if (!chartArea) return "#DA322422";
+            const gradient = ctx.createLinearGradient(
+              0,
+              chartArea.top,
+              0,
+              chartArea.bottom
+            );
+            gradient.addColorStop(0, "#DA322444");
+            gradient.addColorStop(1, "#DA322400");
+            return gradient;
+          },
         },
       ],
     };
   }, [weeklyRestaurants]);
 
-  /* ----------------------------------------------------------------------------- */
-  /* STORE WEEKLY CHART DATA (useMemo) */
-  /* ----------------------------------------------------------------------------- */
   const storeChartData = useMemo(() => {
-    if (!storeRef.current) return { labels: weeklyLabels, datasets: [] };
-
-    const ctx = storeRef.current.ctx;
-    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
-    gradient.addColorStop(0, "#3F6DF255");
-    gradient.addColorStop(1, "#3F6DF200");
-
     return {
-      labels: weeklyLabels,
+      labels: [...WEEKLY_LABELS],
       datasets: [
         {
           label: "Stores",
           data: weeklyStores,
-          fill: true,
+          fill: true as const,
           borderColor: "#3F6DF2",
-          backgroundColor: gradient,
-          tension: 0.4,
           borderWidth: 2,
+          tension: 0.4,
           pointRadius: 5,
+          backgroundColor: (context: any) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart as {
+              ctx: CanvasRenderingContext2D;
+              chartArea?: ChartArea;
+            };
+            if (!chartArea) return "#3F6DF222";
+            const gradient = ctx.createLinearGradient(
+              0,
+              chartArea.top,
+              0,
+              chartArea.bottom
+            );
+            gradient.addColorStop(0, "#3F6DF255");
+            gradient.addColorStop(1, "#3F6DF200");
+            return gradient;
+          },
         },
       ],
     };
   }, [weeklyStores]);
 
-  const ratio =
+  const conversionRate =
     stats.totalUsers > 0
-      ? `${stats.activeSubscribers}:${stats.totalUsers}`
-      : "0:0";
+      ? `${((stats.activeSubscribers / stats.totalUsers) * 100).toFixed(1)}%`
+      : "0.0%";
 
   return (
     <div className="min-h-full w-full">
       {loading ? (
-        <LoadingSkeleton />
+        <DashboardSkeleton />
       ) : (
         <div className="space-y-6">
-
-          {/* HEADER */}
-          <div className="flex items-start justify-between">
-          </div>
-
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <KPI icon={<Users />} label="Total Users" value={stats.totalUsers} tone="indigo" />
-            <KPI icon={<Hotel />} label="Restaurants" value={stats.totalRestaurants} tone="violet" />
-            <KPI icon={<Store />} label="Stores" value={stats.totalStores} tone="purple" />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <KPI
+              icon={<Users />}
+              label="Total Users"
+              value={stats.totalUsers}
+              tone="indigo"
+            />
+            <KPI
+              icon={<Hotel />}
+              label="Restaurants"
+              value={stats.totalRestaurants}
+              tone="violet"
+            />
+            <KPI
+              icon={<Store />}
+              label="Stores"
+              value={stats.totalStores}
+              tone="purple"
+            />
             <KPI
               icon={<Users />}
               label="Active Subs"
@@ -289,10 +328,12 @@ export default function AdminDashboard() {
           </div>
 
           {/* MONTHLY CHART */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-xl border border-indigo-200 shadow-sm">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold text-gray-800">Subscriptions / Month</h3>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="rounded-xl border border-indigo-200 bg-white shadow-sm lg:col-span-2">
+              <div className="border-b border-gray-300 p-4">
+                <h3 className="font-semibold text-gray-800">
+                  Subscriptions / Month
+                </h3>
                 <p className="text-xs text-gray-500">Last 12 months</p>
               </div>
 
@@ -314,32 +355,35 @@ export default function AdminDashboard() {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                    scales: {
+                      y: { beginAtZero: true, ticks: { precision: 0 } },
+                    },
                   }}
                 />
               </div>
             </div>
 
             {/* RIGHT COLUMN */}
-            <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-4 space-y-3">
-              <MiniStat label="Conversion Rate" value={`${((stats.activeSubscribers / stats.totalUsers) * 100).toFixed(1)}%`} />
-              <MiniStat label="Total Revenue" value={new Intl.NumberFormat("en-IN").format(stats.totalRevenue)} />
+            <div className="space-y-3 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm">
+              <MiniStat label="Conversion Rate" value={conversionRate} />
+              <MiniStat
+                label="Total Revenue"
+                value={new Intl.NumberFormat("en-IN").format(stats.totalRevenue)}
+              />
               <MiniStat label="Restaurants" value={stats.totalRestaurants} />
               <MiniStat label="Stores" value={stats.totalStores} />
             </div>
           </div>
 
           {/* WEEKLY TRENDS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Restaurants Weekly */}
-            <div className="bg-white rounded-xl border shadow p-4">
-              <h3 className="font-semibold text-gray-800 mb-2">
+            <div className="rounded-xl border border-gray-300 bg-white p-4 shadow">
+              <h3 className="mb-2 font-semibold text-gray-800">
                 New Restaurants per Week
               </h3>
               <div className="h-[260px]">
                 <Line
-                  ref={restaurantRef}
                   data={restaurantChartData}
                   options={{
                     responsive: true,
@@ -351,13 +395,12 @@ export default function AdminDashboard() {
             </div>
 
             {/* Stores Weekly */}
-            <div className="bg-white rounded-xl border shadow p-4">
-              <h3 className="font-semibold text-gray-800 mb-2">
+            <div className="rounded-xl border border-gray-300 bg-white p-4 shadow">
+              <h3 className="mb-2 font-semibold text-gray-800">
                 New Stores per Week
               </h3>
               <div className="h-[260px]">
                 <Line
-                  ref={storeRef}
                   data={storeChartData}
                   options={{
                     responsive: true,
@@ -374,9 +417,94 @@ export default function AdminDashboard() {
   );
 }
 
+/* -------------------------- SKELETON (ONLY FOR LOADING) -------------------------- */
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div className={`animate-pulse rounded-lg bg-gray-200/70 ${className}`} />
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* KPI skeletons */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-4 w-10" />
+            </div>
+            <div className="mt-3">
+              <Skeleton className="h-7 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* charts row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-2">
+          <div className="border-b border-gray-200 p-4">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="mt-2 h-3 w-28" />
+          </div>
+          <div className="h-80 p-4">
+            <Skeleton className="h-full w-full rounded-xl" />
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
+            >
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* weekly charts */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <Skeleton className="mb-3 h-5 w-52" />
+            <Skeleton className="h-[260px] w-full rounded-xl" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------- UI COMPONENTS -------------------------- */
 
-function KPI({ icon, label, value, tone, extra }: any) {
+function KPI({
+  icon,
+  label,
+  value,
+  tone,
+  extra,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  tone: "indigo" | "violet" | "purple" | "emerald" | "amber";
+  extra?: React.ReactNode;
+}) {
   const toneMap: Record<string, string> = {
     indigo: "from-indigo-50 to-white border-indigo-200 text-indigo-800",
     violet: "from-violet-50 to-white border-violet-200 text-violet-800",
@@ -386,7 +514,9 @@ function KPI({ icon, label, value, tone, extra }: any) {
   };
 
   return (
-    <div className={`rounded-xl border shadow-sm p-4 bg-gradient-to-br ${toneMap[tone]}`}>
+    <div
+      className={`rounded-xl border bg-gradient-to-br p-4 shadow-sm ${toneMap[tone]}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold">
           {icon}
@@ -399,19 +529,11 @@ function KPI({ icon, label, value, tone, extra }: any) {
   );
 }
 
-function MiniStat({ label, value }: any) {
+function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-indigo-100 px-3 py-2">
       <span className="text-sm text-gray-600">{label}</span>
       <span className="text-sm font-semibold text-gray-900">{value}</span>
-    </div>
-  );
-}
-
-function Chip({ text }: any) {
-  return (
-    <div className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold text-gray-700">
-      {text}
     </div>
   );
 }

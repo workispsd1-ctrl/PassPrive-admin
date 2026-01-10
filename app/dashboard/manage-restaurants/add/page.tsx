@@ -19,14 +19,33 @@ const DAYS = [
   "Friday",
   "Saturday",
   "Sunday",
-];
+] as const;
 
-type DayHours = {
-  open: string;
-  close: string;
-};
+type DayHours = { open: string; close: string };
 
 const PARTNER_ROLE = "restaurantpartner" as const;
+
+// ✅ change this if you deploy backend
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+async function getAccessToken() {
+  const { data, error } = await supabaseBrowser.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+  return token;
+}
 
 export default function AddRestaurantPage() {
   const router = useRouter();
@@ -35,7 +54,7 @@ export default function AddRestaurantPage() {
   const [foodImages, setFoodImages] = useState<File[]>([]);
   const [ambienceImages, setAmbienceImages] = useState<File[]>([]);
 
-  // ✅ NEW: partner auth credentials (like your admin page)
+  // partner credentials
   const [partnerEmail, setPartnerEmail] = useState("");
   const [partnerPassword, setPartnerPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -53,6 +72,12 @@ export default function AddRestaurantPage() {
     facilities: "",
     highlights: "",
     worth_visit: "",
+    latitude: "",
+    longitude: "",
+    booking_enabled: true,
+    avg_duration_minutes: "90",
+    max_bookings_per_slot: "",
+    advance_booking_days: "30",
   });
 
   const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(
@@ -64,12 +89,10 @@ export default function AddRestaurantPage() {
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  ) => setForm({ ...form, [e.target.name]: e.target.value });
 
   /* ---------------------------------------------
-     IMAGE UPLOAD
+     IMAGE UPLOAD (still direct to storage)
   --------------------------------------------- */
   const uploadImages = async (
     restaurantId: string,
@@ -79,8 +102,10 @@ export default function AddRestaurantPage() {
     const urls: string[] = [];
 
     for (const file of files) {
-      const ext = file.name.split(".").pop();
-      const path = `${type}/${restaurantId}/${Date.now()}.${ext}`;
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${type}/${restaurantId}/${Date.now()}-${Math.random()
+        .toString(16)
+        .slice(2)}.${ext}`;
 
       const { error } = await supabaseBrowser.storage
         .from("restaurants")
@@ -99,6 +124,77 @@ export default function AddRestaurantPage() {
   };
 
   /* ---------------------------------------------
+     BACKEND: CREATE PARTNER USER (auth.ts does auth + users insert)
+  --------------------------------------------- */
+  const createPartnerViaBackend = async ({
+    email,
+    password,
+    full_name,
+    phone,
+    role,
+  }: {
+    email: string;
+    password: string;
+    full_name?: string;
+    phone?: string;
+    role: string;
+  }) => {
+    const res = await fetch(`${API_BASE}/api/auth/create-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, full_name, phone, role }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || "Failed to create partner user");
+
+    return json.user as { id: string; email: string; role: string };
+  };
+
+  /* ---------------------------------------------
+     BACKEND: CREATE RESTAURANT
+  --------------------------------------------- */
+  const createRestaurantViaBackend = async (payload: any) => {
+    const token = await getAccessToken();
+
+    const res = await fetch(`${API_BASE}/api/restaurants`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`, // ✅ required (admin-only create)
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || "Failed to create restaurant");
+
+    // backend returns { restaurant }
+    return json.restaurant as { id: string };
+  };
+
+  /* ---------------------------------------------
+     BACKEND: UPDATE RESTAURANT (images, etc.)
+  --------------------------------------------- */
+  const updateRestaurantViaBackend = async (id: string, patch: any) => {
+    const token = await getAccessToken();
+
+    const res = await fetch(`${API_BASE}/api/restaurants/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`, // ✅ required (admin or owner partner)
+      },
+      body: JSON.stringify(patch),
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || "Failed to update restaurant");
+
+    return json.item;
+  };
+
+  /* ---------------------------------------------
      SUBMIT
   --------------------------------------------- */
   const handleSubmit = async () => {
@@ -106,21 +202,12 @@ export default function AddRestaurantPage() {
       showToast({ type: "error", title: "Restaurant name is required" });
       return;
     }
-
-    // ✅ NEW: partner credentials required
     if (!partnerEmail || !partnerPassword) {
-      showToast({
-        type: "error",
-        title: "Partner Email & Password are required",
-      });
+      showToast({ type: "error", title: "Partner Email & Password are required" });
       return;
     }
-
     if (partnerPassword.length < 6) {
-      showToast({
-        type: "error",
-        title: "Password must be at least 6 characters",
-      });
+      showToast({ type: "error", title: "Password must be at least 6 characters" });
       return;
     }
 
@@ -129,138 +216,99 @@ export default function AddRestaurantPage() {
     let createdRestaurantId: string | null = null;
 
     try {
-      const formattedOpeningHours: Record<string, string> = {};
+      // opening_hours jsonb
+      const formattedOpeningHours: Record<string, { open: string; close: string }> = {};
       Object.entries(openingHours).forEach(([day, time]) => {
         if (time.open && time.close) {
-          formattedOpeningHours[day] = `${time.open} - ${time.close}`;
+          formattedOpeningHours[day.toLowerCase()] = { open: time.open, close: time.close };
         }
       });
 
-      // 0) Save current admin session (so we can restore it if signUp switches session)
-      const { data: adminSessionBefore } =
-        await supabaseBrowser.auth.getSession();
+      // slug
+      const baseSlug = slugify(`${form.name} ${form.area || ""} ${form.city || ""}`);
+      const slug = baseSlug || slugify(form.name);
 
-      // 1) Create restaurant (unchanged)
-      const { data: restaurant, error } = await supabaseBrowser
-        .from("restaurants")
-        .insert({
-          name: form.name,
-          phone: form.phone || null,
-          city: form.city || null,
-          area: form.area || null,
-          full_address: form.full_address || null,
-          cuisines: form.cuisines
-            ? form.cuisines.split(",").map((v) => v.trim())
-            : [],
-          cost_for_two: form.cost_for_two ? Number(form.cost_for_two) : null,
-          distance: form.distance ? Number(form.distance) : null,
-          offer: form.offer || null,
-          facilities: form.facilities
-            ? form.facilities.split(",").map((v) => v.trim())
-            : [],
-          highlights: form.highlights
-            ? form.highlights.split(",").map((v) => v.trim())
-            : [],
-          worth_visit: form.worth_visit
-            ? form.worth_visit.split(",").map((v) => v.trim())
-            : [],
-          opening_hours: formattedOpeningHours,
-          food_images: [],
-          ambience_images: [],
-          reviews: [],
-          menu: [],
-          is_active: true,
-        })
-        .select()
-        .single();
+      // 1) Create partner first (auth.ts handles auth + users table)
+      const partner = await createPartnerViaBackend({
+        email: partnerEmail,
+        password: partnerPassword,
+        full_name: form.name,
+        phone: form.phone || undefined,
+        role: PARTNER_ROLE,
+      });
 
-      if (error) throw error;
+      // 2) Create restaurant via backend (admin-only)
+      const restaurant = await createRestaurantViaBackend({
+        name: form.name,
+        phone: form.phone || null,
+        city: form.city || null,
+        area: form.area || null,
+        full_address: form.full_address || null,
+
+        cuisines: form.cuisines ? form.cuisines.split(",").map((v) => v.trim()) : [],
+        cost_for_two: form.cost_for_two ? Number(form.cost_for_two) : null,
+        distance: form.distance ? Number(form.distance) : null,
+        offer: form.offer || null,
+
+        facilities: form.facilities ? form.facilities.split(",").map((v) => v.trim()) : [],
+        highlights: form.highlights ? form.highlights.split(",").map((v) => v.trim()) : [],
+        worth_visit: form.worth_visit ? form.worth_visit.split(",").map((v) => v.trim()) : [],
+
+        opening_hours: formattedOpeningHours,
+        reviews: [],
+        menu: [],
+
+        food_images: [],
+        ambience_images: [],
+        cover_image: null,
+
+        is_active: true,
+
+        slug,
+        latitude: form.latitude ? Number(form.latitude) : null,
+        longitude: form.longitude ? Number(form.longitude) : null,
+        booking_enabled: Boolean(form.booking_enabled),
+        avg_duration_minutes: form.avg_duration_minutes ? Number(form.avg_duration_minutes) : 90,
+        max_bookings_per_slot: form.max_bookings_per_slot ? Number(form.max_bookings_per_slot) : null,
+        advance_booking_days: form.advance_booking_days ? Number(form.advance_booking_days) : 30,
+
+        owner_user_id: partner.id, // ✅ link owner at creation
+      });
 
       createdRestaurantId = restaurant.id;
 
-      // 2) Upload images (unchanged)
+      // 3) Upload images to storage
       const foodUrls = await uploadImages(restaurant.id, foodImages, "food");
-      const ambienceUrls = await uploadImages(
-        restaurant.id,
-        ambienceImages,
-        "ambience"
-      );
+      const ambienceUrls = await uploadImages(restaurant.id, ambienceImages, "ambience");
+      const coverImage = foodUrls[0] || ambienceUrls[0] || null;
 
-      await supabaseBrowser
-        .from("restaurants")
-        .update({
-          food_images: foodUrls,
-          ambience_images: ambienceUrls,
-        })
-        .eq("id", restaurant.id);
-
-      // 3) Create AUTH user for restaurant partner (frontend, like your admin page)
-      const { data: signUpData, error: signUpError } =
-        await supabaseBrowser.auth.signUp({
-          email: partnerEmail,
-          password: partnerPassword,
-          options: {
-            data: {
-              role: PARTNER_ROLE,
-              full_name: form.name, // partner name
-              phone: form.phone || null,
-              restaurant_id: restaurant.id, // optional metadata (useful later)
-            },
-            // emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-
-      if (signUpError) throw new Error(signUpError.message);
-
-      const partnerUserId = signUpData?.user?.id;
-      if (!partnerUserId) throw new Error("Partner user id not returned");
-
-      // 4) Insert into public.users (manual, no trigger)
-      // ⚠️ Will fail if your RLS doesn't allow it (see note above)
-      const { error: userInsertErr } = await supabaseBrowser
-        .from("users")
-        .insert({
-          id: partnerUserId,
-          email: partnerEmail,
-          full_name: form.name || null,
-          phone: form.phone || null,
-          role: PARTNER_ROLE,
-          profile_image: null,
-          gender: null,
-          dob: null,
-        });
-
-      if (userInsertErr) {
-        throw new Error(
-          `Failed inserting into public.users: ${userInsertErr.message}. ` +
-            `If email confirmation is ON, signUp may not create a session and RLS may block this insert.`
-        );
-      }
-
-      // 5) Restore admin session if signUp switched auth session
-      if (signUpData?.session && adminSessionBefore?.session) {
-        await supabaseBrowser.auth.setSession({
-          access_token: adminSessionBefore.session.access_token,
-          refresh_token: adminSessionBefore.session.refresh_token,
-        });
-      }
+      // 4) Update restaurant images via backend
+      await updateRestaurantViaBackend(restaurant.id, {
+        food_images: foodUrls,
+        ambience_images: ambienceUrls,
+        cover_image: coverImage,
+      });
 
       showToast({
         type: "success",
         title: "Restaurant added successfully",
-        description: "Partner account created with role restaurantpartner.",
+        description: "Partner account created and linked successfully.",
       });
 
       router.push("/dashboard/manage-restaurants");
     } catch (err: any) {
       console.error(err);
 
-      // Optional cleanup: delete restaurant if something failed after creation
+      // Optional cleanup: if restaurant created but later failed
+      // (this will work only if current token has delete permissions)
       if (createdRestaurantId) {
-        await supabaseBrowser
-          .from("restaurants")
-          .delete()
-          .eq("id", createdRestaurantId);
+        try {
+          const token = await getAccessToken();
+          await fetch(`${API_BASE}/api/restaurants/${createdRestaurantId}?hard=true`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch {}
       }
 
       showToast({
@@ -268,9 +316,9 @@ export default function AddRestaurantPage() {
         title: "Failed to add restaurant",
         description: err?.message || "Something went wrong",
       });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   /* ---------------------------------------------
@@ -314,43 +362,18 @@ export default function AddRestaurantPage() {
           Basic Information
         </h2>
 
-        <Input
-          className={inputClass}
-          name="name"
-          placeholder="Restaurant name"
-          onChange={handleChange}
-        />
-        <Input
-          className={inputClass}
-          name="phone"
-          placeholder="Phone number"
-          onChange={handleChange}
-        />
+        <Input className={inputClass} name="name" placeholder="Restaurant name" onChange={handleChange} />
+        <Input className={inputClass} name="phone" placeholder="Phone number" onChange={handleChange} />
 
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            className={inputClass}
-            name="city"
-            placeholder="City"
-            onChange={handleChange}
-          />
-          <Input
-            className={inputClass}
-            name="area"
-            placeholder="Area"
-            onChange={handleChange}
-          />
+          <Input className={inputClass} name="city" placeholder="City" onChange={handleChange} />
+          <Input className={inputClass} name="area" placeholder="Area" onChange={handleChange} />
         </div>
 
-        <Textarea
-          className={inputClass}
-          name="full_address"
-          placeholder="Full address"
-          onChange={handleChange}
-        />
+        <Textarea className={inputClass} name="full_address" placeholder="Full address" onChange={handleChange} />
       </section>
 
-      {/* ✅ NEW: PARTNER AUTH CREDENTIALS (minimal add, like your admin page) */}
+      {/* PARTNER AUTH CREDENTIALS */}
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">
           Restaurant Partner Login
@@ -391,32 +414,12 @@ export default function AddRestaurantPage() {
           Cuisine & Cost
         </h2>
 
-        <Input
-          className={inputClass}
-          name="cuisines"
-          placeholder="Cuisines (comma separated)"
-          onChange={handleChange}
-        />
+        <Input className={inputClass} name="cuisines" placeholder="Cuisines (comma separated)" onChange={handleChange} />
 
         <div className="grid grid-cols-3 gap-4">
-          <Input
-            className={inputClass}
-            name="cost_for_two"
-            placeholder="Cost for two"
-            onChange={handleChange}
-          />
-          <Input
-            className={inputClass}
-            name="distance"
-            placeholder="Distance (km)"
-            onChange={handleChange}
-          />
-          <Input
-            className={inputClass}
-            name="offer"
-            placeholder="Offer (optional)"
-            onChange={handleChange}
-          />
+          <Input className={inputClass} name="cost_for_two" placeholder="Cost for two" onChange={handleChange} />
+          <Input className={inputClass} name="distance" placeholder="Distance (km) (temp)" onChange={handleChange} />
+          <Input className={inputClass} name="offer" placeholder="Offer (optional)" onChange={handleChange} />
         </div>
       </section>
 
@@ -431,31 +434,20 @@ export default function AddRestaurantPage() {
           type="file"
           multiple
           accept="image/*"
-          onChange={(e) =>
-            setFoodImages([...foodImages, ...(e.target.files || [])])
-          }
+          onChange={(e) => setFoodImages([...foodImages, ...(e.target.files || [])])}
         />
-        <ImagePreviewGrid
-          files={foodImages}
-          onRemove={(i) =>
-            setFoodImages(foodImages.filter((_, idx) => idx !== i))
-          }
-        />
+        <ImagePreviewGrid files={foodImages} onRemove={(i) => setFoodImages(foodImages.filter((_, idx) => idx !== i))} />
 
         <Input
           className={inputClass}
           type="file"
           multiple
           accept="image/*"
-          onChange={(e) =>
-            setAmbienceImages([...ambienceImages, ...(e.target.files || [])])
-          }
+          onChange={(e) => setAmbienceImages([...ambienceImages, ...(e.target.files || [])])}
         />
         <ImagePreviewGrid
           files={ambienceImages}
-          onRemove={(i) =>
-            setAmbienceImages(ambienceImages.filter((_, idx) => idx !== i))
-          }
+          onRemove={(i) => setAmbienceImages(ambienceImages.filter((_, idx) => idx !== i))}
         />
       </section>
 
@@ -465,24 +457,9 @@ export default function AddRestaurantPage() {
           Features
         </h2>
 
-        <Textarea
-          className={inputClass}
-          name="facilities"
-          placeholder="Facilities (comma separated)"
-          onChange={handleChange}
-        />
-        <Textarea
-          className={inputClass}
-          name="highlights"
-          placeholder="Highlights (comma separated)"
-          onChange={handleChange}
-        />
-        <Textarea
-          className={inputClass}
-          name="worth_visit"
-          placeholder="Why worth visiting"
-          onChange={handleChange}
-        />
+        <Textarea className={inputClass} name="facilities" placeholder="Facilities (comma separated)" onChange={handleChange} />
+        <Textarea className={inputClass} name="highlights" placeholder="Highlights (comma separated)" onChange={handleChange} />
+        <Textarea className={inputClass} name="worth_visit" placeholder="Why worth visiting" onChange={handleChange} />
       </section>
 
       {/* OPENING HOURS */}
@@ -522,11 +499,7 @@ export default function AddRestaurantPage() {
 
       {/* ACTIONS */}
       <div className="flex justify-end gap-3 pt-6">
-        <Button
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={loading}
-        >
+        <Button variant="outline" onClick={() => router.back()} disabled={loading}>
           Cancel
         </Button>
         <Button

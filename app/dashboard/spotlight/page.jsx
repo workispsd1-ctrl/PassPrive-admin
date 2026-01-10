@@ -12,7 +12,7 @@ export default function SpotlightAdminPage() {
   const isEditing = !!editingItem;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-full bg-white">
       {/* Top header */}
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">

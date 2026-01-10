@@ -225,7 +225,7 @@ export default function SeminarPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-white">
+      <div className="min-h-full bg-white">
         {/* Add button */}
         <div className="bg-white">
           <button
