@@ -37,17 +37,11 @@ import {
   Phone,
 } from "lucide-react";
 
-import * as XLSX from "xlsx";
-
-
-
-
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
 
-const inputClass =
-  "border border-gray-300 focus:border-gray-400 focus:ring-0";
+const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
 
 async function getAccessToken() {
   const { data, error } = await supabaseBrowser.auth.getSession();
@@ -57,25 +51,25 @@ async function getAccessToken() {
   return token;
 }
 
-function safeArray(v) {
+function safeArray(v: any) {
   return Array.isArray(v) ? v : [];
 }
 
-function normalizeHeader(s) {
+function normalizeHeader(s: any) {
   return String(s || "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "_");
 }
 
-function pick(obj, keys) {
+function pick(obj: any, keys: string[]) {
   for (const k of keys) {
     if (obj?.[k] != null && String(obj[k]).trim() !== "") return obj[k];
   }
   return "";
 }
 
-function formatDate(d) {
+function formatDate(d: any) {
   if (!d) return "-";
   try {
     const date = new Date(d);
@@ -86,7 +80,7 @@ function formatDate(d) {
   }
 }
 
-function StatusPill({ active, label }) {
+function StatusPill({ active, label }: { active: boolean; label: string }) {
   return (
     <span
       className={[
@@ -107,7 +101,15 @@ function StatusPill({ active, label }) {
   );
 }
 
-function Chip({ icon: Icon, label, value }) {
+function Chip({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
       <div className="rounded-lg bg-gray-50 p-2">
@@ -121,35 +123,59 @@ function Chip({ icon: Icon, label, value }) {
   );
 }
 
-function SectionTitle({ title, subtitle, right }) {
+function SectionTitle({
+  title,
+  subtitle,
+  right,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div>
         <div className="text-sm font-semibold text-gray-900">{title}</div>
-        {subtitle ? (
-          <div className="mt-1 text-xs text-gray-500">{subtitle}</div>
-        ) : null}
+        {subtitle ? <div className="mt-1 text-xs text-gray-500">{subtitle}</div> : null}
       </div>
       {right ? <div>{right}</div> : null}
     </div>
   );
 }
 
+type PlanRow = {
+  id: string;
+  plan_name: string;
+  amount: string;
+  type: string;
+  sort_order: number;
+};
+
+type EmployeeRow = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  department?: string;
+  designation?: string;
+  plan?: string; // ✅ optional per-row plan name (Excel)
+};
+
 export default function CorporateDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const id = String(params?.id || "");
+  const id = String((params as any)?.id || "");
 
   const [loading, setLoading] = useState(true);
-  const [corporate, setCorporate] = useState(null);
+  const [corporate, setCorporate] = useState<any>(null);
 
   // Employees pagination (local from jsonb)
   const [empPage, setEmpPage] = useState(1);
   const [empLimit, setEmpLimit] = useState(10);
 
   // modals
-  const [infoEmp, setInfoEmp] = useState(null);
-  const [confirmDeleteEmp, setConfirmDeleteEmp] = useState(null);
+  const [infoEmp, setInfoEmp] = useState<any>(null);
+  const [confirmDeleteEmp, setConfirmDeleteEmp] = useState<any>(null);
   const [deletingEmp, setDeletingEmp] = useState(false);
 
   // Add employees (single / multi)
@@ -157,21 +183,27 @@ export default function CorporateDetailPage() {
   const [creating, setCreating] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
 
-  const [newEmployees, setNewEmployees] = useState([
+  // ✅ Plans + membership selection
+  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [selectedPlanName, setSelectedPlanName] = useState("");
+  const [membershipStart, setMembershipStart] = useState("");
+  const [membershipExpiry, setMembershipExpiry] = useState("");
+
+  const [newEmployees, setNewEmployees] = useState<EmployeeRow[]>([
     { name: "", email: "", phone: "", password: "", department: "", designation: "" },
   ]);
 
   // Excel upload
   const [openUpload, setOpenUpload] = useState(false);
   const [excelFileName, setExcelFileName] = useState("");
-  const [excelRows, setExcelRows] = useState([]);
+  const [excelRows, setExcelRows] = useState<EmployeeRow[]>([]);
   const [parsingExcel, setParsingExcel] = useState(false);
-  const fileInputRef = useRef(null);
-const [excelError, setExcelError] = useState("");
-
+  const [excelError, setExcelError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const employees = useMemo(() => {
-    return safeArray(corporate?.employees).map((e) => ({
+    return safeArray(corporate?.employees).map((e: any) => ({
       role: "user",
       ...e,
     }));
@@ -207,7 +239,7 @@ const [excelError, setExcelError] = useState("");
     } else {
       setCorporate({
         ...(data || {}),
-        employees: safeArray(data?.employees),
+        employees: safeArray((data as any)?.employees),
       });
     }
 
@@ -223,89 +255,147 @@ const [excelError, setExcelError] = useState("");
     if (empPage > totalEmpPages) setEmpPage(totalEmpPages);
   }, [empPage, totalEmpPages]);
 
-  const formatLocation = (c) => {
+  const formatLocation = (c: any) => {
     const parts = [c?.area, c?.city].filter(Boolean);
     return parts.length ? parts.join(", ") : "-";
   };
 
-  /* -----------------------------
-     BACKEND: BULK CREATE EMPLOYEES
-  ----------------------------- */
-  const createEmployeesViaBackend = async (rows) => {
-  const token = await getAccessToken();
+  // ✅ Load plans from subscription table
+  useEffect(() => {
+    const loadPlans = async () => {
+      const { data, error } = await supabaseBrowser
+        .from("subscription")
+        .select("id,plan_name,amount,type,sort_order")
+        .order("sort_order", { ascending: true });
 
-  // 1) Create auth + users rows (bulk)
-  const res = await fetch(`${API_BASE}/api/auth/create-user`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      users: rows.map((r) => ({
-        email: r.email,
-        password: r.password,
-        full_name: r.name,
-        phone: r.phone,
-        role: "user", // ✅ employee role
-      })),
-    }),
-  });
+      if (error) {
+        showToast({
+          type: "error",
+          title: "Failed to load plans",
+          description: error.message,
+        });
+        setPlans([]);
+        return;
+      }
+      setPlans((data as any) || []);
+    };
 
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error || "Failed to create employees");
+    loadPlans();
+  }, []);
 
-  const createdUsers = Array.isArray(json?.created) ? json.created : [];
-  const failedUsers = Array.isArray(json?.failed) ? json.failed : [];
-
-  // 2) Append to corporate.employees jsonb
-  if (createdUsers.length) {
-    // map email -> department/designation from input
-    const extraByEmail = new Map(
-      rows.map((r) => [String(r.email || "").toLowerCase(), r])
-    );
-
-    const employeesPayload = createdUsers.map((u) => {
-      const email = String(u.email || "").toLowerCase();
-      const extra = extraByEmail.get(email) || {};
-      return {
-        user_id: u.id,
-        name: u.full_name || extra.name || "",
-        email: u.email,
-        phone: u.phone || extra.phone || "",
-        department: extra.department || null,
-        designation: extra.designation || null,
-        created_at: u.created_at || new Date().toISOString(),
-      };
-    });
-
-    const res2 = await fetch(`${API_BASE}/api/corporates/${id}/employees`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ employees: employeesPayload }),
-    });
-
-    const json2 = await res2.json();
-    if (!res2.ok) throw new Error(json2?.error || "Failed to update corporate employees");
-  }
-
-  return {
-    created: createdUsers,
-    failed: failedUsers,
-  };
-};
-
-
-  const validateEmployeeRow = (e) => {
+  const validateEmployeeRow = (e: any) => {
     if (!String(e?.name || "").trim()) return "Name is required";
     if (!String(e?.email || "").trim()) return "Email is required";
     if (!String(e?.password || "").trim()) return "Password is required";
     if (String(e.password).trim().length < 6) return "Password must be at least 6 chars";
     if (!String(e?.phone || "").trim()) return "Phone is required";
     return "";
+  };
+
+  const resetMembershipPickers = () => {
+    setSelectedPlanId("");
+    setSelectedPlanName("");
+    setMembershipStart("");
+    setMembershipExpiry("");
+  };
+
+  /* -----------------------------
+     BACKEND: BULK CREATE EMPLOYEES
+     - sends membership + corporate fields to /auth/create-user
+  ----------------------------- */
+  const createEmployeesViaBackend = async (rows: EmployeeRow[]) => {
+    const token = await getAccessToken();
+
+    // Map plan_name -> plan row
+    const planByName = new Map(
+      plans.map((p) => [String(p.plan_name || "").toLowerCase(), p])
+    );
+
+    const usersPayload = rows.map((r) => {
+      // Priority: Excel row plan name -> dropdown plan -> null
+      let planName = selectedPlanName || "";
+      const rowPlanName = String((r as any).plan || "").trim();
+      if (rowPlanName) planName = rowPlanName;
+
+      // If planName matches DB plan, normalize to DB plan_name (clean)
+      const found = planByName.get(planName.toLowerCase());
+      if (found) planName = found.plan_name;
+
+      return {
+        email: String(r.email || "").trim(),
+        password: String(r.password || "").trim(),
+        full_name: String(r.name || "").trim(),
+        phone: String(r.phone || "").trim(),
+        role: "user",
+
+        // ✅ users table membership fields
+        membership: planName ? planName : null,
+        membership_tier: planName ? planName : "none",
+        membership_started: membershipStart || null,
+        membership_expiry: membershipExpiry || null,
+
+        // ✅ corporate fields
+        corporate_code: id,
+        corporate_code_status: "approved",
+      };
+    });
+
+    // Optional: require plan for creation (uncomment if needed)
+    // if (!selectedPlanId && !selectedPlanName && !rows.some((r: any) => String(r.plan || "").trim())) {
+    //   throw new Error("Please select a plan (or include plan column in Excel)");
+    // }
+
+    // 1) Create auth + users rows (bulk)
+    const res = await fetch(`${API_BASE}/api/auth/create-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ users: usersPayload }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || "Failed to create employees");
+
+    const createdUsers = Array.isArray(json?.created) ? json.created : [];
+    const failedUsers = Array.isArray(json?.failed) ? json.failed : [];
+
+    // 2) Append to corporate.employees jsonb
+    if (createdUsers.length) {
+      const extraByEmail = new Map(
+        rows.map((r) => [String(r.email || "").toLowerCase(), r])
+      );
+
+      const employeesPayload = createdUsers.map((u: any) => {
+        const email = String(u.email || "").toLowerCase();
+        const extra = extraByEmail.get(email) || ({} as any);
+
+        return {
+          user_id: u.id,
+          name: u.full_name || extra.name || "",
+          email: u.email,
+          phone: u.phone || extra.phone || "",
+          department: extra.department || null,
+          designation: extra.designation || null,
+          created_at: u.created_at || new Date().toISOString(),
+        };
+      });
+
+      const res2 = await fetch(`${API_BASE}/api/corporates/${id}/employees`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ employees: employeesPayload }),
+      });
+
+      const json2 = await res2.json();
+      if (!res2.ok) throw new Error(json2?.error || "Failed to update corporate employees");
+    }
+
+    return { created: createdUsers, failed: failedUsers };
   };
 
   const handleCreateEmployees = async () => {
@@ -334,6 +424,13 @@ const [excelError, setExcelError] = useState("");
       }
     }
 
+    // Require plan selection if no excel plan per row
+    const hasAnyRowPlan = cleaned.some((r: any) => String(r.plan || "").trim());
+    if (!hasAnyRowPlan && !selectedPlanId) {
+      showToast({ type: "error", title: "Please select a plan" });
+      return;
+    }
+
     setCreating(true);
     try {
       const result = await createEmployeesViaBackend(cleaned);
@@ -348,8 +445,9 @@ const [excelError, setExcelError] = useState("");
       setNewEmployees([
         { name: "", email: "", phone: "", password: "", department: "", designation: "" },
       ]);
+      resetMembershipPickers();
       await fetchCorporate();
-    } catch (err) {
+    } catch (err: any) {
       showToast({
         type: "error",
         title: "Failed to create employees",
@@ -362,66 +460,71 @@ const [excelError, setExcelError] = useState("");
 
   /* -----------------------------
      EXCEL PARSING
+     - supports optional plan / plan_name
   ----------------------------- */
-  const parseExcel = async (file) => {
-  setParsingExcel(true);
-  setExcelError("");
+  const parseExcel = async (file: File) => {
+    setParsingExcel(true);
+    setExcelError("");
 
-  try {
-    // ✅ dynamic import prevents Next bundler issues
-    const XLSX = await import("xlsx");
+    try {
+      const XLSX = await import("xlsx");
 
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
 
-    const sheetName = wb.SheetNames?.[0];
-    if (!sheetName) throw new Error("No sheet found in this file");
+      const sheetName = wb.SheetNames?.[0];
+      if (!sheetName) throw new Error("No sheet found in this file");
 
-    const ws = wb.Sheets[sheetName];
-    const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      const ws = wb.Sheets[sheetName];
+      const raw: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
-    const mapped = raw
-      .map((r) => {
-        const normalized = {};
-        Object.keys(r || {}).forEach((k) => {
-          normalized[normalizeHeader(k)] = r[k];
-        });
+      const mapped: EmployeeRow[] = raw
+        .map((r) => {
+          const normalized: any = {};
+          Object.keys(r || {}).forEach((k) => {
+            normalized[normalizeHeader(k)] = (r as any)[k];
+          });
 
-        const name = String(pick(normalized, ["name", "full_name", "employee_name"])).trim();
-        const email = String(pick(normalized, ["email", "mail"])).trim();
-        const phone = String(pick(normalized, ["phone", "mobile", "whatsapp"])).trim();
-        const password = String(pick(normalized, ["password", "pass"])).trim();
+          const name = String(pick(normalized, ["name", "full_name", "employee_name"])).trim();
+          const email = String(pick(normalized, ["email", "mail"])).trim();
+          const phone = String(pick(normalized, ["phone", "mobile", "whatsapp"])).trim();
+          const password = String(pick(normalized, ["password", "pass"])).trim();
 
-        const department = String(pick(normalized, ["department", "dept"])).trim();
-        const designation = String(pick(normalized, ["designation", "title"])).trim();
+          const department = String(pick(normalized, ["department", "dept"])).trim();
+          const designation = String(pick(normalized, ["designation", "title"])).trim();
 
-        return {
-          name,
-          email,
-          phone,
-          password,
-          department: department || "",
-          designation: designation || "",
-        };
-      })
-      .filter((r) => r.name || r.email || r.phone || r.password);
+          // ✅ optional plan field
+          const plan = String(
+            pick(normalized, ["plan", "plan_name", "membership", "membership_tier"])
+          ).trim();
 
-    if (!mapped.length) {
+          return {
+            name,
+            email,
+            phone,
+            password,
+            department: department || "",
+            designation: designation || "",
+            plan: plan || "",
+          };
+        })
+        .filter((r) => r.name || r.email || r.phone || r.password);
+
+      if (!mapped.length) {
+        setExcelRows([]);
+        setExcelError("No rows found. Check headers: name, email, phone, password (optional: plan).");
+        return;
+      }
+
+      setExcelRows(mapped);
+    } catch (err: any) {
+      console.error(err);
       setExcelRows([]);
-      setExcelError("No rows found. Check headers: name, email, phone, password.");
-      return;
+      setExcelError(err?.message || "Failed to parse Excel file");
+    } finally {
+      setParsingExcel(false);
     }
-
-    setExcelRows(mapped);
-  } catch (err) {
-    console.error(err);
-    setExcelRows([]);
-    setExcelError(err?.message || "Failed to parse Excel file");
-  } finally {
-    setParsingExcel(false);
-  }
-};
-
+  };
 
   const handleUploadCreate = async () => {
     if (!excelRows.length) {
@@ -437,6 +540,12 @@ const [excelError, setExcelError] = useState("");
       }
     }
 
+    const hasAnyRowPlan = excelRows.some((r: any) => String(r.plan || "").trim());
+    if (!hasAnyRowPlan && !selectedPlanId) {
+      showToast({ type: "error", title: "Please select a plan (or include plan column in Excel)" });
+      return;
+    }
+
     setCreating(true);
     try {
       const result = await createEmployeesViaBackend(excelRows);
@@ -450,8 +559,9 @@ const [excelError, setExcelError] = useState("");
       setOpenUpload(false);
       setExcelRows([]);
       setExcelFileName("");
+      resetMembershipPickers();
       await fetchCorporate();
-    } catch (err) {
+    } catch (err: any) {
       showToast({
         type: "error",
         title: "Excel import failed",
@@ -465,7 +575,7 @@ const [excelError, setExcelError] = useState("");
   /* -----------------------------
      DELETE EMPLOYEE
   ----------------------------- */
-  const deleteEmployeeViaBackend = async (userId) => {
+  const deleteEmployeeViaBackend = async (userId: string) => {
     const token = await getAccessToken();
     const res = await fetch(`${API_BASE}/api/corporates/${id}/employees/${userId}`, {
       method: "DELETE",
@@ -489,7 +599,7 @@ const [excelError, setExcelError] = useState("");
       showToast({ type: "success", title: "Employee removed" });
       setConfirmDeleteEmp(null);
       await fetchCorporate();
-    } catch (err) {
+    } catch (err: any) {
       showToast({
         type: "error",
         title: "Failed to remove employee",
@@ -542,11 +652,7 @@ const [excelError, setExcelError] = useState("");
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <Button
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => router.back()}
-                >
+                <Button variant="outline" className="rounded-xl" onClick={() => router.back()}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back
                 </Button>
@@ -556,9 +662,7 @@ const [excelError, setExcelError] = useState("");
                     <div className="rounded-xl bg-gray-50 p-2 border border-gray-200">
                       <Building2 className="h-5 w-5 text-gray-800" />
                     </div>
-                    <div className="text-xl font-semibold text-gray-900">
-                      {corporate.name}
-                    </div>
+                    <div className="text-xl font-semibold text-gray-900">{corporate.name}</div>
                     <StatusPill
                       active={!!corporate.is_active}
                       label={corporate.is_active ? "Active" : "Disabled"}
@@ -591,11 +695,7 @@ const [excelError, setExcelError] = useState("");
                   Add Employees
                 </Button>
 
-                <Button
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => setOpenUpload(true)}
-                >
+                <Button variant="outline" className="rounded-xl" onClick={() => setOpenUpload(true)}>
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Excel
                 </Button>
@@ -624,16 +724,12 @@ const [excelError, setExcelError] = useState("");
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Left: Info */}
                 <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                  <div className="text-xs font-semibold uppercase text-gray-500 mb-3">
-                    Company
-                  </div>
+                  <div className="text-xs font-semibold uppercase text-gray-500 mb-3">Company</div>
 
                   <div className="space-y-2 text-sm text-gray-700">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Name</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {corporate.name}
-                      </span>
+                      <span className="font-semibold text-gray-900 text-right">{corporate.name}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Email</span>
@@ -670,9 +766,7 @@ const [excelError, setExcelError] = useState("");
                   <div className="space-y-2 text-sm text-gray-700">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Plan</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {corporate.plan ?? "-"}
-                      </span>
+                      <span className="font-semibold text-gray-900 text-right">{corporate.plan ?? "-"}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Status</span>
@@ -704,9 +798,7 @@ const [excelError, setExcelError] = useState("");
                   <div className="space-y-2 text-sm text-gray-700">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Total seats</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {String(seats)}
-                      </span>
+                      <span className="font-semibold text-gray-900 text-right">{String(seats)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-500">Employees used</span>
@@ -742,11 +834,7 @@ const [excelError, setExcelError] = useState("");
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => setOpenUpload(true)}
-                  >
+                  <Button variant="outline" className="rounded-xl" onClick={() => setOpenUpload(true)}>
                     <Upload className="h-4 w-4 mr-2" />
                     Import
                   </Button>
@@ -796,8 +884,8 @@ const [excelError, setExcelError] = useState("");
                             No employees found
                           </div>
                           <div className="mt-1 text-xs text-gray-500 max-w-md">
-                            Add employees manually or import from Excel to grant access
-                            under this corporate.
+                            Add employees manually or import from Excel to grant access under this
+                            corporate.
                           </div>
                           <div className="mt-4 flex gap-2">
                             <Button
@@ -820,7 +908,7 @@ const [excelError, setExcelError] = useState("");
                       </td>
                     </tr>
                   ) : (
-                    employeesPageSlice.map((e, idx) => {
+                    employeesPageSlice.map((e: any, idx: number) => {
                       const userId = String(e.user_id || "");
                       return (
                         <tr
@@ -832,9 +920,7 @@ const [excelError, setExcelError] = useState("");
                         >
                           <td className="px-4 py-4 font-semibold text-gray-900">
                             {e.name ?? "-"}
-                            <div className="mt-1 text-xs text-gray-500">
-                              {e.designation ?? ""}
-                            </div>
+                            <div className="mt-1 text-xs text-gray-500">{e.designation ?? ""}</div>
                           </td>
                           <td className="px-4 py-4">{e.email ?? "-"}</td>
                           <td className="px-4 py-4">{e.phone ?? "-"}</td>
@@ -905,7 +991,13 @@ const [excelError, setExcelError] = useState("");
       </div>
 
       {/* ------------------- ADD EMPLOYEES MODAL ------------------- */}
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      <Dialog
+        open={openAdd}
+        onOpenChange={(v) => {
+          setOpenAdd(v);
+          if (!v) resetMembershipPickers();
+        }}
+      >
         <DialogContent className="sm:max-w-4xl bg-white border-gray-300">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -915,7 +1007,52 @@ const [excelError, setExcelError] = useState("");
           </DialogHeader>
 
           <div className="space-y-4">
-          
+            {/* ✅ Plan + dates */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="md:col-span-2">
+                <label className="text-xs font-semibold text-gray-600">Plan</label>
+                <select
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm focus:outline-none"
+                  value={selectedPlanId}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    setSelectedPlanId(pid);
+                    const p = plans.find((x) => x.id === pid);
+                    setSelectedPlanName(p?.plan_name || "");
+                  }}
+                >
+                  <option value="">Select plan</option>
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.plan_name} • {p.type} • ₹{p.amount}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-1 text-[11px] text-gray-500">
+                  Applies to all employees (unless Excel row has its own plan).
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Start</label>
+                <Input
+                  className={inputClass}
+                  type="date"
+                  value={membershipStart}
+                  onChange={(e) => setMembershipStart(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Expiry</label>
+                <Input
+                  className={inputClass}
+                  type="date"
+                  value={membershipExpiry}
+                  onChange={(e) => setMembershipExpiry(e.target.value)}
+                />
+              </div>
+            </div>
 
             <div className="flex justify-end">
               <Button
@@ -935,14 +1072,9 @@ const [excelError, setExcelError] = useState("");
 
             <div className="space-y-3 max-h-[55vh] overflow-auto pr-1">
               {newEmployees.map((row, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-2xl border border-gray-200 p-4 bg-white"
-                >
+                <div key={idx} className="rounded-2xl border border-gray-200 p-4 bg-white">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="text-sm font-semibold text-gray-900">
-                      Employee #{idx + 1}
-                    </div>
+                    <div className="text-sm font-semibold text-gray-900">Employee #{idx + 1}</div>
 
                     <div className="flex items-center gap-2">
                       {idx === 0 ? (
@@ -958,9 +1090,7 @@ const [excelError, setExcelError] = useState("");
                       {newEmployees.length > 1 && (
                         <button
                           className="text-gray-500 hover:text-gray-800"
-                          onClick={() =>
-                            setNewEmployees((prev) => prev.filter((_, i) => i !== idx))
-                          }
+                          onClick={() => setNewEmployees((prev) => prev.filter((_, i) => i !== idx))}
                           type="button"
                           title="Remove row"
                         >
@@ -977,9 +1107,7 @@ const [excelError, setExcelError] = useState("");
                       value={row.name}
                       onChange={(e) => {
                         const v = e.target.value;
-                        setNewEmployees((prev) =>
-                          prev.map((p, i) => (i === idx ? { ...p, name: v } : p))
-                        );
+                        setNewEmployees((prev) => prev.map((p, i) => (i === idx ? { ...p, name: v } : p)));
                       }}
                     />
 
@@ -1060,12 +1188,7 @@ const [excelError, setExcelError] = useState("");
           </div>
 
           <DialogFooter className="mt-2">
-            <Button
-              variant="outline"
-              className="rounded-xl"
-              onClick={() => setOpenAdd(false)}
-              disabled={creating}
-            >
+            <Button variant="outline" className="rounded-xl" onClick={() => setOpenAdd(false)} disabled={creating}>
               Cancel
             </Button>
             <Button
@@ -1081,153 +1204,178 @@ const [excelError, setExcelError] = useState("");
 
       {/* ------------------- UPLOAD EXCEL MODAL ------------------- */}
       <Dialog
-  open={openUpload}
-  onOpenChange={(v) => {
-    setOpenUpload(v);
-    if (!v) {
-      setExcelRows([]);
-      setExcelFileName("");
-      setExcelError("");
-      setParsingExcel(false);
-      // reset input value so same file can be uploaded again
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }}
->
-  <DialogContent className="sm:max-w-4xl bg-white border-gray-300">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2">
-        <Upload className="h-5 w-5" />
-        Import employees from Excel
-      </DialogTitle>
-    </DialogHeader>
-
-    <div className="space-y-4">
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
-        Supported columns: <b>name</b>, <b>email</b>, <b>phone</b>, <b>password</b>
-        (optional: department, designation)
-      </div>
-
-      {/* ✅ hidden input + button (best for Dialogs) */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls"
-        className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-
-          setExcelFileName(f.name);
-          await parseExcel(f);
-
-          // allow reselecting same file again later
-          e.target.value = "";
+        open={openUpload}
+        onOpenChange={(v) => {
+          setOpenUpload(v);
+          if (!v) {
+            setExcelRows([]);
+            setExcelFileName("");
+            setExcelError("");
+            setParsingExcel(false);
+            resetMembershipPickers();
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }
         }}
-      />
-
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-xl"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Choose Excel file
-        </Button>
-
-        {!!excelFileName && (
-          <div className="text-xs text-gray-600">
-            Selected: <span className="font-semibold">{excelFileName}</span>
-          </div>
-        )}
-      </div>
-
-      {excelError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-          {excelError}
-        </div>
-      ) : null}
-
-      {parsingExcel ? (
-        <div className="text-sm text-gray-600">Parsing file...</div>
-      ) : excelRows.length ? (
-        <div className="rounded-2xl border border-gray-200 overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-indigo-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
-                  NAME
-                </th>
-                <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
-                  EMAIL
-                </th>
-                <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
-                  PHONE
-                </th>
-                <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
-                  DEPT
-                </th>
-                <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
-                  DESIG
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="bg-white divide-y divide-gray-200">
-              {excelRows.slice(0, 12).map((r, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.phone}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.department || "-"}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.designation || "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="p-3 text-xs text-gray-500">
-            Showing first {Math.min(12, excelRows.length)} of {excelRows.length} rows.
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
-          <div className="mx-auto w-fit rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <Upload className="h-6 w-6 text-gray-600" />
-          </div>
-          <div className="mt-3 text-sm font-semibold text-gray-900">
-            Upload your Excel sheet
-          </div>
-          <div className="mt-1 text-xs text-gray-500">
-            We’ll preview the first rows before creating users.
-          </div>
-        </div>
-      )}
-    </div>
-
-    <DialogFooter className="mt-2">
-      <Button
-        variant="outline"
-        className="rounded-xl"
-        onClick={() => setOpenUpload(false)}
-        disabled={creating}
       >
-        Cancel
-      </Button>
+        <DialogContent className="sm:max-w-4xl bg-white border-gray-300">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Import employees from Excel
+            </DialogTitle>
+          </DialogHeader>
 
-      <Button
-        onClick={handleUploadCreate}
-        disabled={creating || parsingExcel || !excelRows.length}
-        className="rounded-xl bg-[#DA3224] hover:bg-[#c92b20] text-white"
-      >
-        {creating ? "Creating..." : "Create From Excel"}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+              Supported columns: <b>name</b>, <b>email</b>, <b>phone</b>, <b>password</b>
+              (optional: department, designation, <b>plan</b>/<b>plan_name</b>)
+            </div>
 
+            {/* ✅ Plan + dates for Excel (applies when row plan missing) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="md:col-span-2">
+                <label className="text-xs font-semibold text-gray-600">Default Plan</label>
+                <select
+                  className="mt-1 h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm focus:outline-none"
+                  value={selectedPlanId}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    setSelectedPlanId(pid);
+                    const p = plans.find((x) => x.id === pid);
+                    setSelectedPlanName(p?.plan_name || "");
+                  }}
+                >
+                  <option value="">Select plan</option>
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.plan_name} • {p.type} • ₹{p.amount}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-1 text-[11px] text-gray-500">
+                  Used if Excel row doesn’t have plan/plan_name.
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Start</label>
+                <Input
+                  className={inputClass}
+                  type="date"
+                  value={membershipStart}
+                  onChange={(e) => setMembershipStart(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Expiry</label>
+                <Input
+                  className={inputClass}
+                  type="date"
+                  value={membershipExpiry}
+                  onChange={(e) => setMembershipExpiry(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* hidden input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+
+                setExcelFileName(f.name);
+                await parseExcel(f);
+
+                e.target.value = "";
+              }}
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Choose Excel file
+              </Button>
+
+              {!!excelFileName && (
+                <div className="text-xs text-gray-600">
+                  Selected: <span className="font-semibold">{excelFileName}</span>
+                </div>
+              )}
+            </div>
+
+            {excelError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                {excelError}
+              </div>
+            ) : null}
+
+            {parsingExcel ? (
+              <div className="text-sm text-gray-600">Parsing file...</div>
+            ) : excelRows.length ? (
+              <div className="rounded-2xl border border-gray-200 overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-indigo-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">NAME</th>
+                      <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">EMAIL</th>
+                      <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">PHONE</th>
+                      <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">DEPT</th>
+                      <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">DESIG</th>
+                      <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">PLAN</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {excelRows.slice(0, 12).map((r, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3 text-sm text-gray-700">{r.name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{r.email}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{r.phone}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{r.department || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{r.designation || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{(r as any).plan || selectedPlanName || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="p-3 text-xs text-gray-500">
+                  Showing first {Math.min(12, excelRows.length)} of {excelRows.length} rows.
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
+                <div className="mx-auto w-fit rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <Upload className="h-6 w-6 text-gray-600" />
+                </div>
+                <div className="mt-3 text-sm font-semibold text-gray-900">Upload your Excel sheet</div>
+                <div className="mt-1 text-xs text-gray-500">
+                  We’ll preview the first rows before creating users.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => setOpenUpload(false)} disabled={creating}>
+              Cancel
+            </Button>
+
+            <Button
+              onClick={handleUploadCreate}
+              disabled={creating || parsingExcel || !excelRows.length}
+              className="rounded-xl bg-[#DA3224] hover:bg-[#c92b20] text-white"
+            >
+              {creating ? "Creating..." : "Create From Excel"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ------------------- EMPLOYEE INFO MODAL ------------------- */}
       <Modal isOpen={!!infoEmp} onClose={() => setInfoEmp(null)}>
@@ -1237,9 +1385,7 @@ const [excelError, setExcelError] = useState("");
               <Users className="h-5 w-5 text-gray-700" />
             </div>
             <div>
-              <div className="text-lg font-semibold text-gray-900">
-                {infoEmp?.name ?? "Employee"}
-              </div>
+              <div className="text-lg font-semibold text-gray-900">{infoEmp?.name ?? "Employee"}</div>
               <div className="text-xs text-gray-500">
                 {infoEmp?.designation ?? "—"} {infoEmp?.department ? `• ${infoEmp.department}` : ""}
               </div>
@@ -1257,15 +1403,11 @@ const [excelError, setExcelError] = useState("");
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-gray-500">User ID</span>
-              <span className="font-mono text-xs text-gray-900">
-                {infoEmp?.user_id ?? "-"}
-              </span>
+              <span className="font-mono text-xs text-gray-900">{infoEmp?.user_id ?? "-"}</span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-gray-500">Created</span>
-              <span className="font-medium text-gray-900">
-                {formatDate(infoEmp?.created_at)}
-              </span>
+              <span className="font-medium text-gray-900">{formatDate(infoEmp?.created_at)}</span>
             </div>
           </div>
         </div>
@@ -1275,21 +1417,14 @@ const [excelError, setExcelError] = useState("");
       <Modal isOpen={!!confirmDeleteEmp} onClose={() => setConfirmDeleteEmp(null)}>
         <div className="p-6">
           <div className="text-lg font-semibold text-gray-900">Remove employee?</div>
-          <div className="mt-1 text-sm text-gray-600">
-            This will unlink the employee from this corporate.
-          </div>
+          <div className="mt-1 text-sm text-gray-600">This will unlink the employee from this corporate.</div>
 
           <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
             This does not permanently delete the auth user unless your backend route does that.
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button
-              variant="outline"
-              className="rounded-xl"
-              onClick={() => setConfirmDeleteEmp(null)}
-              disabled={deletingEmp}
-            >
+            <Button variant="outline" className="rounded-xl" onClick={() => setConfirmDeleteEmp(null)} disabled={deletingEmp}>
               Cancel
             </Button>
             <Button
