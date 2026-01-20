@@ -40,6 +40,7 @@ const pathName: any = {
   "/dashboard/invoices": "Invoices",
   "/dashboard/webhook": "Webhook",
   "/dashboard/offers/new": "Add New Offer",
+  "/dashboard/manage-corporates": "Corporate Management",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {

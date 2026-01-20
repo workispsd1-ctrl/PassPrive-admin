@@ -34,6 +34,7 @@ import {
   Store,
   Spotlight,
   BadgePercent,
+  Building
 } from "lucide-react";
 import Image from "next/image";
 
@@ -79,6 +80,12 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       href: "/dashboard/manage-stores",
       icon: Store,
     },
+    {
+      title: "Corporate Management",
+      href:" /dashboard/manage-corporates",
+      icon: Building,
+    },
+
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
     { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
     { title: "User Management", href: "/dashboard/users", icon: Users },

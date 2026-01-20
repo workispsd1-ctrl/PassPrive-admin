@@ -1,27 +1,20 @@
-// app/dashboard/seminar/page.jsx
+// app/dashboard/seminar/page.tsx
 "use client";
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
 import {
-  Calendar,
-  Mail,
-  Phone,
-  Pencil,
+  Search,
   Trash2,
   Info,
   Edit,
-  View,
   FileText,
-  Download,
-  Archive,
-  Search,
   EyeOff,
   Eye,
 } from "lucide-react";
 import ComingSoon from "@/components/ui/coming-soon";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +32,10 @@ import { exportToExcel } from "@/lib/exportToExcel";
 import PaginationBar from "../_components/Pagination";
 
 const PhoneInput = dynamic(() => import("react-phone-input-2"), { ssr: false });
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 type User = {
   id: string;
@@ -60,15 +57,35 @@ type User = {
   full_name?: string;
 };
 
+async function getAccessToken() {
+  const { data, error } = await supabaseBrowser.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+  return token;
+}
+
+/**
+ * Backend payload for your /api/auth/create-user
+ */
+type CreateUserPayload = {
+  email: string;
+  password: string;
+  full_name?: string;
+  phone?: string;
+  role: string;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [admins, setAdmins] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [isOpenDeleted, setIsOpenDeleted] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
   const [newSem, setNewSem] = useState<User>({
     id: crypto.randomUUID(),
     email: "",
@@ -83,19 +100,19 @@ export default function AdminPage() {
     state: "",
     zipCode: "",
     updated_at: "",
-    role: "", // Initialize role for new admin
+    role: "",
     password: "",
   });
+
   const [saving, setSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const confirmOpen = userToDelete !== null;
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+
   const [isOpen, setIsOpen] = useState(false);
   const [selectedData, setSelectedData] = useState<any>(null);
   const [rowData, setRowData] = useState<any>(null);
+
   const [showPassword, setShowPassword] = useState(false);
   const totalPages = Math.ceil(total / limit);
 
@@ -116,6 +133,7 @@ export default function AdminPage() {
     updated_at: "",
     role: "",
   });
+
   const [deleteRefresh, setDeleteRefresh] = useState<any>(null);
 
   const handleRefresh = () => {
@@ -184,7 +202,7 @@ export default function AdminPage() {
         console.error("Supabase fetch error:", error);
         setError(error.message);
       } else {
-        setAdmins(data as User[]);
+        setAdmins((data as User[]) || []);
         setTotal(count || 0);
       }
     } catch (error: any) {
@@ -225,63 +243,6 @@ export default function AdminPage() {
     );
   }
 
-  async function confirmDelete() {
-    if (!userToDelete) return;
-
-    const userToRemove = userToDelete;
-    setIsDeleting(true);
-
-    setAdmins((prev) => prev.filter((s) => s.id !== userToRemove.id));
-    setUserToDelete(null);
-
-    try {
-      const response = await fetch(
-        "https://pkhjjuyhuwsuulxdavld.supabase.co/functions/v1/delete-user",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: userToRemove.id,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error("Failed to delete user via function:", result);
-        showToast({
-          type: "error",
-          title: "Error",
-          description:
-            result?.message || "Something went wrong during deletion!",
-        });
-
-        setAdmins((prev) => [...prev, userToRemove]);
-      } else {
-        console.log("User deleted successfully:", result);
-        showToast({
-          title: "Success",
-          description: "Admin Deleted!",
-        });
-        handleRefresh();
-      }
-    } catch (error: any) {
-      console.error("Deletion error:", error);
-      showToast({
-        type: "error",
-        title: "Error",
-        description: error.message || "Something went wrong during deletion!",
-      });
-
-      setAdmins((prev) => [...prev, userToRemove]);
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
   const handleEditForm = (user: User) => {
     setEditSem(user);
     setIsEditing(true);
@@ -313,6 +274,49 @@ export default function AdminPage() {
     }
   };
 
+  const formatRole = (role?: string) => {
+    if (!role) return "";
+
+    const map: Record<string, string> = {
+      superadmin: "Super Admin",
+      admin: "Admin",
+      restaurantpartner: "Restaurant Partner",
+      storepartner: "Store Partner",
+      user: "User",
+    };
+
+    return map[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  /**
+   * ✅ NEW: Create user via backend API (instead of supabaseBrowser.auth.signUp on client)
+   */
+  const createUserViaBackend = async (payload: CreateUserPayload) => {
+    const token = await getAccessToken();
+
+    // If your backend route differs, change this:
+    // e.g. `${API_BASE}/api/auth/create-user/create-user`
+    const res = await fetch(`${API_BASE}/api/auth/create-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      throw new Error(json?.error || "Failed to create user");
+    }
+
+    return { status: res.status, json };
+  };
+
+  /**
+   * ✅ UPDATED: now uses backend API
+   */
   const hadleAddNewAdmin = async () => {
     setSaving(true);
     try {
@@ -328,24 +332,29 @@ export default function AdminPage() {
         );
       }
 
-      const { data: signUpData, error: signUpError } =
-        await supabaseBrowser.auth.signUp({
-          email: newSem.email,
-          password: newSem.password,
-          options: {
-            data: {
-              name: newSem.name,
-              phone: newSem.phone,
-              role: newSem.role,
-            },
-            emailRedirectTo: `fb-marketplace-bot.web.app/callback`,
-          },
-        });
+      const { status, json } = await createUserViaBackend({
+        email: newSem.email.trim(),
+        password: newSem.password,
+        full_name: newSem.name?.trim(),
+        phone: newSem.phone,
+        role: newSem.role,
+      });
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
+      // Your backend might return 202 if email confirmation is ON (no session)
+      if (status === 202) {
+        showToast({
+          type: "success",
+          title: "User created",
+          description:
+            json?.message ||
+            "Auth user created. Email confirmation may be enabled — user must confirm email before first login.",
+        });
+      } else {
+        showToast({
+          title: "Success",
+          description: `${formatRole(newSem.role)} created successfully!`,
+        });
       }
-     
 
       setNewSem({
         id: crypto.randomUUID(),
@@ -364,12 +373,8 @@ export default function AdminPage() {
         role: "",
         password: "",
       });
-      setDialogOpen(false);
-      showToast({
-        title: "Success",
-        description: `${formatRole(newSem.role)} created successfully!`,
-      });
 
+      setDialogOpen(false);
       setPage(1);
       handleFetchuser();
     } catch (error: any) {
@@ -423,7 +428,7 @@ export default function AdminPage() {
         description: "Admin Updated!",
       });
       setPage(1);
-      if (page == 1) {
+      if (page === 1) {
         handleFetchuser();
       }
     } catch (error: any) {
@@ -436,21 +441,6 @@ export default function AdminPage() {
       setSaving(false);
     }
   };
-
-const formatRole = (role?: string) => {
-  if (!role) return "";
-
-  const map: Record<string, string> = {
-    superadmin: "Super Admin",
-    admin: "Admin",
-    restaurantpartner: "Restaurant Partner",
-    storepartner: "Store Partner",
-    user: "User",
-  };
-
-  return map[role] ?? role.charAt(0).toUpperCase() + role.slice(1);
-};
-
 
   return (
     <>
@@ -478,7 +468,6 @@ const formatRole = (role?: string) => {
           <button
             onClick={() => {
               setNewSem({
-                // Reset form when opening dialog
                 id: crypto.randomUUID(),
                 email: "",
                 name: "",
@@ -492,7 +481,7 @@ const formatRole = (role?: string) => {
                 state: "",
                 zipCode: "",
                 updated_at: "",
-                role: "", // Reset role
+                role: "",
                 password: "",
               });
               setDialogOpen(true);
@@ -522,38 +511,24 @@ const formatRole = (role?: string) => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-indigo-100">
                 <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Role
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Phone
                   </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
+
               <tbody className="bg-white divide-y divide-gray-200">
                 {admins.map((admmin) => (
                   <tr key={admmin.id} className="hover:bg-gray-50">
@@ -586,6 +561,7 @@ const formatRole = (role?: string) => {
                         >
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
+
                         <button
                           disabled={loading}
                           onClick={() => {
@@ -595,6 +571,7 @@ const formatRole = (role?: string) => {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+
                         <button
                           disabled={loading}
                           onClick={() => {
@@ -611,6 +588,7 @@ const formatRole = (role?: string) => {
                 ))}
               </tbody>
             </table>
+
             <div className="mt-auto">
               <PaginationBar
                 page={page}
@@ -623,6 +601,8 @@ const formatRole = (role?: string) => {
             </div>
           </div>
         )}
+
+        {/* CREATE NEW ADMIN */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-lg bg-white border-gray-300">
             <DialogHeader>
@@ -631,9 +611,7 @@ const formatRole = (role?: string) => {
               </DialogTitle>
             </DialogHeader>
 
-            {/* ─────────────── form fields ─────────────── */}
             <div className="space-y-4">
-              {/* Email ---------------------------------------------------- */}
               <div className="space-y-1">
                 <label className="text-sm font-medium">Email</label>
                 <Input
@@ -646,7 +624,6 @@ const formatRole = (role?: string) => {
                 />
               </div>
 
-              {/* Name ----------------------------------------------------- */}
               <div className="space-y-1">
                 <label className="text-sm font-medium">Name</label>
                 <Input
@@ -660,11 +637,12 @@ const formatRole = (role?: string) => {
                   required
                 />
               </div>
+
               <div className="space-y-1">
                 <label className="text-sm font-medium">Role</label>
                 <select
                   className="w-full h-11 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 px-3"
-                  value={newSem.role || ""} // Ensure value is controlled
+                  value={newSem.role || ""}
                   onChange={(e) =>
                     setNewSem({ ...newSem, role: e.target.value })
                   }
@@ -678,13 +656,12 @@ const formatRole = (role?: string) => {
                 </select>
               </div>
 
-              {/* Phone ----------------------------------------------------- */}
               <div className="space-y-1">
                 <label className="text-sm font-medium">Phone</label>
                 <PhoneInput
                   country="in"
                   value={newSem.phone}
-                  onChange={(val, data: any) => {
+                  onChange={(val) => {
                     const finalVal = val.startsWith("+") ? val : `+${val}`;
                     setNewSem({
                       ...newSem,
@@ -697,7 +674,6 @@ const formatRole = (role?: string) => {
                 />
               </div>
 
-              {/* Password ----------------------------------------------------- */}
               <div className="space-y-1 relative">
                 <label className="text-sm font-medium">Password</label>
                 <div className="relative">
@@ -708,7 +684,7 @@ const formatRole = (role?: string) => {
                       setNewSem({ ...newSem, password: e.target.value })
                     }
                     required
-                    className="pr-10" // ensure space for icon
+                    className="pr-10"
                   />
                   <span
                     className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400"
@@ -720,7 +696,6 @@ const formatRole = (role?: string) => {
               </div>
             </div>
 
-            {/* ─────────────── footer / actions ─────────────── */}
             <DialogFooter className="mt-6">
               <Button
                 variant="outline"
@@ -732,9 +707,7 @@ const formatRole = (role?: string) => {
               </Button>
               <Button
                 disabled={saving}
-                onClick={async () => {
-                  hadleAddNewAdmin();
-                }}
+                onClick={hadleAddNewAdmin}
                 className="bg-blue-600 text-white"
               >
                 {saving ? "Saving…" : "Save"}
@@ -742,218 +715,166 @@ const formatRole = (role?: string) => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <Dialog
-          open={confirmOpen}
-          onOpenChange={(o) => {
-            !o && setUserToDelete(null);
-          }}
-        >
-          <DialogContent className="sm:max-w-sm">
+
+        {/* DELETE CONFIRM MODAL */}
+        <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)}>
+          <h2 className="text-lg font-semibold mb-2">Are you sure?</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsConfirmOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteUser}
+              disabled={loading}
+              className="bg-red-500 hover:bg-600 text-white"
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </Modal>
+
+        {/* DETAILS MODAL */}
+        <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
+          <Card className="max-w-md w-full mx-auto shadow-md border mt-5 p-4 rounded-2xl bg-white">
+            <CardContent className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-800">
+                Admin Details
+              </h2>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-gray-700">
+                <div className="font-medium">Email:</div>
+                <div> {selectedData?.email}</div>
+
+                <div className="font-medium">Name:</div>
+                <div> {selectedData?.name}</div>
+
+                <div className="font-medium">Role:</div>
+                <div>
+                  <span className="flex items-center">
+                    {formatRole(selectedData?.role)}
+                  </span>
+                </div>
+
+                <div className="font-medium">Phone:</div>
+                <div>
+                  <span className="flex items-center">{selectedData?.phone}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Modal>
+
+        {/* EDIT ADMIN */}
+        <Dialog open={isEditing} onOpenChange={setIsEditing}>
+          <DialogContent className="sm:max-w-lg bg-white border-gray-300">
             <DialogHeader>
-              <DialogTitle>Delete Admin?</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                Edit Admin
+              </DialogTitle>
             </DialogHeader>
 
-            <p className="text-sm text-gray-600">
-              This action can’t be undone. The{" "}
-              <span className="font-semibold">
-                {formatRole(userToDelete?.role)}
-              </span>{" "}
-              user will be permanently removed.
-            </p>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Email</label>
+                <Input value={editSem?.email} disabled required />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Name</label>
+                <Input
+                  type="text"
+                  value={editSem?.name}
+                  onChange={(e) => {
+                    setEditSem({
+                      ...editSem,
+                      name: e.target.value,
+                    });
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Role</label>
+                <select
+                  className="w-full h-11 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 px-3"
+                  value={editSem.role || ""}
+                  onChange={(e) =>
+                    setEditSem({ ...editSem, role: e.target.value })
+                  }
+                  required
+                >
+                  <option value="" disabled>
+                    Select Role
+                  </option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super Admin</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Phone</label>
+                <PhoneInput
+                  country="in"
+                  value={editSem.phone}
+                  onChange={(val) => {
+                    const finalVal = val.startsWith("+") ? val : `+${val}`;
+                    setEditSem({
+                      ...editSem,
+                      phone: finalVal,
+                    });
+                  }}
+                  inputClass="!w-full !h-11 !text-sm !border !border-gray-300 !rounded-md focus:ring-2 focus:ring-blue-500"
+                  buttonClass="!border-gray-300"
+                  enableSearch
+                />
+              </div>
+            </div>
 
             <DialogFooter className="mt-6">
               <Button
                 variant="outline"
-                className="cursor-pointer"
-                disabled={isDeleting}
                 onClick={() => {
-                  setUserToDelete(null); // Clear userToDelete when canceling
+                  setIsEditing(false);
+                  setEditSem({
+                    id: "",
+                    email: "",
+                    name: "",
+                    provider: "",
+                    provider_type: "",
+                    phone: "",
+                    created_at: "",
+                    subscription: "",
+                    status: "",
+                    city: "",
+                    state: "",
+                    zipCode: "",
+                    updated_at: "",
+                    role: "",
+                  });
                 }}
+                disabled={saving}
               >
                 Cancel
               </Button>
               <Button
-                variant="destructive"
-                disabled={isDeleting}
-                onClick={() => {
-                  confirmDelete();
-                }}
-                className="cursor-pointer"
+                disabled={saving}
+                onClick={hadleUpdateAdmin}
+                className="bg-blue-600 text-white"
               >
-                {isDeleting ? "Loading ..." : "Delete"}
+                {saving ? "Saving…" : "Save"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-
-      <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)}>
-        <h2 className="text-lg font-semibold mb-2">Are you sure?</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => setIsConfirmOpen(false)}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDeleteUser}
-            disabled={loading}
-          >
-            {loading ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <Card className="max-w-md w-full mx-auto shadow-md border mt-5 p-4 rounded-2xl bg-white">
-          <CardContent className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Admin Details
-            </h2>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-gray-700">
-              <div className="font-medium">Email:</div>
-              <div> {selectedData?.email}</div>
-
-              <div className="font-medium">Name:</div>
-              <div> {selectedData?.name}</div>
-              <div className="font-medium">Role:</div>
-              <div>
-                <span className="flex items-center">
-                  {formatRole(selectedData?.role)}
-                </span>
-              </div>
-
-              <div className="font-medium">Phone:</div>
-              <div>
-                <span className="flex items-center">{selectedData?.phone}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </Modal>
-
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-lg bg-white border-gray-300">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Edit Admin
-            </DialogTitle>
-          </DialogHeader>
-
-          {/* ─────────────── form fields ─────────────── */}
-          <div className="space-y-4">
-            {/* Email ---------------------------------------------------- */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                value={editSem?.email}
-                disabled
-                onChange={(e) =>
-                  setEditSem({ ...editSem, email: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            {/* Name ----------------------------------------------------- */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Name</label>
-              <Input
-                type="text"
-                value={editSem?.name}
-                onChange={(e) => {
-                  setEditSem({
-                    ...editSem,
-                    name: e.target.value,
-                  });
-                }}
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Role</label>
-              <select
-                className="w-full h-11 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 px-3"
-                value={editSem.role || ""} // Use editSem.role here
-                onChange={(e) =>
-                  setEditSem({ ...editSem, role: e.target.value })
-                }
-                required
-              >
-                <option value="" disabled>
-                  Select Role
-                </option>
-                <option value="admin">Admin</option>
-                <option value="superadmin">Super Admin</option>
-              </select>
-            </div>
-
-            {/* Phone ----------------------------------------------------- */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Phone</label>
-              <PhoneInput
-                country="in"
-                value={editSem.phone}
-                onChange={(val, data: any) => {
-                  const finalVal = val.startsWith("+") ? val : `+${val}`;
-                  setEditSem({
-                    ...editSem,
-                    phone: finalVal,
-                  });
-                }}
-                inputClass="!w-full !h-11 !text-sm !border !border-gray-300 !rounded-md focus:ring-2 focus:ring-blue-500"
-                buttonClass="!border-gray-300"
-                enableSearch
-              />
-            </div>
-          </div>
-
-          {/* ─────────────── footer / actions ─────────────── */}
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditing(false);
-                setEditSem({
-                  id: "",
-                  email: "",
-                  name: "",
-                  provider: "",
-                  provider_type: "",
-                  phone: "",
-                  created_at: "",
-                  subscription: "",
-                  status: "",
-                  city: "",
-                  state: "",
-                  zipCode: "",
-                  updated_at: "",
-                  role: "",
-                });
-              }}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={saving}
-              onClick={async () => {
-                hadleUpdateAdmin();
-              }}
-              className="bg-blue-600 text-white"
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
