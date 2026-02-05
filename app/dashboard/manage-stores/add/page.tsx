@@ -7,10 +7,7 @@ import { Input } from "@/components/ui/input";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 
-import {
-  DAYS,
-  PRIMARY_BTN,
-} from "@/app/dashboard/_components/StoreComponents/constants";
+import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
 
 import type {
   DayHours,
@@ -19,10 +16,7 @@ import type {
   StoreFormState,
 } from "@/app/dashboard/_components/StoreComponents/types";
 
-import {
-  safeNumberOrNull,
-  slugify,
-} from "@/app/dashboard/_components/StoreComponents/utils";
+import { safeNumberOrNull, slugify } from "@/app/dashboard/_components/StoreComponents/utils";
 
 import { usePreserveScroll } from "@/app/dashboard/_components/StoreComponents/hooks/usePreserveScroll";
 import { useStoreOffers } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreOffers";
@@ -47,24 +41,24 @@ const STORE_ROLE = "storepartner" as const;
   ✅ INDUSTRIAL HELPERS (safe ids + uploads)
 ------------------------------------------------------- */
 
-function uuid() {
+function uuid(): string {
   // @ts-ignore
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `id_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`;
 }
 
-function getExt(file: File) {
+function getExt(file: File): string {
   const nameExt = file.name.split(".").pop()?.toLowerCase();
   if (nameExt) return nameExt;
   const mimeExt = file.type.split("/")[1]?.toLowerCase();
   return mimeExt || "bin";
 }
 
-function isImage(file?: File | null) {
+function isImage(file?: File | null): boolean {
   return !!file?.type?.startsWith("image/");
 }
 
-function isVideo(file?: File | null) {
+function isVideo(file?: File | null): boolean {
   return !!file?.type?.startsWith("video/");
 }
 
@@ -190,7 +184,7 @@ function AddStorePageInner() {
      ✅ STORAGE UPLOAD HELPERS
   --------------------------------------------- */
 
-  const uploadedPaths: string[] = [];
+  const uploadedPathsRef = React.useRef<string[]>([]);
 
   const uploadToBucket = async (path: string, file: File) => {
     const { error } = await supabaseBrowser.storage.from("stores").upload(path, file, {
@@ -199,7 +193,7 @@ function AddStorePageInner() {
 
     if (error) throw error;
 
-    uploadedPaths.push(path);
+    uploadedPathsRef.current.push(path);
 
     const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
     return data.publicUrl;
@@ -241,22 +235,22 @@ function AddStorePageInner() {
   };
 
   const cleanupUploads = async () => {
-    if (!uploadedPaths.length) return;
-    await supabaseBrowser.storage.from("stores").remove(uploadedPaths);
+    const uploaded = uploadedPathsRef.current;
+    if (!uploaded.length) return;
+    await supabaseBrowser.storage.from("stores").remove(uploaded);
+    uploadedPathsRef.current = [];
   };
 
   /* ---------------------------------------------
      ✅ CREATE STORE PARTNER LOGIN (Frontend)
-     - creates auth user
-     - inserts row into public.users with role=storepartner
-     - tries to preserve current session
   --------------------------------------------- */
-  const createStorePartnerAccount = async () => {
+  const createStorePartnerAccount = async (): Promise<{ userId: string; email: string }> => {
     const email = partnerEmail.trim().toLowerCase();
     const password = partnerPassword;
 
     if (!email) throw new Error("Login email is required");
-    if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
+    if (!password || password.length < 6)
+      throw new Error("Password must be at least 6 characters");
 
     // Save current admin session (best effort)
     const { data: prevSession } = await supabaseBrowser.auth.getSession();
@@ -270,7 +264,6 @@ function AddStorePageInner() {
           phone: form.phone?.trim() || null,
           role: STORE_ROLE,
         },
-        // keep your redirect if you want
         emailRedirectTo: `fb-marketplace-bot.web.app/callback`,
       },
     });
@@ -278,12 +271,9 @@ function AddStorePageInner() {
     if (signUpError) throw new Error(signUpError.message);
 
     const newUserId = signUpData.user?.id;
-    if (!newUserId) {
-      throw new Error("User created, but missing user id in response.");
-    }
+    if (!newUserId) throw new Error("User created, but missing user id in response.");
 
-    // Insert into public.users (matches your schema)
-    // NOTE: This requires RLS policy allowing the current admin to insert.
+    // Insert into public.users
     const { error: usersInsertErr } = await supabaseBrowser.from("users").insert({
       id: newUserId,
       email,
@@ -296,14 +286,12 @@ function AddStorePageInner() {
     });
 
     if (usersInsertErr) {
-      // Can't delete auth user from frontend. Tell clearly what happened.
       throw new Error(
-        `Auth user created, but failed to insert into public.users: ${usersInsertErr.message}. ` +
-          `Fix RLS policy for users table or insert via service role.`
+        `Auth user created, but failed to insert into public.users: ${usersInsertErr.message}. Fix RLS policy or insert via service role.`
       );
     }
 
-    // Restore previous session if signup returned a session (rare if email confirmation enabled)
+    // Restore previous session (best effort)
     try {
       if (signUpData.session && prevSession?.session) {
         await supabaseBrowser.auth.setSession({
@@ -312,7 +300,7 @@ function AddStorePageInner() {
         });
       }
     } catch {
-      // ignore best-effort session restore errors
+      // ignore
     }
 
     return { userId: newUserId, email };
@@ -320,10 +308,8 @@ function AddStorePageInner() {
 
   /* ---------------------------------------------
      ✅ STORE OWNER ID RESOLUTION
-     - If ?storeOwnerId= exists -> uses it
-     - Else -> creates new storepartner login from frontend
   --------------------------------------------- */
-  const resolveStoreOwnerId = async () => {
+  const resolveStoreOwnerId = async (): Promise<string> => {
     const fromQuery =
       searchParams.get("storeOwnerId") ||
       searchParams.get("store_owner_id") ||
@@ -332,7 +318,6 @@ function AddStorePageInner() {
 
     if (fromQuery) return fromQuery;
 
-    // Create login for this store
     const created = await createStorePartnerAccount();
     showToast({
       title: "Store Login Created",
@@ -376,7 +361,6 @@ function AddStorePageInner() {
       return;
     }
 
-    // cover validation
     if (coverMediaFile && !isImage(coverMediaFile) && !isVideo(coverMediaFile)) {
       showToast({
         type: "error",
@@ -387,7 +371,6 @@ function AddStorePageInner() {
       return;
     }
 
-    // ✅ NEW: enforce login creds for store creation (unless storeOwnerId is provided via query)
     const hasOwnerInQuery =
       !!(
         searchParams.get("storeOwnerId") ||
@@ -414,7 +397,8 @@ function AddStorePageInner() {
     setLoading(true);
 
     try {
-      const storeId = await resolveStoreOwnerId();
+      const ownerUserId = await resolveStoreOwnerId(); // auth user id
+      const storeId = uuid(); // store uuid (branch id)
 
       const hours = DAYS.map((day) => {
         const d = openingHours[day];
@@ -450,80 +434,123 @@ function AddStorePageInner() {
           start_at: o.start_at || null,
           end_at: o.end_at || null,
           requires_pass: !!o.requires_pass,
-          pass_tiers: o.pass_tiers ? o.pass_tiers.split(",").map((x) => x.trim()).filter(Boolean) : [],
+          pass_tiers: o.pass_tiers
+            ? o.pass_tiers.split(",").map((x) => x.trim()).filter(Boolean)
+            : [],
           coupon_code: o.coupon_code?.trim() || null,
           stackable: !!o.stackable,
           terms: o.terms?.trim() || null,
         }))
         .filter((o) => o.title);
 
-      const coverType = coverMediaFile
+      const coverType: "video" | "image" | null = coverMediaFile
         ? isVideo(coverMediaFile)
           ? "video"
           : "image"
         : null;
 
-      // slug
-      let finalSlug: string | null = null;
-      {
-        const { data: existing, error: exErr } = await supabaseBrowser
-          .from("stores")
-          .select("slug")
-          .eq("id", storeId)
-          .maybeSingle();
+      // ✅ PATCH 1: slug generation should not query by new storeId
+      // Generate and retry if unique constraint fails.
+      let finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
 
-        if (exErr) throw exErr;
+      // 1) Insert store row
+      const { error: upsertStoreErr } = await supabaseBrowser.from("stores").upsert(
+        {
+          id: storeId,
+          owner_user_id: ownerUserId,
+          name: form.name.trim(),
+          slug: finalSlug,
+          description: form.description?.trim() || null,
 
-        finalSlug =
-          existing?.slug ||
-          `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
+          category: form.category?.trim() || null,
+          subcategory: form.subcategory?.trim() || null,
+          tags: tagsArray,
+
+          phone: form.phone?.trim() || null,
+          whatsapp: form.whatsapp?.trim() || null,
+          email: form.email?.trim() || null,
+          website: form.website?.trim() || null,
+
+          social_links,
+
+          location_name: form.location_name?.trim() || null,
+          address_line1: form.address_line1?.trim() || null,
+          address_line2: form.address_line2?.trim() || null,
+          city: form.city?.trim() || null,
+          region: form.region?.trim() || null,
+          postal_code: form.postal_code?.trim() || null,
+          country: "Mauritius",
+
+          lat,
+          lng,
+          google_place_id: form.google_place_id?.trim() || null,
+
+          hours,
+          offers: offersFinal,
+
+          is_active: !!form.is_active,
+          is_featured: !!form.is_featured,
+          cover_media_type: coverType,
+        },
+        { onConflict: "id" }
+      );
+
+      if (upsertStoreErr) {
+        // If slug unique error, regenerate once and retry
+        if (
+          typeof upsertStoreErr.message === "string" &&
+          upsertStoreErr.message.toLowerCase().includes("stores_slug_key")
+        ) {
+          finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 8)}`;
+          const retry = await supabaseBrowser.from("stores").upsert(
+            {
+              id: storeId,
+              owner_user_id: ownerUserId,
+              name: form.name.trim(),
+              slug: finalSlug,
+              description: form.description?.trim() || null,
+              category: form.category?.trim() || null,
+              subcategory: form.subcategory?.trim() || null,
+              tags: tagsArray,
+              phone: form.phone?.trim() || null,
+              whatsapp: form.whatsapp?.trim() || null,
+              email: form.email?.trim() || null,
+              website: form.website?.trim() || null,
+              social_links,
+              location_name: form.location_name?.trim() || null,
+              address_line1: form.address_line1?.trim() || null,
+              address_line2: form.address_line2?.trim() || null,
+              city: form.city?.trim() || null,
+              region: form.region?.trim() || null,
+              postal_code: form.postal_code?.trim() || null,
+              country: "Mauritius",
+              lat,
+              lng,
+              google_place_id: form.google_place_id?.trim() || null,
+              hours,
+              offers: offersFinal,
+              is_active: !!form.is_active,
+              is_featured: !!form.is_featured,
+              cover_media_type: coverType,
+            },
+            { onConflict: "id" }
+          );
+          if (retry.error) throw retry.error;
+        } else {
+          throw upsertStoreErr;
+        }
       }
 
-      // 1) Upsert stores
-      const { error: upsertStoreErr } = await supabaseBrowser
-        .from("stores")
-        .upsert(
-          {
-            id: storeId,
-            name: form.name.trim(),
-            slug: finalSlug,
-            description: form.description?.trim() || null,
+      // ✅ PATCH 2 (IMPORTANT): create membership row so partner can access their store
+      // Requires a table: store_members(store_id uuid, user_id uuid, role text, created_at...)
+      const { error: memberErr } = await supabaseBrowser.from("store_members").insert({
+        store_id: storeId,
+        user_id: ownerUserId,
+        role: "owner",
+      });
+      if (memberErr) throw memberErr;
 
-            category: form.category?.trim() || null,
-            subcategory: form.subcategory?.trim() || null,
-            tags: tagsArray,
-
-            phone: form.phone?.trim() || null,
-            whatsapp: form.whatsapp?.trim() || null,
-            email: form.email?.trim() || null,
-            website: form.website?.trim() || null,
-
-            social_links,
-
-            location_name: form.location_name?.trim() || null,
-            address_line1: form.address_line1?.trim() || null,
-            address_line2: form.address_line2?.trim() || null,
-            city: form.city?.trim() || null,
-            region: form.region?.trim() || null,
-            postal_code: form.postal_code?.trim() || null,
-            country: "Mauritius",
-
-            lat,
-            lng,
-            google_place_id: form.google_place_id?.trim() || null,
-
-            hours,
-            offers: offersFinal,
-
-            is_active: !!form.is_active,
-            is_featured: !!form.is_featured,
-          },
-          { onConflict: "id" }
-        );
-
-      if (upsertStoreErr) throw upsertStoreErr;
-
-      // 2) Upload media then update
+      // 2) Upload media then update store
       const logoUrl = await uploadSingle(storeId, logoFile, "logo");
 
       let coverMediaUrl: string | null = null;
@@ -540,7 +567,6 @@ function AddStorePageInner() {
         .update({
           logo_url: logoUrl,
           cover_image_url: coverImageUrl,
-          cover_media_type: coverType,
           cover_media_url: coverMediaUrl,
           gallery_urls: galleryUrls,
         })
@@ -549,41 +575,38 @@ function AddStorePageInner() {
       if (mediaErr) throw mediaErr;
 
       // 3) Payment
-      const { error: payErr } = await supabaseBrowser
-        .from("store_payment_details")
-        .upsert(
-          {
-            store_id: storeId,
-            legal_business_name: payment.legal_business_name.trim(),
-            display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
+      const { error: payErr } = await supabaseBrowser.from("store_payment_details").upsert(
+        {
+          store_id: storeId,
+          legal_business_name: payment.legal_business_name.trim(),
+          display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
 
-            payout_method: payment.payout_method,
-            beneficiary_name: payment.beneficiary_name?.trim() || null,
-            bank_name: payment.bank_name?.trim() || null,
-            account_number: payment.account_number?.trim() || null,
-            ifsc: payment.ifsc?.trim() || null,
-            iban: payment.iban?.trim() || null,
-            swift: payment.swift?.trim() || null,
-            payout_upi_id: payment.payout_upi_id?.trim() || null,
+          payout_method: payment.payout_method,
+          beneficiary_name: payment.beneficiary_name?.trim() || null,
+          bank_name: payment.bank_name?.trim() || null,
+          account_number: payment.account_number?.trim() || null,
+          ifsc: payment.ifsc?.trim() || null,
+          iban: payment.iban?.trim() || null,
+          swift: payment.swift?.trim() || null,
+          payout_upi_id: payment.payout_upi_id?.trim() || null,
 
-            settlement_cycle: payment.settlement_cycle,
-            commission_percent: payment.commission_percent
-              ? Number(payment.commission_percent)
-              : null,
-            currency: payment.currency || "MUR",
+          settlement_cycle: payment.settlement_cycle,
+          commission_percent: payment.commission_percent
+            ? Number(payment.commission_percent)
+            : null,
+          currency: payment.currency || "MUR",
 
-            tax_id_label: payment.tax_id_label || null,
-            tax_id_value: payment.tax_id_value?.trim() || null,
+          tax_id_label: payment.tax_id_label || null,
+          tax_id_value: payment.tax_id_value?.trim() || null,
 
-            billing_email: payment.billing_email?.trim() || null,
-            billing_phone: payment.billing_phone?.trim() || null,
+          billing_email: payment.billing_email?.trim() || null,
+          billing_phone: payment.billing_phone?.trim() || null,
 
-            kyc_status: payment.kyc_status,
-            notes: payment.notes?.trim() || null,
-          },
-          { onConflict: "store_id" }
-        );
-
+          kyc_status: payment.kyc_status,
+          notes: payment.notes?.trim() || null,
+        },
+        { onConflict: "store_id" }
+      );
       if (payErr) throw payErr;
 
       // 4) Catalogue (replace all)
@@ -613,18 +636,16 @@ function AddStorePageInner() {
         }));
 
       if (enabledCats.length) {
-        const { error: insCatsErr } = await supabaseBrowser
-          .from("store_catalogue_categories")
-          .insert(
-            enabledCats.map((c) => ({
-              id: c.id,
-              store_id: c.store_id,
-              title: c.title,
-              starting_from: c.starting_from,
-              enabled: c.enabled,
-              sort_order: c.sort_order,
-            }))
-          );
+        const { error: insCatsErr } = await supabaseBrowser.from("store_catalogue_categories").insert(
+          enabledCats.map((c) => ({
+            id: c.id,
+            store_id: c.store_id,
+            title: c.title,
+            starting_from: c.starting_from,
+            enabled: c.enabled,
+            sort_order: c.sort_order,
+          }))
+        );
         if (insCatsErr) throw insCatsErr;
       }
 
@@ -693,7 +714,7 @@ function AddStorePageInner() {
         preserveScroll={preserveScroll}
       />
 
-      {/* ✅ NEW: LOGIN SECTION (always visible, doesn't touch your accordion sections) */}
+      {/* ✅ LOGIN SECTION */}
       <div className="rounded-xl border bg-white p-4 mb-5">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -825,11 +846,7 @@ function AddStorePageInner() {
           Cancel
         </Button>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className={[PRIMARY_BTN, "cursor-pointer"].join(" ")}
-        >
+        <Button onClick={handleSubmit} disabled={loading} className={[PRIMARY_BTN, "cursor-pointer"].join(" ")}>
           {loading ? "Saving..." : "Save Store"}
         </Button>
       </div>
