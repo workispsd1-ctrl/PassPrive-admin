@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/dashboard/spotlight/SpotlightList.jsx", "app/dashboard/spotlight/page.jsx", "app/layout.jsx", "app/dashboard/manage-stores/page.jsx"  ],
+, "app/dashboard/spotlight/SpotlightList.jsx", "app/dashboard/spotlight/page.jsx", "app/layout.jsx", "app/dashboard/manage-stores/page.tsx", "app/dashboard/manage-restaurants/page.tsx"  ],
   "exclude": ["node_modules"]
 }

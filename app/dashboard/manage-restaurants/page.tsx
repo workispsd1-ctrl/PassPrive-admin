@@ -22,6 +22,29 @@ function useDebounced<T>(value: T, ms = 350) {
   return v;
 }
 
+function getOfferDisplay(offer: any) {
+  if (offer == null) return "—";
+  if (typeof offer === "string" || typeof offer === "number") return String(offer);
+
+  if (Array.isArray(offer)) {
+    if (offer.length === 0) return "—";
+    const first = offer[0];
+    if (first && typeof first === "object") {
+      if (first.title) return String(first.title);
+      if (first.promoCode) return String(first.promoCode);
+    }
+    return `${offer.length} offer${offer.length > 1 ? "s" : ""}`;
+  }
+
+  if (typeof offer === "object") {
+    if (offer.title) return String(offer.title);
+    if (offer.promoCode) return String(offer.promoCode);
+    return "Offer";
+  }
+
+  return "—";
+}
+
 /* -------------------------- SKELETON (LOADING ONLY) -------------------------- */
 
 function Skeleton({ className = "" }: { className?: string }) {
@@ -31,7 +54,6 @@ function Skeleton({ className = "" }: { className?: string }) {
 function RestaurantsTableSkeleton() {
   return (
     <div className="p-4">
-      {/* header-ish row */}
       <div className="mb-4 flex items-center justify-between">
         <Skeleton className="h-5 w-44" />
         <div className="flex items-center gap-2">
@@ -40,7 +62,6 @@ function RestaurantsTableSkeleton() {
         </div>
       </div>
 
-      {/* table header */}
       <div className="grid grid-cols-12 gap-3 border-b border-gray-100 pb-3">
         <Skeleton className="col-span-3 h-4 w-24" />
         <Skeleton className="col-span-2 h-4 w-20" />
@@ -49,7 +70,6 @@ function RestaurantsTableSkeleton() {
         <Skeleton className="col-span-3 h-4 w-24" />
       </div>
 
-      {/* rows */}
       <div className="mt-3 space-y-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
@@ -69,12 +89,10 @@ function RestaurantsTableSkeleton() {
             <div className="col-span-2">
               <Skeleton className="h-4 w-16" />
             </div>
-            
           </div>
         ))}
       </div>
 
-      {/* pagination-ish */}
       <div className="mt-5 flex items-center justify-between">
         <Skeleton className="h-4 w-40" />
         <div className="flex items-center gap-2">
@@ -99,10 +117,7 @@ export default function RestaurantsPage() {
 
   const debouncedSearch = useDebounced(searchTerm);
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / limit)),
-    [total, limit]
-  );
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -131,7 +146,12 @@ export default function RestaurantsPage() {
         setRestaurants([]);
         setTotal(0);
       } else {
-        setRestaurants(data || []);
+        const normalized = (data || []).map((r: any) => ({
+          ...r,
+          offer_raw: r.offer,
+          offer: getOfferDisplay(r.offer),
+        }));
+        setRestaurants(normalized);
         setTotal(count || 0);
       }
 
@@ -169,16 +189,13 @@ export default function RestaurantsPage() {
                 limit={limit}
                 setLimit={setLimit}
                 setRefresh={setRefresh}
-                onRowClick={(id: string) =>
-                  router.push(`/dashboard/manage-restaurants/${id}`)
-                }
+                onRowClick={(id: string) => router.push(`/dashboard/manage-restaurants/${id}`)}
               />
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Floating Add Button */}
       <Button
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700"
         onClick={() => router.push("/dashboard/manage-restaurants/add")}
