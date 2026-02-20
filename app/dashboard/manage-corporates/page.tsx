@@ -26,9 +26,11 @@ import { Textarea } from "@/components/ui/textarea";
 const ITEMS_PER_PAGE = 10;
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+
+const isServer = typeof window === 'undefined';
+const backendUrl = isServer
+  ? process.env.NEXT_PUBLIC_BACKEND_URL_FOR_EC2 // Use full URL on EC2
+  : process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 function useDebounced<T>(value: T, ms = 350) {
   const [v, setV] = useState(value);
@@ -138,7 +140,7 @@ async function createAuthUserViaBackend(payload: {
 }) {
   const token = await getAccessToken();
 
-  const res = await fetch(`${API_BASE}/api/auth/create-user`, {
+  const res = await fetch(`${backendUrl}/api/auth/create-user`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -161,7 +163,7 @@ async function createAuthUserViaBackend(payload: {
 async function createCorporateViaBackend(payload: any) {
   const token = await getAccessToken();
 
-  const res = await fetch(`${API_BASE}/api/corporates`, {
+  const res = await fetch(`${backendUrl}/api/corporates`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
