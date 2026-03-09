@@ -113,3 +113,6 @@ export default function AddOfferPage() {
     </div>
   );
 }
+
+
+//added notes to check it is pushed correctly
