@@ -36,7 +36,7 @@ export default function AddOfferPage() {
 
 
     alert("Offer Added!");
-    window.location.href = "/admin/offers";
+    window.location.href = "/dashboard/offers";
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 type Offer = {
   id: number;
@@ -13,6 +14,8 @@ type Offer = {
 export default function OffersPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const router = useRouter();
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -26,6 +29,26 @@ export default function OffersPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this offer?")) return;
+
+    try {
+      setDeleting(id);
+      await axios.delete(`${backendUrl}/api/homeherooffers/${id}`);
+      await loadOffers(); // Reload the list
+      alert("Offer deleted successfully!");
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to delete offer");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleEdit = (id: number) => {
+    router.push(`/dashboard/offers/${id}`);
   };
 
   useEffect(() => {
@@ -109,14 +132,19 @@ export default function OffersPage() {
                   </td>
 
                   <td className="p-4 text-right space-x-4">
-                    <a
-                      href={`/admin/offers/edit/${o.id}`}
+                    <button
+                      onClick={() => handleEdit(o.id)}
                       className="text-blue-600 hover:underline"
+                      disabled={deleting === o.id}
                     >
                       Edit
-                    </a>
-                    <button className="text-red-500 hover:underline">
-                      Delete
+                    </button>
+                    <button
+                      onClick={() => handleDelete(o.id)}
+                      className="text-red-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={deleting === o.id}
+                    >
+                      {deleting === o.id ? "Deleting..." : "Delete"}
                     </button>
                   </td>
                 </tr>
