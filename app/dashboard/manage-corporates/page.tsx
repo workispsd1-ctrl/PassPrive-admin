@@ -616,7 +616,7 @@ function CorporateTable({
                       variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/dashboard/corporate/${c.id}`);
+                        router.push(`/dashboard/manage-corporates/${c.id}`);
                       }}
                     >
                       <Pencil className="w-4 h-4" />

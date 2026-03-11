@@ -168,6 +168,11 @@ export default function CorporateDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [corporate, setCorporate] = useState<any>(null);
+  const [corporateOriginal, setCorporateOriginal] = useState<any>(null);
+
+  // Edit mode for corporate details
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Employees pagination (local from jsonb)
   const [empPage, setEmpPage] = useState(1);
@@ -236,11 +241,14 @@ export default function CorporateDetailPage() {
         description: error.message,
       });
       setCorporate(null);
+      setCorporateOriginal(null);
     } else {
-      setCorporate({
+      const corporateData = {
         ...(data || {}),
         employees: safeArray((data as any)?.employees),
-      });
+      };
+      setCorporate(corporateData);
+      setCorporateOriginal(corporateData);
     }
 
     setLoading(false);
@@ -611,6 +619,60 @@ export default function CorporateDetailPage() {
   };
 
   /* -----------------------------
+     EDIT CORPORATE DETAILS
+  ----------------------------- */
+  const handleSaveCorporate = async () => {
+    if (!corporate.name?.trim()) {
+      showToast({ type: "error", title: "Corporate name is required" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const token = await getAccessToken();
+
+      const payload = {
+        name: corporate.name?.trim() || "",
+        phone: corporate.phone?.trim() || null,
+        email: corporate.email?.trim() || null,
+        city: corporate.city?.trim() || null,
+        area: corporate.area?.trim() || null,
+        full_address: corporate.full_address?.trim() || null,
+        is_active: corporate.is_active ?? true,
+      };
+
+      const res = await fetch(`${API_BASE}/api/corporates/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to update corporate");
+
+      showToast({ type: "success", title: "Corporate updated successfully" });
+      setEditMode(false);
+      await fetchCorporate();
+    } catch (err: any) {
+      showToast({
+        type: "error",
+        title: "Failed to update corporate",
+        description: err?.message || "Something went wrong",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setCorporate(corporateOriginal);
+    setEditMode(false);
+  };
+
+  /* -----------------------------
      UI STATES
   ----------------------------- */
   if (loading && !corporate) {
@@ -719,6 +781,36 @@ export default function CorporateDetailPage() {
               <SectionTitle
                 title="Corporate details"
                 subtitle="Company and subscription information for internal admin use."
+                right={
+                  !editMode ? (
+                    <Button
+                      variant="outline"
+                      className="rounded-xl"
+                      onClick={() => setEditMode(true)}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-700"
+                        onClick={handleSaveCorporate}
+                        disabled={saving}
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  )
+                }
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -726,35 +818,113 @@ export default function CorporateDetailPage() {
                 <div className="rounded-2xl border border-gray-200 bg-white p-4">
                   <div className="text-xs font-semibold uppercase text-gray-500 mb-3">Company</div>
 
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Name</span>
-                      <span className="font-semibold text-gray-900 text-right">{corporate.name}</span>
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Name</label>
+                        <Input
+                          className={inputClass}
+                          value={corporate.name || ""}
+                          onChange={(e) => setCorporate({ ...corporate, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Email</label>
+                        <Input
+                          className={inputClass}
+                          type="email"
+                          value={corporate.email || ""}
+                          onChange={(e) => setCorporate({ ...corporate, email: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Phone</label>
+                        <Input
+                          className={inputClass}
+                          value={corporate.phone || ""}
+                          onChange={(e) => setCorporate({ ...corporate, phone: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">City</label>
+                          <Input
+                            className={inputClass}
+                            value={corporate.city || ""}
+                            onChange={(e) => setCorporate({ ...corporate, city: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-600">Area</label>
+                          <Input
+                            className={inputClass}
+                            value={corporate.area || ""}
+                            onChange={(e) => setCorporate({ ...corporate, area: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Full Address</label>
+                        <textarea
+                          className={`${inputClass} w-full rounded-xl px-3 py-2 text-sm`}
+                          rows={3}
+                          value={corporate.full_address || ""}
+                          onChange={(e) => setCorporate({ ...corporate, full_address: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
+                        <input
+                          type="checkbox"
+                          id="is_active"
+                          className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+                          checked={corporate.is_active ?? true}
+                          onChange={(e) => setCorporate({ ...corporate, is_active: e.target.checked })}
+                        />
+                        <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                          Active (visible and accessible)
+                        </label>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Email</span>
-                      <span className="font-medium text-gray-900 text-right">
-                        {corporate.email ?? corporate.owner_email ?? "-"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Phone</span>
-                      <span className="font-medium text-gray-900 text-right">
-                        {corporate.phone ?? "-"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Location</span>
-                      <span className="font-medium text-gray-900 text-right">
-                        {formatLocation(corporate)}
-                      </span>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500">Name</span>
+                          <span className="font-semibold text-gray-900 text-right">{corporate.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500">Email</span>
+                          <span className="font-medium text-gray-900 text-right">
+                            {corporate.email ?? corporate.owner_email ?? "-"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500">Phone</span>
+                          <span className="font-medium text-gray-900 text-right">
+                            {corporate.phone ?? "-"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500">Location</span>
+                          <span className="font-medium text-gray-900 text-right">
+                            {formatLocation(corporate)}
+                          </span>
+                        </div>
+                      </div>
 
-                  <div className="mt-4 text-xs text-gray-500">
-                    <span className="font-semibold text-gray-700">Address:</span>{" "}
-                    {corporate.full_address ?? "-"}
-                  </div>
+                      <div className="mt-4 text-xs text-gray-500">
+                        <span className="font-semibold text-gray-700">Address:</span>{" "}
+                        {corporate.full_address ?? "-"}
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <StatusPill
+                          active={!!corporate.is_active}
+                          label={corporate.is_active ? "Active" : "Disabled"}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Middle: Subscription */}
