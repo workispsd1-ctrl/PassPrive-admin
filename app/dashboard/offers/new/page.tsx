@@ -115,4 +115,3 @@ export default function AddOfferPage() {
 }
 
 
-//added notes to check it is pushed correctly

@@ -34,7 +34,8 @@ import {
   Store,
   Spotlight,
   BadgePercent,
-  Building
+  Building,
+  Landmark
 } from "lucide-react";
 import Image from "next/image";
 
@@ -46,7 +47,6 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { useDispatch, useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
@@ -55,10 +55,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed }: SidebarProps) {
-  const user = useSelector((state: any) => state?.admin?.user);
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useDispatch();
 
   /** sign-out -> clear Redux -> go home */
   async function handleLogout() {
@@ -66,8 +64,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     if (error) return console.error("Sign-out failed:", error.message);
     router.push("/");
   }
-  const activePlan = user?.role == "superadmin";
-
   const menuItems = [
     { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     {
@@ -86,6 +82,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       icon: Building,
     },
 
+    { title: "Bank Offers", href: "/dashboard/bank-offers", icon: Landmark },
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
     { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
     { title: "User Management", href: "/dashboard/users", icon: Users },
