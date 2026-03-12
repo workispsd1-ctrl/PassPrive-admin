@@ -200,7 +200,11 @@ const initialForm: BankOfferForm = {
 
 function uid() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
 }
 
 function createBinDraft(): BinDraft {
@@ -384,18 +388,6 @@ export default function BankOffersPage() {
         .includes(search)
     );
   }, [filter, offers]);
-
-  const dashboardStats = useMemo(() => {
-    const live = offers.filter((offer) => offer.is_active && offer.status === "ACTIVE").length;
-    const draft = offers.filter((offer) => offer.status === "DRAFT").length;
-    const couponBased = offers.filter((offer) => offer.coupon_code).length;
-    return {
-      total: offers.length,
-      live,
-      draft,
-      couponBased,
-    };
-  }, [offers]);
 
   useEffect(() => {
     void (async () => {
@@ -724,20 +716,18 @@ export default function BankOffersPage() {
       const bankLogoUrl = await uploadLogoIfNeeded();
       const payload = buildOfferPayload(form, bankLogoUrl);
 
-      const offerId = editingId
-        ? editingId
-        : (
-            await supabaseBrowser.from("bank_offers").insert(payload).select("id").single()
-          ).data?.id;
-
-      if (!editingId) {
-        if (!offerId) throw new Error("Offer was created without a returned id.");
-        createdOfferId = offerId;
-      }
+      const offerId = editingId || uid();
 
       if (editingId) {
         const { error } = await supabaseBrowser.from("bank_offers").update(payload).eq("id", editingId);
         if (error) throw error;
+      } else {
+        const { error } = await supabaseBrowser.from("bank_offers").insert({
+          id: offerId,
+          ...payload,
+        });
+        if (error) throw error;
+        createdOfferId = offerId;
       }
 
       const finalOfferId = editingId || createdOfferId;
@@ -801,53 +791,20 @@ export default function BankOffersPage() {
     <div className="min-h-full bg-slate-50">
       <div className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Payments Operations
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Bank Offer Console</h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Manage customer-facing discounts and payment eligibility with audit visibility.
-            </p>
-          </div>
+          <div />
 
-          {editingId ? (
-            <Button variant="outline" onClick={resetForm} className="border-slate-200 bg-white">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              New Offer
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {editingId ? (
+              <Button variant="outline" onClick={resetForm} className="border-slate-200 bg-white">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                New Offer
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-amber-50 shadow-sm">
-          <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Production-facing discounts
-              </div>
-              <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-slate-900">
-                Create bank offers in plain language, without forcing the client to think in database fields.
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                The main form now follows a simple business flow: what the offer is, what the customer gets, when it runs,
-                where it works, and which cards are eligible.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label="Total offers" value={String(dashboardStats.total)} tone="slate" />
-              <StatCard label="Live now" value={String(dashboardStats.live)} tone="emerald" />
-              <StatCard label="In draft" value={String(dashboardStats.draft)} tone="amber" />
-              <StatCard label="Coupon-based" value={String(dashboardStats.couponBased)} tone="blue" />
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-6 sm:px-6 lg:grid-cols-[460px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[460px_minmax(0,1fr)]">
         <div className="space-y-6">
           <SectionCard
             icon={BadgePercent}
@@ -981,22 +938,9 @@ export default function BankOffersPage() {
               </div>
             </details>
 
-            <div className="flex gap-3 pt-2">
-              <Button onClick={handleSubmit} disabled={saving} className="flex-1">
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving
-                  </>
-                ) : (
-                  <>
-                    {editingId ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-                    {editingId ? "Update offer" : "Create offer"}
-                  </>
-                )}
-              </Button>
+            <div className="pt-2">
               <Button type="button" variant="outline" onClick={resetForm} className="border-slate-200">
-                Reset
+                Reset form
               </Button>
             </div>
           </SectionCard>
@@ -1222,6 +1166,26 @@ export default function BankOffersPage() {
           </SectionCard>
         </div>
       </div>
+
+      <div className="fixed right-5 bottom-5 z-40 sm:right-6 sm:bottom-6">
+        <Button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="h-12 rounded-full bg-emerald-600 px-6 text-white shadow-lg hover:bg-emerald-700"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Save Offer
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -1272,32 +1236,6 @@ function Subsection({
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-900">{title}</h3>
       <p className="mt-1 text-sm text-slate-500">{description}</p>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "slate" | "emerald" | "amber" | "blue";
-}) {
-  const toneClass =
-    tone === "emerald"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-      : tone === "amber"
-        ? "bg-amber-50 text-amber-700 border-amber-100"
-        : tone === "blue"
-          ? "bg-blue-50 text-blue-700 border-blue-100"
-          : "bg-white text-slate-700 border-slate-200";
-
-  return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${toneClass}`}>
-      <p className="text-xs font-medium opacity-80">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight">{value}</p>
     </div>
   );
 }
