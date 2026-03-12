@@ -153,6 +153,10 @@ type MerchantOption = {
   category?: string | null;
 };
 
+function isNonEmptyString(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 const initialForm: BankOfferForm = {
   title: "",
   short_title: "",
@@ -357,13 +361,16 @@ export default function BankOffersPage() {
   const cityOptions = useMemo(
     () =>
       Array.from(
-        new Set([...restaurants.map((item) => item.city).filter(Boolean), ...stores.map((item) => item.city).filter(Boolean)])
+        new Set([
+          ...restaurants.map((item) => item.city).filter(isNonEmptyString),
+          ...stores.map((item) => item.city).filter(isNonEmptyString),
+        ])
       ).sort(),
     [restaurants, stores]
   );
 
   const categoryOptions = useMemo(
-    () => Array.from(new Set(stores.map((item) => item.category).filter(Boolean))).sort(),
+    () => Array.from(new Set(stores.map((item) => item.category).filter(isNonEmptyString))).sort(),
     [stores]
   );
 
