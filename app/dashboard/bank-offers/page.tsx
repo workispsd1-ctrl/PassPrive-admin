@@ -104,7 +104,6 @@ type BankOfferForm = {
   is_active: boolean;
   bank_name: string;
   bank_logo_url: string;
-  bank_logo_dark_url: string;
   bank_brand_color: string;
   funded_by: (typeof FUNDED_BY)[number];
 };
@@ -150,7 +149,6 @@ type MerchantOption = {
   name: string;
   city?: string | null;
   area?: string | null;
-  category?: string | null;
 };
 
 function isNonEmptyString(value: string | null | undefined): value is string {
@@ -193,7 +191,6 @@ const initialForm: BankOfferForm = {
   is_active: false,
   bank_name: "",
   bank_logo_url: "",
-  bank_logo_dark_url: "",
   bank_brand_color: "",
   funded_by: "BANK",
 };
@@ -336,7 +333,6 @@ function buildOfferPayload(form: BankOfferForm, bankLogoUrl: string | null) {
     is_active: form.is_active,
     bank_name: form.bank_name.trim(),
     bank_logo_url: bankLogoUrl,
-    bank_logo_dark_url: form.bank_logo_dark_url.trim() || null,
     bank_brand_color: form.bank_brand_color.trim() || null,
     funded_by: form.funded_by,
   };
@@ -374,8 +370,8 @@ export default function BankOffersPage() {
   );
 
   const categoryOptions = useMemo(
-    () => Array.from(new Set(stores.map((item) => item.category).filter(isNonEmptyString))).sort(),
-    [stores]
+    () => [] as string[],
+    []
   );
 
   const filteredOffers = useMemo(() => {
@@ -431,7 +427,7 @@ export default function BankOffersPage() {
   async function loadMerchantOptions() {
     const [restaurantRes, storeRes] = await Promise.all([
       supabaseBrowser.from("restaurants").select("id,name,city,area").order("name", { ascending: true }),
-      supabaseBrowser.from("stores").select("id,name,city,area,category").order("name", { ascending: true }),
+      supabaseBrowser.from("stores").select("id,name,city,area").order("name", { ascending: true }),
     ]);
 
     if (!restaurantRes.error) setRestaurants((restaurantRes.data as MerchantOption[]) || []);
@@ -552,7 +548,6 @@ export default function BankOffersPage() {
         is_active: Boolean(data.is_active),
         bank_name: data.bank_name || "",
         bank_logo_url: data.bank_logo_url || "",
-        bank_logo_dark_url: data.bank_logo_dark_url || "",
         bank_brand_color: data.bank_brand_color || "",
         funded_by: data.funded_by || "BANK",
       });
@@ -597,7 +592,6 @@ export default function BankOffersPage() {
     setForm((current) => ({
       ...current,
       bank_logo_url: "",
-      bank_logo_dark_url: "",
     }));
 
     if (fileRef.current) fileRef.current.value = "";
@@ -1016,7 +1010,7 @@ export default function BankOffersPage() {
                       <SelectField label="Restaurant" value={row.target_id} options={restaurants.map((item) => ({ value: item.id, label: `${item.name}${item.city ? ` • ${item.city}` : ""}` }))} onChange={(value) => setTargets((current) => current.map((item) => item.clientId === row.clientId ? { ...item, target_id: value } : item))} />
                     ) : null}
                     {row.target_type === "STORE" ? (
-                      <SelectField label="Store" value={row.target_id} options={stores.map((item) => ({ value: item.id, label: `${item.name}${item.category ? ` • ${item.category}` : ""}` }))} onChange={(value) => setTargets((current) => current.map((item) => item.clientId === row.clientId ? { ...item, target_id: value } : item))} />
+                      <SelectField label="Store" value={row.target_id} options={stores.map((item) => ({ value: item.id, label: `${item.name}${item.city ? ` • ${item.city}` : ""}` }))} onChange={(value) => setTargets((current) => current.map((item) => item.clientId === row.clientId ? { ...item, target_id: value } : item))} />
                     ) : null}
                     {row.target_type === "ALL" ? (
                       <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
