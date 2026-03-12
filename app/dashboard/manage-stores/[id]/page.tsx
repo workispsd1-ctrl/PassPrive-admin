@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
@@ -112,6 +112,14 @@ export default function StoreDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // ✅ Image management state
+  const [logoToAdd, setLogoToAdd] = useState<File | null>(null);
+  const [coverToAdd, setCoverToAdd] = useState<File | null>(null);
+  const [galleryToAdd, setGalleryToAdd] = useState<File[]>([]);
+  const [logoToDelete, setLogoToDelete] = useState(false);
+  const [coverToDelete, setCoverToDelete] = useState(false);
+  const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
+
   const headerLocation = useMemo(() => {
     if (!store) return "";
     const parts = [store.location_name, store.city, store.region].filter(Boolean);
@@ -148,10 +156,127 @@ export default function StoreDetailPage() {
     fetchStore();
   }, [id]);
 
+  /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
+
+  /**
+   * Extract storage path from Supabase public URL
+   * Example: https://xyz.supabase.co/storage/v1/object/public/stores/logo/123/abc.jpg
+   * Returns: logo/123/abc.jpg
+   */
+  const extractStoragePath = (url: string): string | null => {
+    try {
+      const match = url.match(/\/stores\/(.+)$/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Upload a single image to Supabase Storage
+   */
+  const uploadSingleImage = async (
+    storeId: string,
+    file: File,
+    type: "logo" | "cover" | "gallery"
+  ): Promise<string> => {
+    const ext = file.name.split(".").pop() || "jpg";
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).slice(2, 9);
+    const path = `${type}/${storeId}/${timestamp}-${random}.${ext}`;
+
+    const { error } = await supabaseBrowser.storage
+      .from("stores")
+      .upload(path, file);
+
+    if (error) throw error;
+
+    const { data } = supabaseBrowser.storage
+      .from("stores")
+      .getPublicUrl(path);
+
+    return data.publicUrl;
+  };
+
+  /**
+   * Upload multiple images to Supabase Storage
+   */
+  const uploadMultipleImages = async (
+    storeId: string,
+    files: File[],
+    type: "gallery"
+  ): Promise<string[]> => {
+    const urls: string[] = [];
+    const uploadedPaths: string[] = [];
+
+    try {
+      // Upload with concurrency limit of 3
+      const batchSize = 3;
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (file) => {
+          const ext = file.name.split(".").pop() || "jpg";
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).slice(2, 9);
+          const path = `${type}/${storeId}/${timestamp}-${random}.${ext}`;
+
+          const { error } = await supabaseBrowser.storage
+            .from("stores")
+            .upload(path, file);
+
+          if (error) throw error;
+
+          uploadedPaths.push(path);
+
+          const { data } = supabaseBrowser.storage
+            .from("stores")
+            .getPublicUrl(path);
+
+          return data.publicUrl;
+        });
+
+        const batchUrls = await Promise.all(batchPromises);
+        urls.push(...batchUrls);
+      }
+
+      return urls;
+    } catch (error) {
+      // Cleanup: delete successfully uploaded files
+      if (uploadedPaths.length > 0) {
+        await supabaseBrowser.storage
+          .from("stores")
+          .remove(uploadedPaths)
+          .catch(() => {}); // Silent fail on cleanup
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * Delete images from Supabase Storage
+   */
+  const deleteImagesFromStorage = async (urls: string[]): Promise<void> => {
+    const paths = urls.map(extractStoragePath).filter(Boolean) as string[];
+    if (paths.length === 0) return;
+
+    const { error } = await supabaseBrowser.storage
+      .from("stores")
+      .remove(paths);
+
+    if (error) throw error;
+  };
+
   const handleCancel = () => {
     setStore(storeOriginal);
     setOpeningHours(openingHoursOriginal);
     setWeekEnabled(Array.isArray(storeOriginal?.hours) && storeOriginal.hours.length > 0);
+    // ✅ Reset image changes
+    setLogoToAdd(null);
+    setCoverToAdd(null);
+    setGalleryToAdd([]);
+    setLogoToDelete(false);
+    setCoverToDelete(false);
+    setGalleryToDelete([]);
     setEditMode(false);
   };
 
@@ -164,6 +289,59 @@ export default function StoreDetailPage() {
     setSaving(true);
 
     try {
+      // ✅ Step 1: Delete removed images from storage
+      const urlsToDelete: string[] = [];
+      if (logoToDelete && store.logo_url) urlsToDelete.push(store.logo_url);
+      if (coverToDelete && store.cover_image_url) urlsToDelete.push(store.cover_image_url);
+      if (galleryToDelete.length > 0) urlsToDelete.push(...galleryToDelete);
+
+      if (urlsToDelete.length > 0) {
+        try {
+          await deleteImagesFromStorage(urlsToDelete);
+        } catch (error: any) {
+          showToast({
+            type: "error",
+            title: "Failed to delete images",
+            description: error.message,
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      // ✅ Step 2: Upload new images
+      let newLogoUrl: string | null = null;
+      let newCoverUrl: string | null = null;
+      let newGalleryUrls: string[] = [];
+
+      try {
+        if (logoToAdd) {
+          newLogoUrl = await uploadSingleImage(id as string, logoToAdd, "logo");
+        }
+        if (coverToAdd) {
+          newCoverUrl = await uploadSingleImage(id as string, coverToAdd, "cover");
+        }
+        if (galleryToAdd.length > 0) {
+          newGalleryUrls = await uploadMultipleImages(id as string, galleryToAdd, "gallery");
+        }
+      } catch (error: any) {
+        showToast({
+          type: "error",
+          title: "Failed to upload images",
+          description: error.message,
+        });
+        setSaving(false);
+        return;
+      }
+
+      // ✅ Step 3: Determine final image URLs
+      const finalLogoUrl = logoToDelete ? newLogoUrl : (newLogoUrl || store.logo_url);
+      const finalCoverUrl = coverToDelete ? newCoverUrl : (newCoverUrl || store.cover_image_url);
+      const finalGalleryUrls = [
+        ...(store.gallery_urls || []).filter((url: string) => !galleryToDelete.includes(url)),
+        ...newGalleryUrls,
+      ];
+
       const tagsArray =
         typeof store.tags === "string"
           ? store.tags
@@ -226,10 +404,10 @@ export default function StoreDetailPage() {
         is_active: !!store.is_active,
         is_featured: !!store.is_featured,
 
-        // keep images unchanged unless you later add upload/delete here
-        logo_url: store.logo_url || null,
-        cover_image_url: store.cover_image_url || null,
-        gallery_urls: Array.isArray(store.gallery_urls) ? store.gallery_urls : [],
+        // ✅ Updated images
+        logo_url: finalLogoUrl || null,
+        cover_image_url: finalCoverUrl || null,
+        gallery_urls: finalGalleryUrls,
       };
 
       const { error } = await supabaseBrowser
@@ -250,7 +428,7 @@ export default function StoreDetailPage() {
       showToast({ type: "success", title: "Store updated" });
       setEditMode(false);
 
-      // refresh originals
+      // ✅ Refresh originals and reset image state
       const merged = {
         ...store,
         ...payload,
@@ -259,10 +437,19 @@ export default function StoreDetailPage() {
         social_links: payload.social_links,
         lat: payload.lat,
         lng: payload.lng,
+        logo_url: finalLogoUrl,
+        cover_image_url: finalCoverUrl,
+        gallery_urls: finalGalleryUrls,
       };
       setStore(merged);
       setStoreOriginal(merged);
       setOpeningHoursOriginal(openingHours);
+      setLogoToAdd(null);
+      setCoverToAdd(null);
+      setGalleryToAdd([]);
+      setLogoToDelete(false);
+      setCoverToDelete(false);
+      setGalleryToDelete([]);
 
       setSaving(false);
     } catch (err: any) {
@@ -655,11 +842,139 @@ export default function StoreDetailPage() {
         ))}
       </Section>
 
-      {/* IMAGES (Read Only) */}
+      {/* IMAGES */}
       <Section title="Images">
-        <SingleImage title="Logo" src={store.logo_url} />
-        <SingleImage title="Cover" src={store.cover_image_url} />
-        <ImageGrid title="Gallery" images={store.gallery_urls} />
+        {/* Logo Image */}
+        <div className="space-y-3">
+          <EditableSingleImage
+            title="Logo"
+            src={logoToDelete ? null : store.logo_url}
+            onDelete={() => setLogoToDelete(true)}
+            disabled={!editMode}
+          />
+
+          {editMode && (
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">{logoToDelete ? 'Replace' : 'Change'} Logo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setLogoToAdd(file);
+                      setLogoToDelete(false); // Clear delete flag when adding new
+                    }
+                    e.target.value = ""; // Reset input
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-gray-100 file:text-gray-700
+                    hover:file:bg-gray-200
+                    cursor-pointer"
+                />
+              </label>
+
+              {logoToAdd && (
+                <SingleFilePreview
+                  file={logoToAdd}
+                  onRemove={() => setLogoToAdd(null)}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Cover Image */}
+        <div className="space-y-3 mt-6">
+          <EditableSingleImage
+            title="Cover Image"
+            src={coverToDelete ? null : store.cover_image_url}
+            onDelete={() => setCoverToDelete(true)}
+            disabled={!editMode}
+          />
+
+          {editMode && (
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">{coverToDelete ? 'Replace' : 'Change'} Cover</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCoverToAdd(file);
+                      setCoverToDelete(false); // Clear delete flag when adding new
+                    }
+                    e.target.value = ""; // Reset input
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-gray-100 file:text-gray-700
+                    hover:file:bg-gray-200
+                    cursor-pointer"
+                />
+              </label>
+
+              {coverToAdd && (
+                <SingleFilePreview
+                  file={coverToAdd}
+                  onRemove={() => setCoverToAdd(null)}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Gallery Images */}
+        <div className="space-y-3 mt-6">
+          <EditableImageGrid
+            title="Gallery Images"
+            images={(store.gallery_urls || []).filter(
+              (url: string) => !galleryToDelete.includes(url)
+            )}
+            onDelete={(url) => setGalleryToDelete([...galleryToDelete, url])}
+            disabled={!editMode}
+          />
+
+          {editMode && (
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Add Gallery Images</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setGalleryToAdd([...galleryToAdd, ...files]);
+                    e.target.value = ""; // Reset input
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-gray-100 file:text-gray-700
+                    hover:file:bg-gray-200
+                    cursor-pointer"
+                />
+              </label>
+
+              <FilePreviewGrid
+                files={galleryToAdd}
+                onRemove={(idx) =>
+                  setGalleryToAdd(galleryToAdd.filter((_, i) => i !== idx))
+                }
+              />
+            </div>
+          )}
+        </div>
       </Section>
 
       {/* SYSTEM (Read Only) */}
@@ -706,28 +1021,103 @@ const ReadOnly = ({ label, value }: any) => (
   </div>
 );
 
-const SingleImage = ({ title, src }: any) => (
+/* ---------------- IMAGE COMPONENTS ---------------- */
+
+/**
+ * Editable Single Image - shows one image with delete button
+ */
+const EditableSingleImage = ({
+  title,
+  src,
+  onDelete,
+  disabled,
+}: {
+  title: string;
+  src: string | null;
+  onDelete: () => void;
+  disabled: boolean;
+}) => (
   <div className="space-y-2">
     <h3 className="text-sm font-medium">{title}</h3>
     {src ? (
-      <img src={src} className="w-full max-w-sm h-48 object-cover rounded-md border" />
+      <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
+        <img src={src} className="w-full h-full object-cover" alt={title} />
+        {!disabled && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+            aria-label="Delete image"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
     ) : (
       <p className="text-sm text-gray-400">No image</p>
     )}
   </div>
 );
 
-const ImageGrid = ({ title, images }: any) => (
+/**
+ * Single File Preview - shows preview of newly selected file with remove button
+ */
+const SingleFilePreview = ({
+  file,
+  onRemove,
+}: {
+  file: File;
+  onRemove: () => void;
+}) => (
+  <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border border-gray-300">
+    <img
+      src={URL.createObjectURL(file)}
+      alt="Preview"
+      className="w-full h-full object-cover"
+    />
+    <button
+      type="button"
+      onClick={onRemove}
+      className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+      aria-label="Remove file"
+    >
+      <X size={14} />
+    </button>
+  </div>
+);
+
+/**
+ * Editable Image Grid - shows existing images with delete buttons
+ */
+const EditableImageGrid = ({
+  title,
+  images,
+  onDelete,
+  disabled,
+}: {
+  title: string;
+  images: string[];
+  onDelete: (url: string) => void;
+  disabled: boolean;
+}) => (
   <div className="space-y-2">
     <h3 className="text-sm font-medium">{title}</h3>
     <div className="grid grid-cols-4 gap-3">
       {images?.length ? (
         images.map((src: string, i: number) => (
-          <img
-            key={i}
-            src={src}
-            className="w-full h-32 object-cover rounded-md border"
-          />
+          <div key={i} className="relative h-32 rounded-md overflow-hidden border">
+            <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => onDelete(src)}
+                className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+                aria-label="Delete image"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         ))
       ) : (
         <p className="text-sm text-gray-400">No images</p>
@@ -735,3 +1125,38 @@ const ImageGrid = ({ title, images }: any) => (
     </div>
   </div>
 );
+
+/**
+ * File Preview Grid - shows newly selected files with remove buttons
+ */
+const FilePreviewGrid = ({
+  files,
+  onRemove,
+}: {
+  files: File[];
+  onRemove: (index: number) => void;
+}) => {
+  if (files.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-4 gap-3 mt-3">
+      {files.map((file, index) => (
+        <div key={index} className="relative h-32 rounded-md overflow-hidden border border-gray-300">
+          <img
+            src={URL.createObjectURL(file)}
+            alt={`Preview ${index + 1}`}
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+            aria-label="Remove file"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};

@@ -18,7 +18,7 @@ type Offer = {
 export default function EditOfferPage() {
   const { id } = useParams();
   const router = useRouter();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,7 +38,9 @@ export default function EditOfferPage() {
     const loadOffer = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${backendUrl}/api/homeherooffers/${id}`);
+        const res = await axios.get(`${backendUrl}/api/homeherooffers/${id}`, {
+          headers: { 'Cache-Control': 'no-cache' }
+        });
         const offer: Offer = res.data.offer || res.data;
 
         setForm({
@@ -48,9 +50,11 @@ export default function EditOfferPage() {
           is_active: offer.is_active ?? true,
         });
         setCurrentMediaUrl(offer.media_url || "");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to load offer");
+      } catch (err: any) {
+        console.error("Error loading offer:", err);
+        console.error("Backend URL:", backendUrl);
+        console.error("Full URL:", `${backendUrl}/api/homeherooffers/${id}`);
+        alert(`Failed to load offer: ${err.response?.data?.message || err.message}`);
         router.push("/dashboard/offers");
       } finally {
         setLoading(false);
@@ -87,6 +91,7 @@ export default function EditOfferPage() {
       }
 
       alert("Offer updated successfully!");
+      router.refresh(); // Clear Next.js cache
       router.push("/dashboard/offers");
     } catch (err: any) {
       console.error(err);

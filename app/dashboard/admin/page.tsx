@@ -783,14 +783,14 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Email</label>
-                <Input value={editSem?.email} disabled required />
+                <Input value={editSem?.email || ""} disabled required />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Name</label>
                 <Input
                   type="text"
-                  value={editSem?.name}
+                  value={editSem?.name || ""}
                   onChange={(e) => {
                     setEditSem({
                       ...editSem,
@@ -823,7 +823,7 @@ export default function AdminPage() {
                 <label className="text-sm font-medium">Phone</label>
                 <PhoneInput
                   country="in"
-                  value={editSem.phone}
+                  value={editSem.phone || ""}
                   onChange={(val) => {
                     const finalVal = val.startsWith("+") ? val : `+${val}`;
                     setEditSem({

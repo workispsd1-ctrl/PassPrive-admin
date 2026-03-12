@@ -20,7 +20,6 @@ import {
   CheckCircle,
   Pencil,
   File,
-  Users,
 } from "lucide-react";
 import Modal from "@/app/dashboard/_components/Modal";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -279,11 +278,6 @@ export const UserTable = ({
                       <Link href={`/dashboard/users/${user.id}/edit`}>
                         <button className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200">
                           <Pencil className="w-4 h-4" />
-                        </button>
-                      </Link>
-                      <Link href={`/dashboard/users/${user.id}/leads`}>
-                        <button className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200">
-                          <Users className="w-4 h-4" />
                         </button>
                       </Link>
                     </div>

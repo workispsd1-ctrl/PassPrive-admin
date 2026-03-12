@@ -6,7 +6,7 @@ import { ChevronLeft } from 'lucide-react';
 import Link from "next/link";
 
 export default function AddOfferPage() {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
   const [form, setForm] = useState({
     title: "",

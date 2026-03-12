@@ -417,8 +417,21 @@ export default function AddRestaurantPage() {
         <Input className={inputClass} name="cuisines" placeholder="Cuisines (comma separated)" onChange={handleChange} />
 
         <div className="grid grid-cols-3 gap-4">
-          <Input className={inputClass} name="cost_for_two" placeholder="Cost for two" onChange={handleChange} />
-          <Input className={inputClass} name="distance" placeholder="Distance (km) (temp)" onChange={handleChange} />
+          <Input 
+            type="number" 
+            className={inputClass} 
+            name="cost_for_two" 
+            placeholder="Cost for two" 
+            onChange={handleChange} 
+          />
+          <Input 
+            type="number" 
+            step="0.1"
+            className={inputClass} 
+            name="distance" 
+            placeholder="Distance (km)" 
+            onChange={handleChange} 
+          />
           <Input className={inputClass} name="offer" placeholder="Offer (optional)" onChange={handleChange} />
         </div>
       </section>

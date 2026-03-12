@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
@@ -119,6 +119,12 @@ export default function RestaurantDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // ✅ Image management state
+  const [foodImagesToAdd, setFoodImagesToAdd] = useState<File[]>([]);
+  const [ambienceImagesToAdd, setAmbienceImagesToAdd] = useState<File[]>([]);
+  const [foodImagesToDelete, setFoodImagesToDelete] = useState<string[]>([]);
+  const [ambienceImagesToDelete, setAmbienceImagesToDelete] = useState<string[]>([]);
+
   const normalizedFacilitiesSet = useMemo(() => {
     const arr: string[] = restaurant?.facilities || [];
     return new Set(arr.map((x) => norm(x)));
@@ -146,6 +152,90 @@ export default function RestaurantDetailPage() {
     // remove any matching variant strings
     const next = current.filter((x) => !variantsNorm.has(norm(x)));
     setRestaurant({ ...restaurant, facilities: next });
+  };
+
+  /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
+
+  /**
+   * Extract storage path from Supabase public URL
+   * Example: https://xyz.supabase.co/storage/v1/object/public/restaurants/food/123/abc.jpg
+   * Returns: food/123/abc.jpg
+   */
+  const extractStoragePath = (url: string): string | null => {
+    try {
+      const match = url.match(/\/restaurants\/(.+)$/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Upload new images to Supabase Storage
+   */
+  const uploadNewImages = async (
+    restaurantId: string,
+    files: File[],
+    type: "food" | "ambience"
+  ): Promise<string[]> => {
+    const urls: string[] = [];
+    const uploadedPaths: string[] = [];
+
+    try {
+      // Upload with concurrency limit of 3
+      const batchSize = 3;
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (file) => {
+          const ext = file.name.split(".").pop() || "jpg";
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).slice(2, 9);
+          const path = `${type}/${restaurantId}/${timestamp}-${random}.${ext}`;
+
+          const { error } = await supabaseBrowser.storage
+            .from("restaurants")
+            .upload(path, file);
+
+          if (error) throw error;
+
+          uploadedPaths.push(path);
+
+          const { data } = supabaseBrowser.storage
+            .from("restaurants")
+            .getPublicUrl(path);
+
+          return data.publicUrl;
+        });
+
+        const batchUrls = await Promise.all(batchPromises);
+        urls.push(...batchUrls);
+      }
+
+      return urls;
+    } catch (error) {
+      // Cleanup: delete successfully uploaded files
+      if (uploadedPaths.length > 0) {
+        await supabaseBrowser.storage
+          .from("restaurants")
+          .remove(uploadedPaths)
+          .catch(() => {}); // Silent fail on cleanup
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * Delete images from Supabase Storage
+   */
+  const deleteImagesFromStorage = async (urls: string[]): Promise<void> => {
+    const paths = urls.map(extractStoragePath).filter(Boolean) as string[];
+    if (paths.length === 0) return;
+
+    const { error } = await supabaseBrowser.storage
+      .from("restaurants")
+      .remove(paths);
+
+    if (error) throw error;
   };
 
   useEffect(() => {
@@ -183,13 +273,66 @@ export default function RestaurantDetailPage() {
     setRestaurant(restaurantOriginal);
     setOpeningHours(openingHoursOriginal);
     setWeekEnabled(!!restaurantOriginal?.opening_hours && Object.keys(restaurantOriginal?.opening_hours || {}).length > 0);
+    // ✅ Reset image changes
+    setFoodImagesToAdd([]);
+    setAmbienceImagesToAdd([]);
+    setFoodImagesToDelete([]);
+    setAmbienceImagesToDelete([]);
     setEditMode(false);
   };
 
   const handleSave = async () => {
     setSaving(true);
 
-    const payload = {
+    try {
+      // ✅ Step 1: Delete removed images from storage
+      if (foodImagesToDelete.length > 0 || ambienceImagesToDelete.length > 0) {
+        try {
+          await deleteImagesFromStorage([...foodImagesToDelete, ...ambienceImagesToDelete]);
+        } catch (error: any) {
+          showToast({
+            type: "error",
+            title: "Failed to delete images",
+            description: error.message,
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      // ✅ Step 2: Upload new images
+      let newFoodUrls: string[] = [];
+      let newAmbienceUrls: string[] = [];
+
+      try {
+        if (foodImagesToAdd.length > 0) {
+          newFoodUrls = await uploadNewImages(id as string, foodImagesToAdd, "food");
+        }
+        if (ambienceImagesToAdd.length > 0) {
+          newAmbienceUrls = await uploadNewImages(id as string, ambienceImagesToAdd, "ambience");
+        }
+      } catch (error: any) {
+        showToast({
+          type: "error",
+          title: "Failed to upload images",
+          description: error.message,
+        });
+        setSaving(false);
+        return;
+      }
+
+      // ✅ Step 3: Merge image arrays (existing - deleted + new)
+      const finalFoodImages = [
+        ...(restaurant.food_images || []).filter((url: string) => !foodImagesToDelete.includes(url)),
+        ...newFoodUrls,
+      ];
+
+      const finalAmbienceImages = [
+        ...(restaurant.ambience_images || []).filter((url: string) => !ambienceImagesToDelete.includes(url)),
+        ...newAmbienceUrls,
+      ];
+
+      const payload = {
       // keep all editable fields you already had
       name: restaurant.name,
       phone: restaurant.phone,
@@ -209,9 +352,9 @@ export default function RestaurantDetailPage() {
 
       is_active: restaurant.is_active,
 
-      // keep images unchanged (they’re shown; if you later add upload/delete, update here)
-      food_images: restaurant.food_images,
-      ambience_images: restaurant.ambience_images,
+      // ✅ Updated images
+      food_images: finalFoodImages,
+      ambience_images: finalAmbienceImages,
 
       // keep these unchanged (read-only in UI)
       menu: restaurant.menu,
@@ -220,23 +363,37 @@ export default function RestaurantDetailPage() {
 
     const { error } = await supabaseBrowser.from("restaurants").update(payload).eq("id", id);
 
-    if (error) {
+      if (error) {
+        showToast({
+          type: "error",
+          title: "Update failed",
+          description: error.message,
+        });
+        setSaving(false);
+        return;
+      }
+
+      showToast({ type: "success", title: "Restaurant updated" });
+      setEditMode(false);
+
+      // ✅ Refresh originals and reset image state
+      const updatedRestaurant = { ...restaurant, opening_hours: payload.opening_hours, food_images: finalFoodImages, ambience_images: finalAmbienceImages };
+      setRestaurant(updatedRestaurant);
+      setRestaurantOriginal(updatedRestaurant);
+      setOpeningHoursOriginal(openingHours);
+      setFoodImagesToAdd([]);
+      setAmbienceImagesToAdd([]);
+      setFoodImagesToDelete([]);
+      setAmbienceImagesToDelete([]);
+      setSaving(false);
+    } catch (error: any) {
       showToast({
         type: "error",
-        title: "Update failed",
+        title: "Unexpected error",
         description: error.message,
       });
       setSaving(false);
-      return;
     }
-
-    showToast({ type: "success", title: "Restaurant updated" });
-    setEditMode(false);
-
-    // refresh originals so cancel doesn't revert back to older state
-    setRestaurantOriginal({ ...restaurant, opening_hours: payload.opening_hours });
-    setOpeningHoursOriginal(openingHours);
-    setSaving(false);
   };
 
   if (!restaurant) return <div className="p-6">Loading…</div>;
@@ -509,8 +666,93 @@ export default function RestaurantDetailPage() {
 
       {/* IMAGES */}
       <Section title="Images">
-        <ImageGrid title="Food Images" images={restaurant.food_images} />
-        <ImageGrid title="Ambience Images" images={restaurant.ambience_images} />
+        {/* Food Images Section */}
+        <div className="space-y-3">
+          <EditableImageGrid
+            title="Food Images"
+            images={(restaurant.food_images || []).filter(
+              (url: string) => !foodImagesToDelete.includes(url)
+            )}
+            onDelete={(url) => setFoodImagesToDelete([...foodImagesToDelete, url])}
+            disabled={!editMode}
+          />
+
+          {editMode && (
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Add Food Images</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setFoodImagesToAdd([...foodImagesToAdd, ...files]);
+                    e.target.value = ""; // Reset input
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-gray-100 file:text-gray-700
+                    hover:file:bg-gray-200
+                    cursor-pointer"
+                />
+              </label>
+
+              <FilePreviewGrid
+                files={foodImagesToAdd}
+                onRemove={(idx) =>
+                  setFoodImagesToAdd(foodImagesToAdd.filter((_, i) => i !== idx))
+                }
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Ambience Images Section */}
+        <div className="space-y-3 mt-6">
+          <EditableImageGrid
+            title="Ambience Images"
+            images={(restaurant.ambience_images || []).filter(
+              (url: string) => !ambienceImagesToDelete.includes(url)
+            )}
+            onDelete={(url) => setAmbienceImagesToDelete([...ambienceImagesToDelete, url])}
+            disabled={!editMode}
+          />
+
+          {editMode && (
+            <div className="space-y-2">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">Add Ambience Images</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setAmbienceImagesToAdd([...ambienceImagesToAdd, ...files]);
+                    e.target.value = ""; // Reset input
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-gray-100 file:text-gray-700
+                    hover:file:bg-gray-200
+                    cursor-pointer"
+                />
+              </label>
+
+              <FilePreviewGrid
+                files={ambienceImagesToAdd}
+                onRemove={(idx) =>
+                  setAmbienceImagesToAdd(ambienceImagesToAdd.filter((_, i) => i !== idx))
+                }
+              />
+            </div>
+          )}
+        </div>
       </Section>
 
       {/* RATINGS (Read Only) */}
@@ -580,6 +822,83 @@ const ReadOnly = ({ label, value }: any) => (
     <div className="text-sm font-medium">{value ?? "-"}</div>
   </div>
 );
+
+/* ---------------- IMAGE COMPONENTS ---------------- */
+
+/**
+ * Editable Image Grid - shows existing images with delete buttons
+ */
+const EditableImageGrid = ({
+  title,
+  images,
+  onDelete,
+  disabled,
+}: {
+  title: string;
+  images: string[];
+  onDelete: (url: string) => void;
+  disabled: boolean;
+}) => (
+  <div className="space-y-2">
+    <h3 className="text-sm font-medium">{title}</h3>
+    <div className="grid grid-cols-4 gap-3">
+      {images?.length ? (
+        images.map((src: string, i: number) => (
+          <div key={i} className="relative h-32 rounded-md overflow-hidden border">
+            <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => onDelete(src)}
+                className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+                aria-label="Delete image"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        ))
+      ) : (
+        <p className="text-sm text-gray-400">No images</p>
+      )}
+    </div>
+  </div>
+);
+
+/**
+ * File Preview Grid - shows newly selected files with remove buttons
+ */
+const FilePreviewGrid = ({
+  files,
+  onRemove,
+}: {
+  files: File[];
+  onRemove: (index: number) => void;
+}) => {
+  if (files.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-4 gap-3 mt-3">
+      {files.map((file, index) => (
+        <div key={index} className="relative h-32 rounded-md overflow-hidden border border-gray-300">
+          <img
+            src={URL.createObjectURL(file)}
+            alt={`Preview ${index + 1}`}
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+            aria-label="Remove file"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const ImageGrid = ({ title, images }: any) => (
   <div className="space-y-2">

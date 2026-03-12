@@ -17,12 +17,14 @@ export default function OffersPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const router = useRouter();
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
   const loadOffers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${backendUrl}/api/homeherooffers`);
+      const res = await axios.get(`${backendUrl}/api/homeherooffers`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       setOffers(res.data.offers || []);
     } catch (err) {
       console.error(err);
