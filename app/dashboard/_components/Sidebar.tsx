@@ -119,18 +119,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       )}
     >
       {/* ────────────────── BRAND ────────────────── */}
-      <div className="px-3 py-3 border-b border-gray-300 flex items-center justify-start">
-        <Image
-          src="/LOGO.png"
-          alt="No Logo Found"
-          // Show smaller logo when collapsed (desktop or mobile)
-          width={collapsed ? 40 : 40}
-          height={collapsed ? 40 : 40}
-          className="object-contain max-h-[50px] text-[#2563EB]"
-        />
+      <div className="px-3 py-3 border-b border-gray-300 flex items-center justify-start gap-2">
+        <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg select-none">
+          P
+        </div>
 
         {!collapsed && (
-          <span className="ml-3 text-2xl font-semibold text-gray-800">
+          <span className="text-xl font-bold text-gray-900 tracking-tight">
             PassPrive
           </span>
         )}

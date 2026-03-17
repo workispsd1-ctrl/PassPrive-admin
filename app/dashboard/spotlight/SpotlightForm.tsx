@@ -95,8 +95,11 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const handleSubmit = async () => {
     try {
+      if (!BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL");
       setLoading(true);
 
       const form = new FormData();
@@ -106,7 +109,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
       form.append("module_type", moduleType);
       if (file) form.append("file", file);
 
-      const endpoint = editingItem?.id ? `/api/spotlight/${editingItem.id}` : `/api/spotlight`;
+      const endpoint = editingItem?.id ? `${BASE}/api/spotlight/${editingItem.id}` : `${BASE}/api/spotlight`;
 
       const res = await fetch(endpoint, {
         method: editingItem?.id ? "PUT" : "POST",

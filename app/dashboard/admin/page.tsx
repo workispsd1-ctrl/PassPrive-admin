@@ -145,20 +145,19 @@ export default function AdminPage() {
     if (!rowData) return;
     try {
       setLoading(true);
-      const res = await fetch("/api/delete-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: rowData.id }),
+      const token = await getAccessToken();
+      
+      const res = await fetch(`${API_BASE}/api/auth/users/${rowData.id}`, {
+        method: "DELETE",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
       });
 
-      const data = await res.json();
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast({
-          title: "Error",
-          description: `Failed to delete user`,
-          type: "error",
-        });
-        return;
+        throw new Error(json.error || "Failed to delete user");
       }
 
       showToast({
@@ -171,12 +170,14 @@ export default function AdminPage() {
     } catch (err: any) {
       showToast({
         title: "Error",
-        description: `Failed to delete user`,
+        description: err.message || `Failed to delete user`,
+        type: "error"
       });
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleFetchuser = useCallback(async () => {
     setLoading(true);
@@ -188,9 +189,10 @@ export default function AdminPage() {
 
       if (searchTerm) {
         query = query.or(
-          `email.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
+          `email.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
         );
       }
+
 
       const from = (page - 1) * limit;
       const to = from + limit - 1;
@@ -244,7 +246,10 @@ export default function AdminPage() {
   }
 
   const handleEditForm = (user: User) => {
-    setEditSem(user);
+    setEditSem({
+      ...user,
+      name: user.name || user.full_name || "",
+    });
     setIsEditing(true);
   };
 
@@ -390,20 +395,30 @@ export default function AdminPage() {
     }
   };
 
-  const hadleUpdateAdmin = async () => {
+  const handleUpdateAdmin = async () => {
     setSaving(true);
     try {
-      const { error: updateError } = await supabaseBrowser
-        .from("users")
-        .update({
-          name: editSem?.name,
-          phone: editSem?.phone,
-          role: editSem.role,
-        })
-        .eq("id", editSem?.id);
+      const token = await getAccessToken();
+      
+      const payload = {
+        full_name: editSem?.name?.trim(),
+        phone: editSem?.phone,
+        role: editSem.role,
+      };
 
-      if (updateError) {
-        throw new Error(updateError?.message);
+      const res = await fetch(`${API_BASE}/api/auth/users/${editSem.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to update admin");
       }
 
       setEditSem({
@@ -427,10 +442,7 @@ export default function AdminPage() {
         title: "Success",
         description: "Admin Updated!",
       });
-      setPage(1);
-      if (page === 1) {
-        handleFetchuser();
-      }
+      handleRefresh();
     } catch (error: any) {
       showToast({
         type: "error",
@@ -441,6 +453,7 @@ export default function AdminPage() {
       setSaving(false);
     }
   };
+
 
   return (
     <>
@@ -753,7 +766,7 @@ export default function AdminPage() {
                 <div> {selectedData?.email}</div>
 
                 <div className="font-medium">Name:</div>
-                <div> {selectedData?.name}</div>
+                <div> {selectedData?.full_name || selectedData?.name}</div>
 
                 <div className="font-medium">Role:</div>
                 <div>
@@ -866,7 +879,7 @@ export default function AdminPage() {
               </Button>
               <Button
                 disabled={saving}
-                onClick={hadleUpdateAdmin}
+                onClick={handleUpdateAdmin}
                 className="bg-blue-600 text-white"
               >
                 {saving ? "Saving…" : "Save"}

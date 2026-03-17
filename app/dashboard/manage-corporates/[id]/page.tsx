@@ -35,9 +35,11 @@ import {
   MapPin,
   Mail,
   Phone,
+  Download,
 } from "lucide-react";
 
 const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
 
@@ -196,7 +198,7 @@ export default function CorporateDetailPage() {
   const [membershipExpiry, setMembershipExpiry] = useState("");
 
   const [newEmployees, setNewEmployees] = useState<EmployeeRow[]>([
-    { name: "", email: "", phone: "", password: "", department: "", designation: "" },
+    { name: "", email: "", phone: "", password: "", department: "", designation: "", plan: "" },
   ]);
 
   // Excel upload
@@ -311,7 +313,12 @@ export default function CorporateDetailPage() {
      BACKEND: BULK CREATE EMPLOYEES
      - sends membership + corporate fields to /auth/create-user
   ----------------------------- */
+  /* -----------------------------
+     BACKEND: BULK CREATE EMPLOYEES
+     - sends membership + corporate fields to /auth/create-user
+  ----------------------------- */
   const createEmployeesViaBackend = async (rows: EmployeeRow[]) => {
+    if (!API_BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL in environment.");
     const token = await getAccessToken();
 
     // Map plan_name -> plan row
@@ -322,7 +329,7 @@ export default function CorporateDetailPage() {
     const usersPayload = rows.map((r) => {
       // Priority: Excel row plan name -> dropdown plan -> null
       let planName = selectedPlanName || "";
-      const rowPlanName = String((r as any).plan || "").trim();
+      const rowPlanName = String(r.plan || "").trim();
       if (rowPlanName) planName = rowPlanName;
 
       // If planName matches DB plan, normalize to DB plan_name (clean)
@@ -337,8 +344,8 @@ export default function CorporateDetailPage() {
         role: "user",
 
         // ✅ users table membership fields
-        membership: planName ? planName : null,
-        membership_tier: planName ? planName : "none",
+        membership: planName || null,
+        membership_tier: planName || "none",
         membership_started: membershipStart || null,
         membership_expiry: membershipExpiry || null,
 
@@ -347,11 +354,6 @@ export default function CorporateDetailPage() {
         corporate_code_status: "approved",
       };
     });
-
-    // Optional: require plan for creation (uncomment if needed)
-    // if (!selectedPlanId && !selectedPlanName && !rows.some((r: any) => String(r.plan || "").trim())) {
-    //   throw new Error("Please select a plan (or include plan column in Excel)");
-    // }
 
     // 1) Create auth + users rows (bulk)
     const res = await fetch(`${API_BASE}/api/auth/create-user`, {
@@ -363,11 +365,33 @@ export default function CorporateDetailPage() {
       body: JSON.stringify({ users: usersPayload }),
     });
 
-    const json = await res.json();
-    if (!res.ok) throw new Error(json?.error || "Failed to create employees");
+    const json = await res.json().catch(() => ({ error: "Invalid JSON response from server" }));
+    console.log("[createEmployeesViaBackend] auth response:", res.status, json);
 
-    const createdUsers = Array.isArray(json?.created) ? json.created : [];
-    const failedUsers = Array.isArray(json?.failed) ? json.failed : [];
+    if (!res.ok) {
+      throw new Error(json?.error || json?.message || `Auth creation failed with status ${res.status}`);
+    }
+
+    // Handle both bulk { created: [], failed: [] } and single { user: {} } response shapes
+    let createdUsers: any[] = [];
+    let failedUsers: any[] = [];
+
+    if (Array.isArray(json?.created)) {
+      // bulk format
+      createdUsers = json.created;
+      failedUsers = Array.isArray(json?.failed) ? json.failed : [];
+    } else if (json?.user?.id) {
+      // single user format: { user: { id, email, ... } }
+      createdUsers = [json.user];
+    }
+
+    // If everything failed, surface the reason from the failed array
+    if (createdUsers.length === 0 && failedUsers.length > 0) {
+      const reasons = failedUsers
+        .map((f: any) => f?.error || f?.reason || f?.email || "Unknown")
+        .join("; ");
+      throw new Error(`All users failed to create: ${reasons}`);
+    }
 
     // 2) Append to corporate.employees jsonb
     if (createdUsers.length) {
@@ -381,7 +405,7 @@ export default function CorporateDetailPage() {
 
         return {
           user_id: u.id,
-          name: u.full_name || extra.name || "",
+          name: u.full_name || extra.name || extra.full_name || "",
           email: u.email,
           phone: u.phone || extra.phone || "",
           department: extra.department || null,
@@ -399,25 +423,28 @@ export default function CorporateDetailPage() {
         body: JSON.stringify({ employees: employeesPayload }),
       });
 
-      const json2 = await res2.json();
-      if (!res2.ok) throw new Error(json2?.error || "Failed to update corporate employees");
+      const json2 = await res2.json().catch(() => ({ error: "Invalid JSON response from server" }));
+      console.log("[createEmployeesViaBackend] employees update response:", res2.status, json2);
+      if (!res2.ok) {
+        throw new Error(json2?.error || json2?.message || `Corporate update failed with status ${res2.status}`);
+      }
     }
 
     return { created: createdUsers, failed: failedUsers };
   };
 
   const handleCreateEmployees = async () => {
-    const cleaned = newEmployees
+    const cleaned: EmployeeRow[] = newEmployees
       .map((e) => ({
-        ...e,
         name: String(e.name || "").trim(),
         email: String(e.email || "").trim(),
         phone: String(e.phone || "").trim(),
         password: String(e.password || ""),
-        department: String(e.department || "").trim() || undefined,
-        designation: String(e.designation || "").trim() || undefined,
+        department: String(e.department || "").trim(),
+        designation: String(e.designation || "").trim(),
+        plan: String(e.plan || "").trim(),
       }))
-      .filter((e) => e.name || e.email || e.phone || e.password);
+      .filter((e) => e.name || e.email || e.phone); // Require at least identity fields
 
     if (!cleaned.length) {
       showToast({ type: "error", title: "Add at least 1 employee" });
@@ -443,15 +470,26 @@ export default function CorporateDetailPage() {
     try {
       const result = await createEmployeesViaBackend(cleaned);
 
-      showToast({
-        type: "success",
-        title: "Employees created",
-        description: `${result?.created?.length || 0} created, ${result?.failed?.length || 0} failed`,
-      });
+      const createdCount = result?.created?.length || 0;
+      const failedCount = result?.failed?.length || 0;
+
+      if (createdCount > 0) {
+        showToast({
+          type: "success",
+          title: "Employees created",
+          description: `${createdCount} created successfully${failedCount > 0 ? `, ${failedCount} failed` : ""}`,
+        });
+      } else {
+        showToast({
+          type: "error",
+          title: "Failed to create employees",
+          description: "All employee creation attempts failed. Please check the data.",
+        });
+      }
 
       setOpenAdd(false);
       setNewEmployees([
-        { name: "", email: "", phone: "", password: "", department: "", designation: "" },
+        { name: "", email: "", phone: "", password: "", department: "", designation: "", plan: "" },
       ]);
       resetMembershipPickers();
       await fetchCorporate();
@@ -531,6 +569,23 @@ export default function CorporateDetailPage() {
       setExcelError(err?.message || "Failed to parse Excel file");
     } finally {
       setParsingExcel(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      const data = [
+        ["name", "email", "phone", "password", "department", "designation", "plan"],
+        ["John Doe", "john@example.com", "9876543210", "pass123", "IT", "Developer", "Professional"],
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Employees");
+      XLSX.writeFile(wb, "employee_template.xlsx");
+    } catch (err) {
+      console.error(err);
+      showToast({ type: "error", title: "Template generation failed" });
     }
   };
 
@@ -630,8 +685,10 @@ export default function CorporateDetailPage() {
     setSaving(true);
     try {
       const token = await getAccessToken();
+      const cleanId = String(id).trim();
 
-      const payload = {
+      // Always-sent fields
+      const payload: any = {
         name: corporate.name?.trim() || "",
         phone: corporate.phone?.trim() || null,
         email: corporate.email?.trim() || null,
@@ -641,7 +698,27 @@ export default function CorporateDetailPage() {
         is_active: corporate.is_active ?? true,
       };
 
-      const res = await fetch(`${API_BASE}/api/corporates/${id}`, {
+      // Only include optional fields when they have valid values
+      const planVal = String(corporate.plan || "").trim();
+      if (planVal) payload.plan = planVal;
+
+      const seatsVal = Number(corporate.seats);
+      if (!isNaN(seatsVal)) payload.seats = seatsVal;
+
+      // Ensure dates are YYYY-MM-DD
+      const startVal = String(corporate.subscription_start || "").trim().split("T")[0];
+      if (startVal && startVal !== "null") payload.subscription_start = startVal;
+
+      const expiryVal = String(corporate.subscription_expiry || "").trim().split("T")[0];
+      if (expiryVal && expiryVal !== "null") payload.subscription_expiry = expiryVal;
+
+      const validStatuses = ["active", "inactive", "expired"];
+      const statusVal = String(corporate.subscription_status || "").trim().toLowerCase();
+      if (validStatuses.includes(statusVal)) payload.subscription_status = statusVal;
+
+      console.log("[handleSaveCorporate] Request:", { url: `${API_BASE}/api/corporates/${cleanId}`, payload });
+
+      const res = await fetch(`${API_BASE}/api/corporates/${cleanId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -650,8 +727,19 @@ export default function CorporateDetailPage() {
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to update corporate");
+      const text = await res.text();
+      console.log("[handleSaveCorporate] Response:", res.status, text);
+
+      let json: any = {};
+      try { json = JSON.parse(text); } catch { /* silenty fail if not JSON */ }
+
+      if (!res.ok) {
+        // If server says "Cannot PUT", it's an Express routing error
+        if (text.includes("Cannot PUT")) {
+          throw new Error(`Server route not found (404). Please ensure the backend has the PUT /api/corporates/:id route defined.`);
+        }
+        throw new Error(json?.error || json?.details || `Error ${res.status}: ${text.slice(0, 100)}`);
+      }
 
       showToast({ type: "success", title: "Corporate updated successfully" });
       setEditMode(false);
@@ -659,7 +747,7 @@ export default function CorporateDetailPage() {
     } catch (err: any) {
       showToast({
         type: "error",
-        title: "Failed to update corporate",
+        title: "Update Failed",
         description: err?.message || "Something went wrong",
       });
     } finally {
@@ -671,7 +759,6 @@ export default function CorporateDetailPage() {
     setCorporate(corporateOriginal);
     setEditMode(false);
   };
-
   /* -----------------------------
      UI STATES
   ----------------------------- */
@@ -933,30 +1020,74 @@ export default function CorporateDetailPage() {
                     Subscription
                   </div>
 
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Plan</span>
-                      <span className="font-semibold text-gray-900 text-right">{corporate.plan ?? "-"}</span>
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Plan Name</label>
+                        <Input
+                          className={inputClass}
+                          placeholder="e.g. Professional"
+                          value={corporate.plan || ""}
+                          onChange={(e) => setCorporate({ ...corporate, plan: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Status</label>
+                        <select
+                          className="mt-1 h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm focus:outline-none"
+                          value={corporate.subscription_status || "active"}
+                          onChange={(e) => setCorporate({ ...corporate, subscription_status: e.target.value })}
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="expired">Expired</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Start Date</label>
+                        <Input
+                          className={inputClass}
+                          type="date"
+                          value={corporate.subscription_start?.split("T")[0] || ""}
+                          onChange={(e) => setCorporate({ ...corporate, subscription_start: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Expiry Date</label>
+                        <Input
+                          className={inputClass}
+                          type="date"
+                          value={corporate.subscription_expiry?.split("T")[0] || ""}
+                          onChange={(e) => setCorporate({ ...corporate, subscription_expiry: e.target.value })}
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Status</span>
-                      <span className="font-medium text-gray-900 text-right">
-                        {corporate.subscription_status ?? "-"}
-                      </span>
+                  ) : (
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Plan</span>
+                        <span className="font-semibold text-gray-900 text-right">{corporate.plan ?? "-"}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Status</span>
+                        <span className="font-medium text-gray-900 text-right">
+                          {corporate.subscription_status ?? "-"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Start</span>
+                        <span className="font-medium text-gray-900 text-right">
+                          {formatDate(corporate.subscription_start)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Expiry</span>
+                        <span className="font-medium text-gray-900 text-right">
+                          {formatDate(corporate.subscription_expiry)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Start</span>
-                      <span className="font-medium text-gray-900 text-right">
-                        {formatDate(corporate.subscription_start)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Expiry</span>
-                      <span className="font-medium text-gray-900 text-right">
-                        {formatDate(corporate.subscription_expiry)}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Right: Seats */}
@@ -965,24 +1096,49 @@ export default function CorporateDetailPage() {
                     Seats allocation
                   </div>
 
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Total seats</span>
-                      <span className="font-semibold text-gray-900 text-right">{String(seats)}</span>
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600">Total Seats</label>
+                        <Input
+                          className={inputClass}
+                          type="number"
+                          min={0}
+                          value={String(corporate.seats ?? 0)}
+                          onChange={(e) => setCorporate({ ...corporate, seats: Number(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Employees used</span>
+                          <span className="font-semibold">{employeeCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Seats left</span>
+                          <span className="font-semibold">{Math.max(0, Number(corporate.seats || 0) - employeeCount)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Employees used</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {String(employeeCount)}
-                      </span>
+                  ) : (
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Total seats</span>
+                        <span className="font-semibold text-gray-900 text-right">{String(seats)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Employees used</span>
+                        <span className="font-semibold text-gray-900 text-right">
+                          {String(employeeCount)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500">Seats left</span>
+                        <span className="font-semibold text-gray-900 text-right">
+                          {String(seatsLeft)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-500">Seats left</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {String(seatsLeft)}
-                      </span>
-                    </div>
-                  </div>
+                  )}
 
                   <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
                     Tip: Keep seats aligned with subscription for accurate access control.
@@ -1168,7 +1324,7 @@ export default function CorporateDetailPage() {
           if (!v) resetMembershipPickers();
         }}
       >
-        <DialogContent className="sm:max-w-4xl bg-white border-gray-300">
+        <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto bg-white border-gray-300 rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -1231,7 +1387,7 @@ export default function CorporateDetailPage() {
                 onClick={() =>
                   setNewEmployees((prev) => [
                     ...prev,
-                    { name: "", email: "", phone: "", password: "", department: "", designation: "" },
+                    { name: "", email: "", phone: "", password: "", department: "", designation: "", plan: "" },
                   ])
                 }
               >
@@ -1387,7 +1543,7 @@ export default function CorporateDetailPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-4xl bg-white border-gray-300">
+        <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto bg-white border-gray-300 rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
@@ -1465,18 +1621,23 @@ export default function CorporateDetailPage() {
               }}
             />
 
-            <div className="flex items-center justify-between gap-3">
-              <Button type="button" variant="outline" className="rounded-xl" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" />
-                Choose Excel file
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" className="rounded-xl" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose Excel file
+                </Button>
+
+                <Button type="button" variant="outline" className="rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50" onClick={handleDownloadTemplate}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Template
+                </Button>
+              </div>
 
               {!!excelFileName && (
                 <div className="text-xs text-gray-600">
                   Selected: <span className="font-semibold">{excelFileName}</span>
                 </div>
               )}
-            </div>
 
             {excelError ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">

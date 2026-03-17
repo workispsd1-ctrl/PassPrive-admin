@@ -231,7 +231,7 @@ export const UserTable = ({
                   key={user.id}
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors lg:text-md md:text-md text-sm"
                 >
-                  <td className="py-4 px-4  text-gray-900">{user.full_name}</td>
+                  <td className="py-4 px-4  text-gray-900">{user.full_name || user.display_name}</td>
                   <td className="py-4 px-4 text-center  text-gray-900">
                     {user.phone ?? "-"}
                   </td>
@@ -336,7 +336,7 @@ export const UserTable = ({
           {/* Header */}
           <div className="flex justify-between items-center border-b pb-4 mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">
-              {selectedData?.full_name}
+              {selectedData?.full_name || selectedData?.display_name}
             </h2>
             <span
               className={`text-[12px] font-semibold px-3 py-1 rounded-full ${
@@ -354,7 +354,7 @@ export const UserTable = ({
             {/* BASIC INFO */}
             <div className="flex justify-between">
               <span className="font-semibold text-gray-600">Full Name:</span>
-              <span>{selectedData?.full_name || "-"}</span>
+              <span>{selectedData?.full_name || selectedData?.display_name || "-"}</span>
             </div>
 
             <div className="flex justify-between">
