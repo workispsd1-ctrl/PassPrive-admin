@@ -359,7 +359,7 @@ export default function BankOffersPage() {
   const [filter, setFilter] = useState("");
   const [restaurants, setRestaurants] = useState<MerchantOption[]>([]);
   const [stores, setStores] = useState<MerchantOption[]>([]);
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const existingBinIdsRef = useRef<string[]>([]);
   const existingTargetIdsRef = useRef<string[]>([]);
 
