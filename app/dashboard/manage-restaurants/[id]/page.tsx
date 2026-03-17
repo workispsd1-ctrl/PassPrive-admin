@@ -50,6 +50,11 @@ const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
   return `${h}:${m}`;
 });
 
+const getDayValue = (raw: any, day: string) => {
+  if (!raw || typeof raw !== "object") return undefined;
+  return raw[day] ?? raw[day.toLowerCase()] ?? raw[day.toUpperCase()];
+};
+
 /* ---------------- NORMALIZATION (Facilities Tick Fix) ---------------- */
 
 /**
@@ -81,10 +86,12 @@ const FACILITY_VARIANTS: Record<string, string[]> = {
 const parseOpeningHours = (raw: any) => {
   const result: any = {};
   DAYS.forEach((day) => {
-    const v = raw?.[day];
+    const v = getDayValue(raw, day);
     if (typeof v === "string" && v.includes("-")) {
       const [open, close] = v.split("-").map((x) => x.trim());
       result[day] = { open, close };
+    } else if (v && typeof v === "object") {
+      result[day] = { open: v.open || "", close: v.close || "" };
     } else {
       result[day] = { open: "", close: "" };
     }
@@ -96,7 +103,9 @@ const serializeOpeningHours = (hours: any) => {
   const result: any = {};
   DAYS.forEach((day) => {
     const { open, close } = hours[day] || {};
-    if (open && close) result[day] = `${open} - ${close}`;
+    if (open && close) {
+      result[day.toLowerCase()] = { open, close };
+    }
   });
   return result;
 };
@@ -547,7 +556,17 @@ export default function RestaurantDetailPage() {
       <Section title="Weekly Schedule">
         <div className="flex items-center gap-4">
           <span className="text-sm">Enable opening hours for this week</span>
-          <Switch checked={weekEnabled} disabled={!editMode} onCheckedChange={setWeekEnabled} />
+          <Switch
+            checked={weekEnabled}
+            disabled={!editMode}
+            onCheckedChange={setWeekEnabled}
+            className="data-[state=unchecked]:bg-rose-500 data-[state=checked]:bg-blue-600"
+          />
+          <span
+            className={`text-sm font-medium ${weekEnabled ? "text-blue-700" : "text-rose-600"}`}
+          >
+            {weekEnabled ? "Open" : "Closed"}
+          </span>
         </div>
         {!weekEnabled && (
           <p className="text-xs text-gray-500">

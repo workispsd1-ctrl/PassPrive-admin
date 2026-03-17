@@ -45,24 +45,56 @@ const emptyWeek = () =>
     return acc;
   }, {} as Record<string, DayHours>);
 
+const normalizeDayLabel = (day: string) => {
+  if (!day) return "";
+  const lowered = day.toLowerCase();
+  const match = DAYS.find((d) => d.toLowerCase() === lowered);
+  return match || "";
+};
+
 /* ---------------- HOURS UTILS ---------------- */
 
 const parseHours = (raw: any) => {
   const week = emptyWeek();
-  if (!Array.isArray(raw)) return week;
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const day = normalizeDayLabel(item?.day || "");
+      if (!day || !week[day]) continue;
 
-  for (const item of raw) {
-    const day = item?.day;
-    if (!day || !week[day]) continue;
+      const closed = !!item?.closed;
+      const slot0 = Array.isArray(item?.slots) ? item.slots[0] : null;
 
-    const closed = !!item?.closed;
-    const slot0 = Array.isArray(item?.slots) ? item.slots[0] : null;
+      week[day] = {
+        closed,
+        open: closed ? "" : (slot0?.open || ""),
+        close: closed ? "" : (slot0?.close || ""),
+      };
+    }
 
-    week[day] = {
-      closed,
-      open: closed ? "" : (slot0?.open || ""),
-      close: closed ? "" : (slot0?.close || ""),
-    };
+    return week;
+  }
+
+  if (raw && typeof raw === "object") {
+    for (const [dayKey, value] of Object.entries(raw)) {
+      const day = normalizeDayLabel(dayKey);
+      if (!day || !week[day]) continue;
+
+      if (typeof value === "string" && value.includes("-")) {
+        const [open, close] = value.split("-").map((x) => x.trim());
+        week[day] = { open: open || "", close: close || "", closed: false };
+        continue;
+      }
+
+      if (value && typeof value === "object") {
+        const obj = value as { open?: string; close?: string; closed?: boolean };
+        const closed = !!obj.closed;
+        week[day] = {
+          closed,
+          open: closed ? "" : (obj.open || ""),
+          close: closed ? "" : (obj.close || ""),
+        };
+      }
+    }
   }
 
   return week;
@@ -150,7 +182,13 @@ export default function StoreDetailPage() {
       setOpeningHours(parsed);
       setOpeningHoursOriginal(parsed);
 
-      setWeekEnabled(Array.isArray(data.hours) && data.hours.length > 0);
+      const hasArrayHours = Array.isArray(data.hours) && data.hours.length > 0;
+      const hasObjectHours =
+        !!data.hours &&
+        typeof data.hours === "object" &&
+        !Array.isArray(data.hours) &&
+        Object.keys(data.hours).length > 0;
+      setWeekEnabled(hasArrayHours || hasObjectHours);
     };
 
     fetchStore();
@@ -766,7 +804,13 @@ export default function StoreDetailPage() {
             checked={weekEnabled}
             disabled={!editMode}
             onCheckedChange={setWeekEnabled}
+            className="data-[state=unchecked]:bg-rose-500 data-[state=checked]:bg-blue-600"
           />
+          <span
+            className={`text-sm font-medium ${weekEnabled ? "text-blue-700" : "text-rose-600"}`}
+          >
+            {weekEnabled ? "Open" : "Closed"}
+          </span>
         </div>
         {!weekEnabled && (
           <p className="text-xs text-gray-500">
