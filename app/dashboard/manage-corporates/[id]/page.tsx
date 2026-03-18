@@ -687,7 +687,7 @@ export default function CorporateDetailPage() {
       const token = await getAccessToken();
       const cleanId = String(id).trim();
 
-      // Always-sent fields
+      // Only send fields accepted by backend UpdateCorporateSchema
       const payload: any = {
         name: corporate.name?.trim() || "",
         phone: corporate.phone?.trim() || null,
@@ -697,24 +697,6 @@ export default function CorporateDetailPage() {
         full_address: corporate.full_address?.trim() || null,
         is_active: corporate.is_active ?? true,
       };
-
-      // Only include optional fields when they have valid values
-      const planVal = String(corporate.plan || "").trim();
-      if (planVal) payload.plan = planVal;
-
-      const seatsVal = Number(corporate.seats);
-      if (!isNaN(seatsVal)) payload.seats = seatsVal;
-
-      // Ensure dates are YYYY-MM-DD
-      const startVal = String(corporate.subscription_start || "").trim().split("T")[0];
-      if (startVal && startVal !== "null") payload.subscription_start = startVal;
-
-      const expiryVal = String(corporate.subscription_expiry || "").trim().split("T")[0];
-      if (expiryVal && expiryVal !== "null") payload.subscription_expiry = expiryVal;
-
-      const validStatuses = ["active", "inactive", "expired"];
-      const statusVal = String(corporate.subscription_status || "").trim().toLowerCase();
-      if (validStatuses.includes(statusVal)) payload.subscription_status = statusVal;
 
       console.log("[handleSaveCorporate] Request:", { url: `${API_BASE}/api/corporates/${cleanId}`, payload });
 
@@ -731,10 +713,9 @@ export default function CorporateDetailPage() {
       console.log("[handleSaveCorporate] Response:", res.status, text);
 
       let json: any = {};
-      try { json = JSON.parse(text); } catch { /* silenty fail if not JSON */ }
+      try { json = JSON.parse(text); } catch { /* silently fail if not JSON */ }
 
       if (!res.ok) {
-        // If server says "Cannot PUT", it's an Express routing error
         if (text.includes("Cannot PUT")) {
           throw new Error(`Server route not found (404). Please ensure the backend has the PUT /api/corporates/:id route defined.`);
         }
@@ -1020,49 +1001,8 @@ export default function CorporateDetailPage() {
                     Subscription
                   </div>
 
-                  {editMode ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Plan Name</label>
-                        <Input
-                          className={inputClass}
-                          placeholder="e.g. Professional"
-                          value={corporate.plan || ""}
-                          onChange={(e) => setCorporate({ ...corporate, plan: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Status</label>
-                        <select
-                          className="mt-1 h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm focus:outline-none"
-                          value={corporate.subscription_status || "active"}
-                          onChange={(e) => setCorporate({ ...corporate, subscription_status: e.target.value })}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="expired">Expired</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Start Date</label>
-                        <Input
-                          className={inputClass}
-                          type="date"
-                          value={corporate.subscription_start?.split("T")[0] || ""}
-                          onChange={(e) => setCorporate({ ...corporate, subscription_start: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Expiry Date</label>
-                        <Input
-                          className={inputClass}
-                          type="date"
-                          value={corporate.subscription_expiry?.split("T")[0] || ""}
-                          onChange={(e) => setCorporate({ ...corporate, subscription_expiry: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  ) : (
+                  {/* Subscription is read-only (managed at creation time) */}
+                  {false ? null : (
                     <div className="space-y-2 text-sm text-gray-700">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-gray-500">Plan</span>
@@ -1096,30 +1036,8 @@ export default function CorporateDetailPage() {
                     Seats allocation
                   </div>
 
-                  {editMode ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-gray-600">Total Seats</label>
-                        <Input
-                          className={inputClass}
-                          type="number"
-                          min={0}
-                          value={String(corporate.seats ?? 0)}
-                          onChange={(e) => setCorporate({ ...corporate, seats: Number(e.target.value) || 0 })}
-                        />
-                      </div>
-                      <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Employees used</span>
-                          <span className="font-semibold">{employeeCount}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Seats left</span>
-                          <span className="font-semibold">{Math.max(0, Number(corporate.seats || 0) - employeeCount)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
+                  {/* Seats are read-only (managed at creation time) */}
+                  {false ? null : (
                     <div className="space-y-2 text-sm text-gray-700">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-gray-500">Total seats</span>
