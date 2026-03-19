@@ -44,6 +44,12 @@ export default function AddOfferPage() {
       <div className="py-5">  <Link href="/dashboard/offers"><ChevronLeft  /></Link></div>
 
       <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Add Home Hero Offer</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Create a new banner for the main home hero section.
+          </p>
+        </div>
 
         {/* Title */}
         <input
@@ -79,6 +85,7 @@ export default function AddOfferPage() {
             {form.type === "image" && (
               <img
                 src={URL.createObjectURL(file)}
+                alt="Offer preview"
                 className="w-48 rounded"
               />
             )}
@@ -113,5 +120,3 @@ export default function AddOfferPage() {
     </div>
   );
 }
-
-

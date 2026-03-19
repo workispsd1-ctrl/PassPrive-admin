@@ -1,180 +1,619 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type Offer = {
+type BannerRecord = {
   id: number;
+  title?: string;
   type: string;
   media_url: string;
   is_active: boolean;
+  priority?: number;
 };
 
-export default function OffersPage() {
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState<number | null>(null);
-  const router = useRouter();
+type BannerKind = "homehero" | "dinein" | "store";
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+type BannerConfig = {
+  key: BannerKind;
+  title: string;
+  description: string;
+  collectionLabel: string;
+  listEndpoint: string;
+  uploadEndpoint?: string;
+  deleteEndpoint: string;
+  emptyLabel: string;
+  addLabel: string;
+  supportsEdit: boolean;
+};
 
-  const loadOffers = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${backendUrl}/api/homeherooffers`, {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      setOffers(res.data.offers || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+type UploadFormState = {
+  title: string;
+  type: string;
+  priority: number;
+  is_active: boolean;
+};
+
+const backendUrl =
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://localhost:8000";
+
+const initialUploadForm: UploadFormState = {
+  title: "",
+  type: "image",
+  priority: 1,
+  is_active: true,
+};
+
+const bannerConfigs: BannerConfig[] = [
+  {
+    key: "homehero",
+    title: "Home Hero Offers",
+    description: "Top-level hero creatives shown on the main home experience.",
+    collectionLabel: "Hero offers",
+    listEndpoint: "/api/homeherooffers",
+    uploadEndpoint: "/api/homeherooffers/upload",
+    deleteEndpoint: "/api/homeherooffers",
+    emptyLabel: "No home hero offers available yet.",
+    addLabel: "Add Home Hero Offer",
+    supportsEdit: true,
+  },
+  {
+    key: "dinein",
+    title: "Dine-In Home Banners",
+    description: "Promotional banners shown in the dine-in home section.",
+    collectionLabel: "Dine-in banners",
+    listEndpoint: "/api/dineinhomebanners",
+    uploadEndpoint: "/api/dineinhomebanners/upload",
+    deleteEndpoint: "/api/dineinhomebanners",
+    emptyLabel: "No dine-in home banners available yet.",
+    addLabel: "Add Dine-In Banner",
+    supportsEdit: false,
+  },
+  {
+    key: "store",
+    title: "Store Home Banners",
+    description: "Promotional banners shown in the store home section.",
+    collectionLabel: "Store banners",
+    listEndpoint: "/api/storeshomebanners",
+    uploadEndpoint: "/api/storeshomebanners/upload",
+    deleteEndpoint: "/api/storeshomebanners",
+    emptyLabel: "No store home banners available yet.",
+    addLabel: "Add Store Banner",
+    supportsEdit: false,
+  },
+];
+
+function extractBannerList(payload: unknown): BannerRecord[] {
+  if (Array.isArray(payload)) return payload;
+
+  const recordPayload =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+  if (!recordPayload) return [];
+
+  const possibleKeys = [
+    "offers",
+    "offer",
+    "banners",
+    "banner",
+    "data",
+    "items",
+    "results",
+  ];
+
+  for (const key of possibleKeys) {
+    const value = recordPayload[key];
+    if (Array.isArray(value)) {
+      return value as BannerRecord[];
     }
-  };
+  }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this offer?")) return;
+  return [];
+}
 
-    try {
-      setDeleting(id);
-      await axios.delete(`${backendUrl}/api/homeherooffers/${id}`);
-      await loadOffers(); // Reload the list
-      alert("Offer deleted successfully!");
-    } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to delete offer");
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  const handleEdit = (id: number) => {
-    router.push(`/dashboard/offers/${id}`);
-  };
-
-  useEffect(() => {
-    loadOffers();
-  }, []);
+function BannerPreview({ banner }: { banner: BannerRecord }) {
+  if (banner.type === "video") {
+    return (
+      <video
+        src={banner.media_url}
+        className="h-20 w-36 rounded-lg border border-slate-200 bg-slate-100 object-cover"
+        controls
+      />
+    );
+  }
 
   return (
-    <div className="p-4 min-h-full">
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-800">
-            Home Hero Offers
-          </h1>
-          <p className="text-sm text-slate-500">
-            Manage banners, images and promotional offers
-          </p>
-        </div>
+    <img
+      src={banner.media_url}
+      alt={banner.title || "Banner"}
+      className="h-20 w-36 rounded-lg border border-slate-200 bg-slate-100 object-cover"
+    />
+  );
+}
 
-        <a
-          href="/dashboard/offers/new"
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          + Add Offer
-        </a>
+function UploadPanel({
+  config,
+  form,
+  file,
+  saving,
+  onChange,
+  onFileChange,
+  onCancel,
+  onSubmit,
+}: {
+  config: BannerConfig;
+  form: UploadFormState;
+  file: File | null;
+  saving: boolean;
+  onChange: (patch: Partial<UploadFormState>) => void;
+  onFileChange: (file: File | null) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+      <div className="mb-4">
+        <h3 className="text-base font-semibold text-slate-900">{config.addLabel}</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Upload a new creative for the {config.collectionLabel.toLowerCase()} section.
+        </p>
       </div>
 
-      {/* CONTENT */}
-      {loading ? (
-        <SkeletonTable />
-      ) : offers.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center text-slate-500 border border-slate-200">
-          No offers available. Create a new offer to get started.
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Title
+          </label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={(e) => onChange({ title: e.target.value })}
+            placeholder={`${config.title} title`}
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500"
+          />
         </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="p-4 text-left font-medium text-slate-600">ID</th>
-                <th className="p-4 text-left font-medium text-slate-600">Type</th>
-                <th className="p-4 text-left font-medium text-slate-600">
-                  Preview
-                </th>
-                <th className="p-4 text-left font-medium text-slate-600">
-                  Status
-                </th>
-                <th className="p-4 text-right font-medium text-slate-600">
-                  Actions
-                </th>
-              </tr>
-            </thead>
 
-            <tbody>
-              {offers.map((o) => (
-                <tr
-                  key={o.id}
-                  className="border-t border-slate-200 hover:bg-slate-50"
-                >
-                  <td className="p-4 text-slate-700">{o.id}</td>
-                  <td className="p-4 capitalize text-slate-700">{o.type}</td>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Media Type
+          </label>
+          <select
+            value={form.type}
+            onChange={(e) => onChange({ type: e.target.value })}
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500"
+          >
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+            <option value="lottie">Lottie</option>
+          </select>
+        </div>
 
-                  <td className="p-4">
-                    <img
-                      src={o.media_url}
-                      alt="Offer"
-                      className="w-28 h-16 rounded-md object-cover border border-slate-200"
-                    />
-                  </td>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Priority
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={form.priority}
+            onChange={(e) => onChange({ priority: Number(e.target.value) || 1 })}
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500"
+          />
+        </div>
 
-                  <td className="p-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        o.is_active
-                          ? "bg-green-100 text-green-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}
-                    >
-                      {o.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
+        <div className="md:col-span-2">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Upload File
+          </label>
+          <input
+            type="file"
+            accept={
+              form.type === "video"
+                ? "video/*"
+                : form.type === "image"
+                ? "image/*"
+                : ".json"
+            }
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              onFileChange(e.target.files?.[0] ?? null)
+            }
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500"
+          />
+        </div>
 
-                  <td className="p-4 text-right space-x-4">
-                    <button
-                      onClick={() => handleEdit(o.id)}
-                      className="text-blue-600 hover:underline"
-                      disabled={deleting === o.id}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(o.id)}
-                      className="text-red-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={deleting === o.id}
-                    >
-                      {deleting === o.id ? "Deleting..." : "Delete"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => onChange({ is_active: e.target.checked })}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          Active banner
+        </label>
+      </div>
+
+      {file && (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-4">
+          <p className="mb-3 text-sm font-medium text-slate-700">Preview</p>
+          {form.type === "video" ? (
+            <video
+              src={URL.createObjectURL(file)}
+              className="max-h-56 w-full max-w-sm rounded-lg object-cover"
+              controls
+            />
+          ) : (
+            <img
+              src={URL.createObjectURL(file)}
+              alt="Selected file preview"
+              className="max-h-56 w-full max-w-sm rounded-lg object-cover"
+            />
+          )}
         </div>
       )}
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button
+          onClick={onSubmit}
+          disabled={saving}
+          className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+        >
+          {saving ? "Uploading..." : config.addLabel}
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={saving}
+          className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
 
-/* ---------------- Skeleton Loader ---------------- */
+export default function OffersPage() {
+  const router = useRouter();
+  const [records, setRecords] = useState<Record<BannerKind, BannerRecord[]>>({
+    homehero: [],
+    dinein: [],
+    store: [],
+  });
+  const [loading, setLoading] = useState<Record<BannerKind, boolean>>({
+    homehero: true,
+    dinein: true,
+    store: true,
+  });
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [saving, setSaving] = useState<Record<BannerKind, boolean>>({
+    homehero: false,
+    dinein: false,
+    store: false,
+  });
+  const [openForm, setOpenForm] = useState<BannerKind | null>(null);
+  const [forms, setForms] = useState<Record<BannerKind, UploadFormState>>({
+    homehero: { ...initialUploadForm },
+    dinein: { ...initialUploadForm },
+    store: { ...initialUploadForm },
+  });
+  const [files, setFiles] = useState<Record<BannerKind, File | null>>({
+    homehero: null,
+    dinein: null,
+    store: null,
+  });
+
+  const summary = useMemo(
+    () =>
+      bannerConfigs.map((config) => ({
+        label: config.collectionLabel,
+        count: records[config.key]?.length || 0,
+      })),
+    [records]
+  );
+
+  async function loadBannerGroup(config: BannerConfig) {
+    try {
+      setLoading((current) => ({ ...current, [config.key]: true }));
+      const res = await axios.get(`${backendUrl}${config.listEndpoint}`, {
+        headers: { "Cache-Control": "no-cache" },
+      });
+      setRecords((current) => ({
+        ...current,
+        [config.key]: extractBannerList(res.data),
+      }));
+    } catch (error) {
+      console.error(`Failed to load ${config.key} banners`, error);
+      setRecords((current) => ({ ...current, [config.key]: [] }));
+    } finally {
+      setLoading((current) => ({ ...current, [config.key]: false }));
+    }
+  }
+
+  useEffect(() => {
+    void Promise.all(bannerConfigs.map((config) => loadBannerGroup(config)));
+  }, []);
+
+  function updateForm(kind: BannerKind, patch: Partial<UploadFormState>) {
+    setForms((current) => ({
+      ...current,
+      [kind]: {
+        ...current[kind],
+        ...patch,
+      },
+    }));
+  }
+
+  function resetForm(kind: BannerKind) {
+    setForms((current) => ({ ...current, [kind]: { ...initialUploadForm } }));
+    setFiles((current) => ({ ...current, [kind]: null }));
+    setOpenForm((current) => (current === kind ? null : current));
+  }
+
+  async function handleDelete(config: BannerConfig, id: number) {
+    if (!confirm(`Delete this ${config.collectionLabel.slice(0, -1).toLowerCase()}?`)) {
+      return;
+    }
+
+    const deletingKey = `${config.key}-${id}`;
+
+    try {
+      setDeleting(deletingKey);
+      await axios.delete(`${backendUrl}${config.deleteEndpoint}/${id}`);
+      await loadBannerGroup(config);
+      alert(`${config.title} item deleted successfully.`);
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      console.error(error);
+      alert(message || "Failed to delete banner");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  async function handleUpload(config: BannerConfig) {
+    const file = files[config.key];
+    const form = forms[config.key];
+
+    if (!config.uploadEndpoint) {
+      return;
+    }
+
+    if (!file) {
+      alert("Please upload a file");
+      return;
+    }
+
+    try {
+      setSaving((current) => ({ ...current, [config.key]: true }));
+
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("type", form.type);
+      formData.append("priority", String(form.priority));
+      formData.append("is_active", String(form.is_active));
+      formData.append("media", file);
+
+      await axios.post(`${backendUrl}${config.uploadEndpoint}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      await loadBannerGroup(config);
+      resetForm(config.key);
+      alert(`${config.addLabel} created successfully.`);
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      console.error(error);
+      alert(message || "Failed to upload banner");
+    } finally {
+      setSaving((current) => ({ ...current, [config.key]: false }));
+    }
+  }
+
+  function handleEdit(id: number) {
+    router.push(`/dashboard/offers/${id}`);
+  }
+
+  return (
+    <div className="min-h-full bg-slate-50/70 p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">
+                Offers Section
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold text-slate-900">
+                Banner Management
+              </h1>
+              <p className="mt-3 text-sm text-slate-500">
+                Manage home hero offers, dine-in home banners, and store home banners from one place.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {summary.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    {item.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {item.count}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {bannerConfigs.map((config) => {
+          const items = records[config.key] || [];
+          const formOpen = openForm === config.key;
+
+          return (
+            <section
+              key={config.key}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            >
+              <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-start md:justify-between">
+                <div className="max-w-2xl">
+                  <h2 className="text-xl font-semibold text-slate-900">{config.title}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{config.description}</p>
+                  {!config.supportsEdit && (
+                    <p className="mt-2 text-xs font-medium text-amber-600">
+                      Upload and delete are available here. Edit is not added because only create/delete routes were provided.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {config.supportsEdit ? (
+                    <Link
+                      href="/dashboard/offers/new"
+                      className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                      {config.addLabel}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        setOpenForm((current) =>
+                          current === config.key ? null : config.key
+                        )
+                      }
+                      className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                      {formOpen ? "Close Form" : config.addLabel}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {formOpen && !config.supportsEdit && (
+                <div className="mt-5">
+                  <UploadPanel
+                    config={config}
+                    form={forms[config.key]}
+                    file={files[config.key]}
+                    saving={saving[config.key]}
+                    onChange={(patch) => updateForm(config.key, patch)}
+                    onFileChange={(file) =>
+                      setFiles((current) => ({ ...current, [config.key]: file }))
+                    }
+                    onCancel={() => resetForm(config.key)}
+                    onSubmit={() => handleUpload(config)}
+                  />
+                </div>
+              )}
+
+              <div className="mt-6">
+                {loading[config.key] ? (
+                  <SkeletonTable />
+                ) : items.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
+                    {config.emptyLabel}
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">ID</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">Title</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">Type</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">Priority</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">Preview</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
+                            <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {items.map((item) => {
+                            const rowDeleteKey = `${config.key}-${item.id}`;
+                            return (
+                              <tr key={item.id} className="hover:bg-slate-50">
+                                <td className="px-4 py-4 text-slate-700">{item.id}</td>
+                                <td className="px-4 py-4 font-medium text-slate-800">
+                                  {item.title?.trim() || "-"}
+                                </td>
+                                <td className="px-4 py-4 capitalize text-slate-700">
+                                  {item.type || "-"}
+                                </td>
+                                <td className="px-4 py-4 text-slate-700">
+                                  {item.priority ?? "-"}
+                                </td>
+                                <td className="px-4 py-4">
+                                  <BannerPreview banner={item} />
+                                </td>
+                                <td className="px-4 py-4">
+                                  <span
+                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                                      item.is_active
+                                        ? "bg-emerald-100 text-emerald-700"
+                                        : "bg-amber-100 text-amber-700"
+                                    }`}
+                                  >
+                                    {item.is_active ? "Active" : "Inactive"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4 text-right">
+                                  <div className="flex justify-end gap-3">
+                                    {config.supportsEdit && (
+                                      <button
+                                        onClick={() => handleEdit(item.id)}
+                                        className="text-blue-600 transition hover:underline"
+                                        disabled={deleting === rowDeleteKey}
+                                      >
+                                        Edit
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleDelete(config, item.id)}
+                                      className="text-red-500 transition hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                                      disabled={deleting === rowDeleteKey}
+                                    >
+                                      {deleting === rowDeleteKey ? "Deleting..." : "Delete"}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function SkeletonTable() {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div className="p-4 space-y-4 animate-pulse">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-5 gap-4 items-center"
-          >
-            <div className="h-4 bg-slate-200 rounded w-12" />
-            <div className="h-4 bg-slate-200 rounded w-24" />
-            <div className="h-10 bg-slate-200 rounded w-28" />
-            <div className="h-6 bg-slate-200 rounded w-20" />
-            <div className="h-4 bg-slate-200 rounded w-24 ml-auto" />
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="animate-pulse space-y-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="grid grid-cols-6 gap-4">
+            <div className="h-4 rounded bg-slate-200" />
+            <div className="h-4 rounded bg-slate-200" />
+            <div className="h-4 rounded bg-slate-200" />
+            <div className="h-4 rounded bg-slate-200" />
+            <div className="h-16 rounded bg-slate-200" />
+            <div className="h-4 rounded bg-slate-200" />
           </div>
         ))}
       </div>

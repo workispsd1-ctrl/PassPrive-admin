@@ -22,7 +22,7 @@ const pathName: any = {
   "/dashboard/users": "User Management",
   "/dashboard/manage-restaurants": "Restaurant Management",
   "/dashboard/manage-stores": "Stores Management",
-  "/dashboard/offers": "Offer Management",
+  "/dashboard/offers": "Banner Management",
   "/dashboard/manage-restaurants/add": " Add Restaurant",
   "/dashboard/spotlight": "Spotlight Management",
   "/dashboard/users/[id]": "User Subscription",
@@ -39,7 +39,7 @@ const pathName: any = {
   "/dashboard/leads": "Leads",
   "/dashboard/invoices": "Invoices",
   "/dashboard/webhook": "Webhook",
-  "/dashboard/offers/new": "Add New Offer",
+  "/dashboard/offers/new": "Add Home Hero Offer",
   "/dashboard/manage-corporates": "Corporate Management",
 };
 

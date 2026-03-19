@@ -50,11 +50,14 @@ export default function EditOfferPage() {
           is_active: offer.is_active ?? true,
         });
         setCurrentMediaUrl(offer.media_url || "");
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = axios.isAxiosError(err)
+          ? err.response?.data?.message || err.message
+          : "Unknown error";
         console.error("Error loading offer:", err);
         console.error("Backend URL:", backendUrl);
         console.error("Full URL:", `${backendUrl}/api/homeherooffers/${id}`);
-        alert(`Failed to load offer: ${err.response?.data?.message || err.message}`);
+        alert(`Failed to load offer: ${message}`);
         router.push("/dashboard/offers");
       } finally {
         setLoading(false);
@@ -62,7 +65,7 @@ export default function EditOfferPage() {
     };
 
     if (id) loadOffer();
-  }, [id]);
+  }, [backendUrl, id, router]);
 
   const onSubmit = async () => {
     try {
@@ -93,9 +96,12 @@ export default function EditOfferPage() {
       alert("Offer updated successfully!");
       router.refresh(); // Clear Next.js cache
       router.push("/dashboard/offers");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message
+        : undefined;
       console.error(err);
-      alert(err.response?.data?.message || "Failed to update offer");
+      alert(message || "Failed to update offer");
     } finally {
       setSaving(false);
     }
@@ -120,7 +126,7 @@ export default function EditOfferPage() {
         <Link href="/dashboard/offers">
           <ChevronLeft className="cursor-pointer hover:bg-slate-100 rounded" />
         </Link>
-        <h1 className="text-2xl font-semibold">Edit Offer</h1>
+        <h1 className="text-2xl font-semibold">Edit Home Hero Offer</h1>
       </div>
 
       <div className="space-y-4">
