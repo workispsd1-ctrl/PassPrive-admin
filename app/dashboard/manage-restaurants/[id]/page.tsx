@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -81,6 +83,18 @@ const FACILITY_VARIANTS: Record<string, string[]> = {
   "Bar Available": ["Bar Available", "Bar available", "Bar"],
 };
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+async function getAccessToken() {
+  const { data, error } = await supabaseBrowser.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in.");
+  return token;
+}
+
 /* ---------------- OPENING HOURS UTILS ---------------- */
 
 const parseOpeningHours = (raw: any) => {
@@ -115,6 +129,8 @@ const serializeOpeningHours = (hours: any) => {
 export default function RestaurantDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+
+  const { isAdmin } = useSelector((state: RootState) => state.admin);
 
   const [restaurant, setRestaurant] = useState<any>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<any>(null);
@@ -227,7 +243,7 @@ export default function RestaurantDetailPage() {
         await supabaseBrowser.storage
           .from("restaurants")
           .remove(uploadedPaths)
-          .catch(() => {}); // Silent fail on cleanup
+          .catch(() => { }); // Silent fail on cleanup
       }
       throw error;
     }
@@ -342,45 +358,54 @@ export default function RestaurantDetailPage() {
       ];
 
       const payload = {
-      // keep all editable fields you already had
-      name: restaurant.name,
-      phone: restaurant.phone,
-      area: restaurant.area,
-      city: restaurant.city,
-      full_address: restaurant.full_address,
-      cuisines: restaurant.cuisines,
-      cost_for_two: restaurant.cost_for_two,
-      distance: restaurant.distance,
-      offer: restaurant.offer,
-      facilities: restaurant.facilities,
-      highlights: restaurant.highlights,
-      worth_visit: restaurant.worth_visit,
+        name: restaurant.name,
+        phone: restaurant.phone,
+        area: restaurant.area,
+        city: restaurant.city,
+        full_address: restaurant.full_address,
+        cuisines: restaurant.cuisines,
+        cost_for_two: restaurant.cost_for_two,
+        distance: restaurant.distance,
+        offer: restaurant.offer,
+        facilities: restaurant.facilities,
+        highlights: restaurant.highlights,
+        worth_visit: restaurant.worth_visit,
 
-      // ✅ week include/exclude
-      opening_hours: weekEnabled ? serializeOpeningHours(openingHours) : {},
+        // ✅ week include/exclude
+        opening_hours: weekEnabled ? serializeOpeningHours(openingHours) : {},
 
-      is_active: restaurant.is_active,
+        is_active: restaurant.is_active,
 
-      // ✅ Updated images
-      food_images: finalFoodImages,
-      ambience_images: finalAmbienceImages,
+        // ✅ Updated images
+        food_images: finalFoodImages,
+        ambience_images: finalAmbienceImages,
 
-      // keep these unchanged (read-only in UI)
-      menu: restaurant.menu,
-      reviews: restaurant.reviews,
-    };
+        // ✅ New booking fields
+        booking_enabled: restaurant.booking_enabled,
+        avg_duration_minutes: Number(restaurant.avg_duration_minutes),
+        max_bookings_per_slot: restaurant.max_bookings_per_slot ? Number(restaurant.max_bookings_per_slot) : null,
+        advance_booking_days: Number(restaurant.advance_booking_days),
 
-    const { error } = await supabaseBrowser.from("restaurants").update(payload).eq("id", id);
+        // ✅ link owner (only admins can change this successfully in backend)
+        owner_user_id: restaurant.owner_user_id || null,
 
-      if (error) {
-        showToast({
-          type: "error",
-          title: "Update failed",
-          description: error.message,
-        });
-        setSaving(false);
-        return;
-      }
+        // keep these unchanged (read-only in UI)
+        menu: restaurant.menu,
+        reviews: restaurant.reviews,
+      };
+
+      const token = await getAccessToken();
+      const res = await fetch(`${API_BASE}/api/restaurants/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Update failed");
 
       showToast({ type: "success", title: "Restaurant updated" });
       setEditMode(false);
@@ -437,16 +462,72 @@ export default function RestaurantDetailPage() {
         )}
       </div>
 
-       <Section title="System">
-        <div className="flex items-center gap-4">
-          <span>Active</span>
-          <Switch
-            checked={restaurant.is_active}
-            disabled={!editMode}
-            onCheckedChange={(v) => setRestaurant({ ...restaurant, is_active: v })}
-          />
-        </div>
+      <Section title="System">
+        <Grid>
+          <Field label="Active">
+            <Switch
+              checked={restaurant.is_active}
+              disabled={!editMode}
+              onCheckedChange={(v) => setRestaurant({ ...restaurant, is_active: v })}
+            />
+          </Field>
 
+          {/* 🛡️ OWNER MANAGEMENT (Only for Admins) */}
+          {isAdmin && (
+            <Field label="Owner User ID">
+              <Input
+                className={inputClass}
+                disabled={!editMode}
+                value={restaurant.owner_user_id ?? ""}
+                placeholder="Partner UUID (leave empty to unassign)"
+                onChange={(e) => setRestaurant({ ...restaurant, owner_user_id: e.target.value || null })}
+              />
+            </Field>
+          )}
+        </Grid>
+      </Section>
+
+      <Section title="Booking & Reservation">
+        <Grid>
+          <Field label="Booking Enabled">
+            <Switch
+              checked={restaurant.booking_enabled}
+              disabled={!editMode}
+              onCheckedChange={(v) => setRestaurant({ ...restaurant, booking_enabled: v })}
+            />
+          </Field>
+
+          <Field label="Avg Duration (minutes)">
+            <Input
+              className={inputClass}
+              type="number"
+              disabled={!editMode}
+              value={restaurant.avg_duration_minutes ?? ""}
+              onChange={(e) => setRestaurant({ ...restaurant, avg_duration_minutes: Number(e.target.value) })}
+            />
+          </Field>
+
+          <Field label="Max Bookings Per Slot">
+            <Input
+              className={inputClass}
+              type="number"
+              disabled={!editMode}
+              value={restaurant.max_bookings_per_slot ?? ""}
+              placeholder="No limit"
+              onChange={(e) => setRestaurant({ ...restaurant, max_bookings_per_slot: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
+
+          <Field label="Advance Booking (days)">
+            <Input
+              className={inputClass}
+              type="number"
+              disabled={!editMode}
+              value={restaurant.advance_booking_days ?? ""}
+              onChange={(e) => setRestaurant({ ...restaurant, advance_booking_days: Number(e.target.value) })}
+            />
+          </Field>
+        </Grid>
       </Section>
 
       {/* BASIC INFO */}
@@ -804,13 +885,13 @@ export default function RestaurantDetailPage() {
         />
       </Section>
 
-        <ReadOnly
-          label="Created At"
-          value={restaurant.created_at ? new Date(restaurant.created_at).toLocaleString() : "-"}
-        />
+      <ReadOnly
+        label="Created At"
+        value={restaurant.created_at ? new Date(restaurant.created_at).toLocaleString() : "-"}
+      />
 
       {/* SYSTEM */}
-     
+
     </div>
   );
 }
