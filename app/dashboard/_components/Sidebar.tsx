@@ -5,39 +5,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Users,
-  CreditCard,
-  BarChart3,
-  Activity,
-  Settings,
-  Mail,
-  CalendarDays,
   LogOut,
   LayoutDashboard,
-  View,
-  Recycle,
-  Calculator,
-  FileArchive,
   Code,
-  Archive,
-  Video,
-  Table2,
-  Ampersand,
-  Amphora,
   BookUser,
-  History,
-  Bot,
   WalletMinimal,
-  FileText,
-  File,
-  Globe,
   Hotel,
   Store,
   Spotlight,
   BadgePercent,
   Building,
-  Landmark
+  Landmark,
+  Tags
 } from "lucide-react";
-import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 import {
@@ -83,6 +63,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     },
 
     { title: "Bank Offers", href: "/dashboard/bank-offers", icon: Landmark },
+    { title: "Mood Categories", href: "/dashboard/mood-categories", icon: Tags },
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
     { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
     { title: "User Management", href: "/dashboard/users", icon: Users },
