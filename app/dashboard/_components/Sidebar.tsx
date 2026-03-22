@@ -16,7 +16,8 @@ import {
   BadgePercent,
   Building,
   Landmark,
-  Tags
+  Tags,
+  PanelsTopLeft
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     },
 
     { title: "Bank Offers", href: "/dashboard/bank-offers", icon: Landmark },
+    { title: "In Your PassPrive", href: "/dashboard/in-your-passprive", icon: PanelsTopLeft },
     { title: "Restaurant Mood Categories", href: "/dashboard/mood-categories", icon: Tags },
     { title: "Store Mood Categories", href: "/dashboard/store-mood-categories", icon: Store },
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
