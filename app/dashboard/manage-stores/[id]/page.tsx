@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -185,6 +191,26 @@ export default function StoreDetailPage() {
     const parts = [store.location_name, store.city, store.region].filter(Boolean);
     return parts.join(", ");
   }, [store]);
+
+  const selectedStoreCategories = useMemo(() => {
+    if (!store) return [] as string[];
+
+    const values = Array.isArray(store.category)
+      ? store.category
+      : String(store.category || "")
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+
+    return values.filter((value: string) => categoryOptions.includes(value));
+  }, [store, categoryOptions]);
+
+  const categoryForSave = useMemo(() => {
+    if (!store) return null;
+    const raw = typeof store.category === "string" ? store.category.trim() : "";
+    if (!categoryOptions.length) return raw || null;
+    return selectedStoreCategories.length ? selectedStoreCategories.join(", ") : null;
+  }, [store, categoryOptions, selectedStoreCategories]);
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -473,7 +499,7 @@ export default function StoreDetailPage() {
         name: store.name,
         description: store.description || null,
 
-        category: store.category || null,
+        category: categoryForSave,
         subcategory: store.subcategory || null,
         tags: tagsArray,
 
@@ -637,31 +663,65 @@ export default function StoreDetailPage() {
           </Field>
 
           <Field label="Category">
-            <select
-              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm disabled:bg-gray-100`}
-              disabled={!editMode}
-              value={store.category ?? ""}
-              onChange={(e) =>
-                setStore({
-                  ...store,
-                  category: e.target.value,
-                })
-              }
-            >
-              <option value="">Select category</option>
-              {Array.from(
-                new Set(
-                  [
-                    ...(store.category ? [store.category] : []),
-                    ...categoryOptions,
-                  ].filter(Boolean)
-                )
-              ).map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!editMode}
+                  className="w-full justify-between bg-white border-gray-300"
+                >
+                  {selectedStoreCategories.length
+                    ? `${selectedStoreCategories.length} categories selected`
+                    : "Select categories"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                sideOffset={6}
+                className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
+              >
+                {categoryOptions.length ? (
+                  categoryOptions.map((category) => (
+                    <DropdownMenuCheckboxItem
+                      key={category}
+                      checked={selectedStoreCategories.includes(category)}
+                      onCheckedChange={(checked) => {
+                        const next =
+                          checked === true
+                            ? selectedStoreCategories.includes(category)
+                              ? selectedStoreCategories
+                              : [...selectedStoreCategories, category]
+                            : selectedStoreCategories.filter((item: string) => item !== category);
+
+                        setStore({
+                          ...store,
+                          category: next.join(", "),
+                        });
+                      }}
+                    >
+                      {category}
+                    </DropdownMenuCheckboxItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    No store mood categories found
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {selectedStoreCategories.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selectedStoreCategories.map((category: string) => (
+                  <span
+                    key={category}
+                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-2 py-1 text-xs"
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
+            )}
           </Field>
 
           <Field label="Subcategory">

@@ -4,6 +4,13 @@ import React, { useMemo } from "react";
 import { Building2, Minus, Plus, Tags } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Section, Label } from "../ui";
 import { ICON_INDIGO, inputClass } from "../constants";
 import type { OpenSection, StoreFormState } from "../types";
@@ -32,11 +39,13 @@ export default function BasicSection({
   ) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  const categoryItems = useMemo(() => {
-    if (!form.category) return categoryOptions;
-    if (categoryOptions.includes(form.category)) return categoryOptions;
-    return [form.category, ...categoryOptions];
-  }, [categoryOptions, form.category]);
+  const selectedCategories = useMemo(() => {
+    const values = (form.category || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    return values.filter((v) => categoryOptions.includes(v));
+  }, [form.category, categoryOptions]);
 
   return (
     <Section
@@ -63,25 +72,64 @@ export default function BasicSection({
 
         <div>
           <Label required>Category</Label>
-          <select
-            className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
-            name="category"
-            value={form.category}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                category: e.target.value,
-                subcategory: "",
-              }))
-            }
-          >
-            <option value="">Select category</option>
-            {categoryItems.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between bg-white border-gray-300"
+              >
+                {selectedCategories.length
+                  ? `${selectedCategories.length} categories selected`
+                  : "Select categories"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              sideOffset={6}
+              className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
+            >
+              {categoryOptions.length ? (
+                categoryOptions.map((category) => (
+                  <DropdownMenuCheckboxItem
+                    key={category}
+                    checked={selectedCategories.includes(category)}
+                    onCheckedChange={(checked) => {
+                      const next =
+                        checked === true
+                          ? selectedCategories.includes(category)
+                            ? selectedCategories
+                            : [...selectedCategories, category]
+                          : selectedCategories.filter((item) => item !== category);
+
+                      setForm((prev) => ({
+                        ...prev,
+                        category: next.join(", "),
+                      }));
+                    }}
+                  >
+                    {category}
+                  </DropdownMenuCheckboxItem>
+                ))
+              ) : (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  No store mood categories found
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {selectedCategories.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {selectedCategories.map((category) => (
+                <span
+                  key={category}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-2 py-1 text-xs"
+                >
+                  {category}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
