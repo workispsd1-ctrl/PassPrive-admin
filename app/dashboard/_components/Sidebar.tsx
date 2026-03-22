@@ -63,7 +63,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     },
 
     { title: "Bank Offers", href: "/dashboard/bank-offers", icon: Landmark },
-    { title: "Mood Categories", href: "/dashboard/mood-categories", icon: Tags },
+    { title: "Restaurant Mood Categories", href: "/dashboard/mood-categories", icon: Tags },
+    { title: "Store Mood Categories", href: "/dashboard/store-mood-categories", icon: Store },
     { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
     { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
     { title: "User Management", href: "/dashboard/users", icon: Users },
