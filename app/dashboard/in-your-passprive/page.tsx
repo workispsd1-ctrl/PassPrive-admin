@@ -56,12 +56,14 @@ type PassPriveCard = {
 
 type CardFormState = {
   title: string;
+  subtitle: string;
   is_active: boolean;
   sort_order: string;
 };
 
 const initialForm: CardFormState = {
   title: "",
+  subtitle: "",
   is_active: true,
   sort_order: "100",
 };
@@ -173,6 +175,7 @@ export default function InYourPassPrivePage() {
     setEditingCard(card);
     setForm({
       title: card.title || "",
+      subtitle: card.subtitle || "",
       is_active: Boolean(card.is_active),
       sort_order: String(card.sort_order ?? 100),
     });
@@ -185,6 +188,11 @@ export default function InYourPassPrivePage() {
       return;
     }
 
+    if (!form.subtitle.trim()) {
+      showToast({ type: "error", title: "Subtitle is required" });
+      return;
+    }
+
     const sortOrder = Number(form.sort_order);
     if (!Number.isFinite(sortOrder)) {
       showToast({ type: "error", title: "Sort order must be a valid number" });
@@ -193,7 +201,7 @@ export default function InYourPassPrivePage() {
 
     const payload = {
       title: form.title.trim(),
-      subtitle: null,
+      subtitle: form.subtitle.trim(),
       city: null,
       is_active: form.is_active,
       sort_order: sortOrder,
@@ -384,6 +392,16 @@ export default function InYourPassPrivePage() {
                 value={form.title}
                 onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                 placeholder="In Your PassPrive"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="card-subtitle">Subtitle</Label>
+              <Input
+                id="card-subtitle"
+                value={form.subtitle}
+                onChange={(event) => setForm((current) => ({ ...current, subtitle: event.target.value }))}
+                placeholder="Top picks for your city"
               />
             </div>
 
