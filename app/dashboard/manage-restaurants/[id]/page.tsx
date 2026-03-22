@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 
@@ -87,6 +93,68 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
 
+type MoodCategoryRecord = { title?: string };
+
+function extractCategoryList(payload: unknown): MoodCategoryRecord[] {
+  if (Array.isArray(payload)) return payload as MoodCategoryRecord[];
+
+  const recordPayload =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+
+  if (!recordPayload) return [];
+
+  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
+  for (const key of possibleKeys) {
+    if (Array.isArray(recordPayload[key])) {
+      return recordPayload[key] as MoodCategoryRecord[];
+    }
+  }
+
+  return [];
+}
+
+function offerToInputValue(offer: unknown): string {
+  if (offer === null || offer === undefined) return "";
+  if (typeof offer === "string") return offer;
+  if (typeof offer === "object") {
+    const record = offer as Record<string, unknown>;
+    if (typeof record.text === "string") return record.text;
+    if (typeof record.title === "string") return record.title;
+    if (typeof record.label === "string") return record.label;
+    return "";
+  }
+  return "";
+}
+
+function offerToPayload(offer: unknown) {
+  if (offer === null || offer === undefined) return null;
+  if (typeof offer === "string") {
+    const text = offer.trim();
+    return text ? { text } : null;
+  }
+  if (typeof offer === "object") return offer;
+  return null;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function asIntOrDefault(value: unknown, fallback: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.trunc(n);
+}
+
 async function getAccessToken() {
   const { data, error } = await supabaseBrowser.auth.getSession();
   if (error) throw error;
@@ -140,6 +208,7 @@ export default function RestaurantDetailPage() {
 
   // ✅ week include/exclude
   const [weekEnabled, setWeekEnabled] = useState(true);
+  const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -294,6 +363,38 @@ export default function RestaurantDetailPage() {
     fetchRestaurant();
   }, [id]);
 
+  useEffect(() => {
+    const loadMoodCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/moodcategories`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) return;
+
+        const payload = await response.json().catch(() => null);
+        const moodTitles = Array.from(
+          new Set(
+            extractCategoryList(payload)
+              .map((item) => item?.title)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim().length > 0
+              )
+              .map((value) => value.trim())
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        setMoodCategoryOptions(moodTitles);
+      } catch {
+        // keep editor usable even when mood categories cannot be loaded
+      }
+    };
+
+    void loadMoodCategories();
+  }, []);
+
   const handleCancel = () => {
     setRestaurant(restaurantOriginal);
     setOpeningHours(openingHoursOriginal);
@@ -363,13 +464,15 @@ export default function RestaurantDetailPage() {
         area: restaurant.area,
         city: restaurant.city,
         full_address: restaurant.full_address,
-        cuisines: restaurant.cuisines,
-        cost_for_two: restaurant.cost_for_two,
-        distance: restaurant.distance,
-        offer: restaurant.offer,
-        facilities: restaurant.facilities,
-        highlights: restaurant.highlights,
-        worth_visit: restaurant.worth_visit,
+        cuisines: asStringArray(restaurant.cuisines),
+        cost_for_two: asNullableNumber(restaurant.cost_for_two),
+        distance: asNullableNumber(restaurant.distance),
+        offer: offerToPayload(restaurant.offer),
+        facilities: asStringArray(restaurant.facilities),
+        highlights: asStringArray(restaurant.highlights),
+        worth_visit: asStringArray(restaurant.worth_visit),
+        mood_tags: asStringArray(restaurant.mood_tags),
+        is_pure_veg: !!restaurant.is_pure_veg,
 
         // ✅ week include/exclude
         opening_hours: weekEnabled ? serializeOpeningHours(openingHours) : {},
@@ -381,10 +484,10 @@ export default function RestaurantDetailPage() {
         ambience_images: finalAmbienceImages,
 
         // ✅ New booking fields
-        booking_enabled: restaurant.booking_enabled,
-        avg_duration_minutes: Number(restaurant.avg_duration_minutes),
-        max_bookings_per_slot: restaurant.max_bookings_per_slot ? Number(restaurant.max_bookings_per_slot) : null,
-        advance_booking_days: Number(restaurant.advance_booking_days),
+        booking_enabled: !!restaurant.booking_enabled,
+        avg_duration_minutes: asIntOrDefault(restaurant.avg_duration_minutes, 90),
+        max_bookings_per_slot: asNullableNumber(restaurant.max_bookings_per_slot),
+        advance_booking_days: asIntOrDefault(restaurant.advance_booking_days, 30),
 
         // ✅ link owner (only admins can change this successfully in backend)
         owner_user_id: restaurant.owner_user_id || null,
@@ -405,7 +508,10 @@ export default function RestaurantDetailPage() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Update failed");
+      if (!res.ok) {
+        const details = json?.details ? ` ${JSON.stringify(json.details)}` : "";
+        throw new Error(`${json?.error || "Update failed"}${details}`.trim());
+      }
 
       showToast({ type: "success", title: "Restaurant updated" });
       setEditMode(false);
@@ -604,9 +710,80 @@ export default function RestaurantDetailPage() {
             <Input
               className={inputClass}
               disabled={!editMode}
-              value={restaurant.offer ?? ""}
+              value={offerToInputValue(restaurant.offer)}
               onChange={(e) => setRestaurant({ ...restaurant, offer: e.target.value })}
             />
+          </Field>
+
+          <Field label="Mood Tags">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!editMode}
+                  className="w-full justify-between bg-white border-gray-300"
+                >
+                  {Array.isArray(restaurant.mood_tags) && restaurant.mood_tags.length
+                    ? `${restaurant.mood_tags.length} mood tag${restaurant.mood_tags.length > 1 ? "s" : ""} selected`
+                    : "Select mood tags"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                sideOffset={6}
+                className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
+              >
+                {Array.from(
+                  new Set([
+                    ...(Array.isArray(restaurant.mood_tags) ? restaurant.mood_tags : []),
+                    ...moodCategoryOptions,
+                  ])
+                ).map((mood) => (
+                  <DropdownMenuCheckboxItem
+                    key={mood}
+                    checked={Array.isArray(restaurant.mood_tags) && restaurant.mood_tags.includes(mood)}
+                    onCheckedChange={(checked) => {
+                      const current = Array.isArray(restaurant.mood_tags) ? restaurant.mood_tags : [];
+                      const next =
+                        checked === true
+                          ? current.includes(mood)
+                            ? current
+                            : [...current, mood]
+                          : current.filter((item: string) => item !== mood);
+                      setRestaurant({ ...restaurant, mood_tags: next });
+                    }}
+                  >
+                    {mood}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {Array.isArray(restaurant.mood_tags) && restaurant.mood_tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {restaurant.mood_tags.map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-2 py-1 text-xs"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </Field>
+
+          <Field label="Pure Veg">
+            <div className="flex items-center gap-3 h-10">
+              <Switch
+                checked={!!restaurant.is_pure_veg}
+                disabled={!editMode}
+                onCheckedChange={(value) =>
+                  setRestaurant({ ...restaurant, is_pure_veg: value })
+                }
+              />
+              <span className="text-sm text-gray-700">Vegetarian restaurant</span>
+            </div>
           </Field>
 
           {/* ✅ keeping other fields (you already save these; show them too) */}

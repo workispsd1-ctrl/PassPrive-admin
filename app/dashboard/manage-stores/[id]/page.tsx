@@ -16,6 +16,33 @@ import { Switch } from "@/components/ui/switch";
 const inputClass =
   "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+type StoreMoodCategoryRecord = {
+  title?: string;
+};
+
+function extractCategoryList(payload: unknown): StoreMoodCategoryRecord[] {
+  if (Array.isArray(payload)) return payload as StoreMoodCategoryRecord[];
+
+  const recordPayload =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+
+  if (!recordPayload) return [];
+
+  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
+  for (const key of possibleKeys) {
+    if (Array.isArray(recordPayload[key])) {
+      return recordPayload[key] as StoreMoodCategoryRecord[];
+    }
+  }
+
+  return [];
+}
+
 const DAYS = [
   "Monday",
   "Tuesday",
@@ -140,6 +167,7 @@ export default function StoreDetailPage() {
 
   // ✅ week include/exclude (same as restaurants)
   const [weekEnabled, setWeekEnabled] = useState(true);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -193,6 +221,38 @@ export default function StoreDetailPage() {
 
     fetchStore();
   }, [id]);
+
+  useEffect(() => {
+    const loadDropdownOptions = async () => {
+      try {
+        const moodResult = await fetch(`${API_BASE}/api/storemoodcategories`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (moodResult.ok) {
+          const payload = await moodResult.json().catch(() => null);
+          const categories = Array.from(
+            new Set(
+              extractCategoryList(payload)
+                .map((item) => item?.title)
+                .filter(
+                  (value): value is string =>
+                    typeof value === "string" && value.trim().length > 0
+                )
+                .map((value) => value.trim())
+            )
+          ).sort((a, b) => a.localeCompare(b));
+
+          setCategoryOptions(categories);
+        }
+      } catch {
+        // Keep form usable even if dropdown options fail to load.
+      }
+    };
+
+    void loadDropdownOptions();
+  }, []);
 
   /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
 
@@ -577,12 +637,31 @@ export default function StoreDetailPage() {
           </Field>
 
           <Field label="Category">
-            <Input
-              className={inputClass}
+            <select
+              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm disabled:bg-gray-100`}
               disabled={!editMode}
               value={store.category ?? ""}
-              onChange={(e) => setStore({ ...store, category: e.target.value })}
-            />
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  category: e.target.value,
+                })
+              }
+            >
+              <option value="">Select category</option>
+              {Array.from(
+                new Set(
+                  [
+                    ...(store.category ? [store.category] : []),
+                    ...categoryOptions,
+                  ].filter(Boolean)
+                )
+              ).map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Subcategory">

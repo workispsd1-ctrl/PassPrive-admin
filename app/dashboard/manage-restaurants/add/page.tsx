@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import { X, Eye, EyeOff } from "lucide-react";
@@ -22,6 +29,7 @@ const DAYS = [
 ] as const;
 
 type DayHours = { open: string; close: string };
+type MoodCategoryRecord = { title?: string };
 
 const PARTNER_ROLE = "restaurantpartner" as const;
 
@@ -30,6 +38,24 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
 
+function extractCategoryList(payload: unknown): MoodCategoryRecord[] {
+  if (Array.isArray(payload)) return payload as MoodCategoryRecord[];
+
+  const recordPayload =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+
+  if (!recordPayload) return [];
+
+  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
+  for (const key of possibleKeys) {
+    if (Array.isArray(recordPayload[key])) {
+      return recordPayload[key] as MoodCategoryRecord[];
+    }
+  }
+
+  return [];
+}
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -37,6 +63,16 @@ function slugify(input: string) {
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+}
+
+function offerToPayload(offer: unknown) {
+  if (offer === null || offer === undefined) return null;
+  if (typeof offer === "string") {
+    const text = offer.trim();
+    return text ? { text } : null;
+  }
+  if (typeof offer === "object") return offer;
+  return null;
 }
 
 async function getAccessToken() {
@@ -50,6 +86,8 @@ async function getAccessToken() {
 export default function AddRestaurantPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
+  const [selectedMoodTags, setSelectedMoodTags] = useState<string[]>([]);
 
   const [foodImages, setFoodImages] = useState<File[]>([]);
   const [ambienceImages, setAmbienceImages] = useState<File[]>([]);
@@ -74,6 +112,7 @@ export default function AddRestaurantPage() {
     worth_visit: "",
     latitude: "",
     longitude: "",
+    is_pure_veg: false,
     booking_enabled: true,
     avg_duration_minutes: "90",
     max_bookings_per_slot: "",
@@ -90,6 +129,38 @@ export default function AddRestaurantPage() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  useEffect(() => {
+    const loadMoodCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/moodcategories`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) return;
+
+        const payload = await response.json().catch(() => null);
+        const moodTitles = Array.from(
+          new Set(
+            extractCategoryList(payload)
+              .map((item) => item?.title)
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim().length > 0
+              )
+              .map((value) => value.trim())
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        setMoodCategoryOptions(moodTitles);
+      } catch {
+        // keep form functional even when mood categories cannot be loaded
+      }
+    };
+
+    void loadMoodCategories();
+  }, []);
 
   /* ---------------------------------------------
      IMAGE UPLOAD (still direct to storage)
@@ -139,14 +210,29 @@ export default function AddRestaurantPage() {
     phone?: string;
     role: string;
   }) => {
+    const token = await getAccessToken();
+
     const res = await fetch(`${API_BASE}/api/auth/create-user`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ email, password, full_name, phone, role }),
     });
 
     const json = await res.json();
-    if (!res.ok) throw new Error(json?.error || "Failed to create partner user");
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error("Unauthorized. Please login again as admin/superadmin.");
+      }
+      if (res.status === 403) {
+        throw new Error(
+          "Access denied. Current account is not admin/superadmin. Please login with an admin account."
+        );
+      }
+      throw new Error(json?.error || "Failed to create partner user");
+    }
 
     return json.user as { id: string; email: string; role: string };
   };
@@ -248,11 +334,13 @@ export default function AddRestaurantPage() {
         cuisines: form.cuisines ? form.cuisines.split(",").map((v) => v.trim()) : [],
         cost_for_two: form.cost_for_two ? Number(form.cost_for_two) : null,
         distance: form.distance ? Number(form.distance) : null,
-        offer: form.offer || null,
+        offer: offerToPayload(form.offer),
 
         facilities: form.facilities ? form.facilities.split(",").map((v) => v.trim()) : [],
         highlights: form.highlights ? form.highlights.split(",").map((v) => v.trim()) : [],
         worth_visit: form.worth_visit ? form.worth_visit.split(",").map((v) => v.trim()) : [],
+        mood_tags: selectedMoodTags,
+        is_pure_veg: !!form.is_pure_veg,
 
         opening_hours: formattedOpeningHours,
         reviews: [],
@@ -416,6 +504,66 @@ export default function AddRestaurantPage() {
 
         <Input className={inputClass} name="cuisines" placeholder="Cuisines (comma separated)" onChange={handleChange} />
 
+        <div>
+          <label className="text-sm font-medium">Mood Tags</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-1 justify-between bg-white border-gray-300"
+              >
+                {selectedMoodTags.length
+                  ? `${selectedMoodTags.length} mood tag${selectedMoodTags.length > 1 ? "s" : ""} selected`
+                  : "Select mood tags"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              sideOffset={6}
+              className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
+            >
+              {moodCategoryOptions.length ? (
+                moodCategoryOptions.map((mood) => (
+                  <DropdownMenuCheckboxItem
+                    key={mood}
+                    checked={selectedMoodTags.includes(mood)}
+                    onCheckedChange={(checked) => {
+                      setSelectedMoodTags((prev) => {
+                        if (checked === true) {
+                          return prev.includes(mood) ? prev : [...prev, mood];
+                        }
+                        return prev.filter((item) => item !== mood);
+                      });
+                    }}
+                  >
+                    {mood}
+                  </DropdownMenuCheckboxItem>
+                ))
+              ) : (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  No mood categories found
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {selectedMoodTags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {selectedMoodTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-2 py-1 text-xs"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-500 mt-1">
+            Pick one or more mood categories.
+          </p>
+        </div>
+
         <div className="grid grid-cols-3 gap-4">
           <Input 
             type="number" 
@@ -433,6 +581,14 @@ export default function AddRestaurantPage() {
             onChange={handleChange} 
           />
           <Input className={inputClass} name="offer" placeholder="Offer (optional)" onChange={handleChange} />
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <Switch
+            checked={!!form.is_pure_veg}
+            onCheckedChange={(value) => setForm((prev) => ({ ...prev, is_pure_veg: value }))}
+          />
+          <span className="text-sm">Pure Veg</span>
         </div>
       </section>
 

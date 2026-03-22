@@ -14,19 +14,29 @@ export default function BasicSection({
   preserveScroll,
   form,
   setForm,
+  categoryOptions = [],
 }: {
   openSection: OpenSection;
   onToggle: (id: Exclude<OpenSection, null>) => void;
   preserveScroll: (fn: () => void) => void;
   form: StoreFormState;
   setForm: React.Dispatch<React.SetStateAction<StoreFormState>>;
+  categoryOptions?: string[];
 }) {
   const tagsArray = useMemo(() => {
     return form.tags ? form.tags.split(",").map((v) => v.trim()).filter(Boolean) : [];
   }, [form.tags]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) =>
     setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const categoryItems = useMemo(() => {
+    if (!form.category) return categoryOptions;
+    if (categoryOptions.includes(form.category)) return categoryOptions;
+    return [form.category, ...categoryOptions];
+  }, [categoryOptions, form.category]);
 
   return (
     <Section
@@ -53,13 +63,25 @@ export default function BasicSection({
 
         <div>
           <Label required>Category</Label>
-          <Input
-            className={inputClass}
+          <select
+            className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
             name="category"
-            placeholder="e.g. Fashion, Supermarket, Electronics"
             value={form.category}
-            onChange={handleChange}
-          />
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                category: e.target.value,
+                subcategory: "",
+              }))
+            }
+          >
+            <option value="">Select category</option>
+            {categoryItems.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

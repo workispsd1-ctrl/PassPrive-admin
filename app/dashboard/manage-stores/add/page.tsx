@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,32 @@ import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sectio
   ✅ CONSTANTS
 ------------------------------------------------------- */
 const STORE_ROLE = "storepartner" as const;
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+type StoreMoodCategoryRecord = {
+  title?: string;
+};
+
+function extractCategoryList(payload: unknown): StoreMoodCategoryRecord[] {
+  if (Array.isArray(payload)) return payload as StoreMoodCategoryRecord[];
+
+  const recordPayload =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+
+  if (!recordPayload) return [];
+
+  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
+  for (const key of possibleKeys) {
+    if (Array.isArray(recordPayload[key])) {
+      return recordPayload[key] as StoreMoodCategoryRecord[];
+    }
+  }
+
+  return [];
+}
 
 /* -------------------------------------------------------
   ✅ INDUSTRIAL HELPERS (safe ids + uploads)
@@ -87,6 +113,7 @@ function AddStorePageInner() {
   const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
 
   // ✅ NEW: Partner login credentials (frontend create)
   const [partnerEmail, setPartnerEmail] = useState("");
@@ -179,6 +206,38 @@ function AddStorePageInner() {
 
   const offersApi = useStoreOffers(preserveScroll);
   const catalogueApi = useStoreCatalogue(preserveScroll);
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const moodResult = await fetch(`${API_BASE}/api/storemoodcategories`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (moodResult.ok) {
+          const payload = await moodResult.json().catch(() => null);
+          const categories = Array.from(
+            new Set(
+              extractCategoryList(payload)
+                .map((item) => item?.title)
+                .filter(
+                  (value): value is string =>
+                    typeof value === "string" && value.trim().length > 0
+                )
+                .map((value) => value.trim())
+            )
+          ).sort((a, b) => a.localeCompare(b));
+
+          setCategoryOptions(categories);
+        }
+      } catch {
+        // Keep form usable even if dropdown options fail to load.
+      }
+    };
+
+    void loadOptions();
+  }, []);
 
   /* ---------------------------------------------
      ✅ STORAGE UPLOAD HELPERS
@@ -757,6 +816,7 @@ function AddStorePageInner() {
           preserveScroll={preserveScroll}
           form={form}
           setForm={setForm}
+          categoryOptions={categoryOptions}
         />
 
         <ContactSection
