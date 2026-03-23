@@ -41,6 +41,7 @@ const pathName: any = {
   "/dashboard/webhook": "Webhook",
   "/dashboard/offers/new": "Add Home Hero Offer",
   "/dashboard/manage-corporates": "Corporate Management",
+  "/dashboard/store-campaign": "Store Campaign",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
