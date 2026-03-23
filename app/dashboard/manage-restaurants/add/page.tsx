@@ -28,7 +28,12 @@ const DAYS = [
   "Sunday",
 ] as const;
 
-type DayHours = { open: string; close: string };
+const HOUR_OPTIONS = Array.from(
+  { length: 24 },
+  (_, hour) => `${String(hour).padStart(2, "0")}:00`
+);
+
+type DayHours = { open: string; close: string; closed: boolean };
 type MoodCategoryRecord = { title?: string };
 
 const PARTNER_ROLE = "restaurantpartner" as const;
@@ -121,7 +126,7 @@ export default function AddRestaurantPage() {
 
   const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(
     DAYS.reduce((acc, day) => {
-      acc[day] = { open: "", close: "" };
+      acc[day] = { open: "", close: "", closed: false };
       return acc;
     }, {} as Record<string, DayHours>)
   );
@@ -304,10 +309,13 @@ export default function AddRestaurantPage() {
     try {
       // opening_hours jsonb
       const formattedOpeningHours: Record<string, { open: string; close: string }> = {};
-      Object.entries(openingHours).forEach(([day, time]) => {
-        if (time.open && time.close) {
-          formattedOpeningHours[day.toLowerCase()] = { open: time.open, close: time.close };
-        }
+      Object.entries(openingHours).forEach(([day, dayData]) => {
+        if (dayData.closed || !dayData.open || !dayData.close) return;
+
+        formattedOpeningHours[day.toLowerCase()] = {
+          open: dayData.open,
+          close: dayData.close,
+        };
       });
 
       // slug
@@ -583,6 +591,25 @@ export default function AddRestaurantPage() {
           <Input className={inputClass} name="offer" placeholder="Offer (optional)" onChange={handleChange} />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <Input 
+            type="number" 
+            step="0.000001"
+            className={inputClass} 
+            name="latitude" 
+            placeholder="Latitude" 
+            onChange={handleChange} 
+          />
+          <Input 
+            type="number" 
+            step="0.000001"
+            className={inputClass} 
+            name="longitude" 
+            placeholder="Longitude" 
+            onChange={handleChange} 
+          />
+        </div>
+
         <div className="flex items-center gap-3 pt-1">
           <Switch
             checked={!!form.is_pure_veg}
@@ -638,30 +665,68 @@ export default function AddRestaurantPage() {
         </h2>
 
         {DAYS.map((day) => (
-          <div key={day} className="grid grid-cols-3 gap-4 items-center">
-            <span className="text-sm">{day}</span>
-            <Input
-              className={inputClass}
-              type="time"
-              value={openingHours[day].open}
-              onChange={(e) =>
-                setOpeningHours({
-                  ...openingHours,
-                  [day]: { ...openingHours[day], open: e.target.value },
-                })
-              }
-            />
-            <Input
-              className={inputClass}
-              type="time"
-              value={openingHours[day].close}
-              onChange={(e) =>
-                setOpeningHours({
-                  ...openingHours,
-                  [day]: { ...openingHours[day], close: e.target.value },
-                })
-              }
-            />
+          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold">{day}</span>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={openingHours[day].closed}
+                  onChange={(e) =>
+                    setOpeningHours((prev) => ({
+                      ...prev,
+                      [day]: {
+                        ...prev[day],
+                        closed: e.target.checked,
+                        open: e.target.checked ? "" : prev[day].open,
+                        close: e.target.checked ? "" : prev[day].close,
+                      },
+                    }))
+                  }
+                />
+                Closed
+              </label>
+            </div>
+
+            {!openingHours[day].closed && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select
+                  className="border rounded-md px-3 py-2 text-sm bg-white"
+                  value={openingHours[day].open || ""}
+                  onChange={(e) =>
+                    setOpeningHours((prev) => ({
+                      ...prev,
+                      [day]: { ...prev[day], open: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="">Open</option>
+                  {HOUR_OPTIONS.map((t) => (
+                    <option key={`${day}-open-${t}`} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="border rounded-md px-3 py-2 text-sm bg-white"
+                  value={openingHours[day].close || ""}
+                  onChange={(e) =>
+                    setOpeningHours((prev) => ({
+                      ...prev,
+                      [day]: { ...prev[day], close: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="">Close</option>
+                  {HOUR_OPTIONS.map((t) => (
+                    <option key={`${day}-close-${t}`} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         ))}
       </section>

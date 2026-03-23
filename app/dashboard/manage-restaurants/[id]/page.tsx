@@ -34,6 +34,11 @@ const DAYS = [
   "Sunday",
 ];
 
+const HOUR_OPTIONS = Array.from(
+  { length: 24 },
+  (_, hour) => `${String(hour).padStart(2, "0")}:00`
+);
+
 /**
  * These are the labels you want to show in UI (keep as-is).
  * We'll still make them tick correctly by mapping + normalization.
@@ -50,13 +55,6 @@ const FACILITY_OPTIONS = [
   "Pet Friendly",
   "Bar Available",
 ];
-
-/** Generates 15-min slots in 24h format (kept as your code) */
-const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
-  const h = String(Math.floor(i / 4)).padStart(2, "0");
-  const m = String((i % 4) * 15).padStart(2, "0");
-  return `${h}:${m}`;
-});
 
 const getDayValue = (raw: any, day: string) => {
   if (!raw || typeof raw !== "object") return undefined;
@@ -167,15 +165,22 @@ async function getAccessToken() {
 
 const parseOpeningHours = (raw: any) => {
   const result: any = {};
+
   DAYS.forEach((day) => {
     const v = getDayValue(raw, day);
     if (typeof v === "string" && v.includes("-")) {
       const [open, close] = v.split("-").map((x) => x.trim());
-      result[day] = { open, close };
+      result[day] = { open, close, closed: false };
     } else if (v && typeof v === "object") {
-      result[day] = { open: v.open || "", close: v.close || "" };
+      const open = v.open || "";
+      const close = v.close || "";
+      result[day] = {
+        open,
+        close,
+        closed: !!v.closed || (!open && !close),
+      };
     } else {
-      result[day] = { open: "", close: "" };
+      result[day] = { open: "", close: "", closed: false };
     }
   });
   return result;
@@ -184,10 +189,13 @@ const parseOpeningHours = (raw: any) => {
 const serializeOpeningHours = (hours: any) => {
   const result: any = {};
   DAYS.forEach((day) => {
-    const { open, close } = hours[day] || {};
-    if (open && close) {
-      result[day.toLowerCase()] = { open, close };
-    }
+    const dayData = hours[day] || { open: "", close: "", closed: false };
+    if (dayData.closed || !dayData.open || !dayData.close) return;
+
+    result[day.toLowerCase()] = {
+      open: dayData.open,
+      close: dayData.close,
+    };
   });
   return result;
 };
@@ -478,6 +486,10 @@ export default function RestaurantDetailPage() {
         opening_hours: weekEnabled ? serializeOpeningHours(openingHours) : {},
 
         is_active: restaurant.is_active,
+
+        // ✅ Location (latitude/longitude)
+        latitude: asNullableNumber(restaurant.latitude),
+        longitude: asNullableNumber(restaurant.longitude),
 
         // ✅ Updated images
         food_images: finalFoodImages,
@@ -807,6 +819,28 @@ export default function RestaurantDetailPage() {
               onChange={(e) => setRestaurant({ ...restaurant, distance: Number(e.target.value) })}
             />
           </Field>
+
+          <Field label="Latitude">
+            <Input
+              className={inputClass}
+              type="number"
+              step="0.000001"
+              disabled={!editMode}
+              value={restaurant.latitude ?? ""}
+              onChange={(e) => setRestaurant({ ...restaurant, latitude: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
+
+          <Field label="Longitude">
+            <Input
+              className={inputClass}
+              type="number"
+              step="0.000001"
+              disabled={!editMode}
+              value={restaurant.longitude ?? ""}
+              onChange={(e) => setRestaurant({ ...restaurant, longitude: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
         </Grid>
       </Section>
 
@@ -836,45 +870,71 @@ export default function RestaurantDetailPage() {
       {/* OPENING HOURS */}
       <Section title="Opening Hours">
         {DAYS.map((day) => (
-          <div key={day} className="grid grid-cols-[120px_1fr_1fr] gap-4 mb-2">
-            <span className="text-sm">{day}</span>
-            <select
-              disabled={!editMode || !weekEnabled}
-              className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-              value={openingHours[day]?.open || ""}
-              onChange={(e) =>
-                setOpeningHours({
-                  ...openingHours,
-                  [day]: { ...openingHours[day], open: e.target.value },
-                })
-              }
-            >
-              <option value="">Open</option>
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4 mb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold">{day}</span>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  disabled={!editMode || !weekEnabled}
+                  checked={!!openingHours[day]?.closed}
+                  onChange={(e) =>
+                    setOpeningHours((prev: any) => ({
+                      ...prev,
+                      [day]: {
+                        ...prev[day],
+                        closed: e.target.checked,
+                        open: e.target.checked ? "" : (prev[day]?.open || ""),
+                        close: e.target.checked ? "" : (prev[day]?.close || ""),
+                      },
+                    }))
+                  }
+                />
+                Closed
+              </label>
+            </div>
 
-            <select
-              disabled={!editMode || !weekEnabled}
-              className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-              value={openingHours[day]?.close || ""}
-              onChange={(e) =>
-                setOpeningHours({
-                  ...openingHours,
-                  [day]: { ...openingHours[day], close: e.target.value },
-                })
-              }
-            >
-              <option value="">Close</option>
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            {!openingHours[day]?.closed && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select
+                  disabled={!editMode || !weekEnabled}
+                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
+                  value={openingHours[day]?.open || ""}
+                  onChange={(e) =>
+                    setOpeningHours((prev: any) => ({
+                      ...prev,
+                      [day]: { ...prev[day], open: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="">Open</option>
+                  {HOUR_OPTIONS.map((t) => (
+                    <option key={`${day}-open-${t}`} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  disabled={!editMode || !weekEnabled}
+                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
+                  value={openingHours[day]?.close || ""}
+                  onChange={(e) =>
+                    setOpeningHours((prev: any) => ({
+                      ...prev,
+                      [day]: { ...prev[day], close: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="">Close</option>
+                  {HOUR_OPTIONS.map((t) => (
+                    <option key={`${day}-close-${t}`} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         ))}
       </Section>

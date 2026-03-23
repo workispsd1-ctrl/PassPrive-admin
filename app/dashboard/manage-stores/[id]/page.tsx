@@ -59,12 +59,10 @@ const DAYS = [
   "Sunday",
 ];
 
-/** Generates 15-min slots in 24h format */
-const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
-  const h = String(Math.floor(i / 4)).padStart(2, "0");
-  const m = String((i % 4) * 15).padStart(2, "0");
-  return `${h}:${m}`;
-});
+const HOUR_OPTIONS = Array.from(
+  { length: 24 },
+  (_, hour) => `${String(hour).padStart(2, "0")}:00`
+);
 
 type DayHours = {
   open: string;
@@ -89,6 +87,7 @@ const normalizeDayLabel = (day: string) => {
 
 const parseHours = (raw: any) => {
   const week = emptyWeek();
+
   if (Array.isArray(raw)) {
     for (const item of raw) {
       const day = normalizeDayLabel(item?.day || "");
@@ -961,66 +960,72 @@ export default function StoreDetailPage() {
       {/* OPENING HOURS */}
       <Section title="Opening Hours">
         {DAYS.map((day) => (
-          <div key={day} className="grid grid-cols-[120px_140px_1fr_1fr] gap-4 mb-2 items-center">
-            <span className="text-sm">{day}</span>
+          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4 mb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold">{day}</span>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={!editMode || !weekEnabled}
-                checked={!!openingHours[day]?.closed}
-                onChange={(e) =>
-                  setOpeningHours({
-                    ...openingHours,
-                    [day]: {
-                      ...openingHours[day],
-                      closed: e.target.checked,
-                      open: e.target.checked ? "" : openingHours[day].open,
-                      close: e.target.checked ? "" : openingHours[day].close,
-                    },
-                  })
-                }
-              />
-              <span className="text-sm text-gray-600">Closed</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  disabled={!editMode || !weekEnabled}
+                  checked={!!openingHours[day]?.closed}
+                  onChange={(e) =>
+                    setOpeningHours((prev) => ({
+                      ...prev,
+                      [day]: {
+                        ...prev[day],
+                        closed: e.target.checked,
+                        open: e.target.checked ? "" : (prev[day]?.open || ""),
+                        close: e.target.checked ? "" : (prev[day]?.close || ""),
+                      },
+                    }))
+                  }
+                />
+                <span className="text-sm text-gray-600">Closed</span>
+              </div>
             </div>
 
-            <select
-              disabled={!editMode || !weekEnabled || !!openingHours[day]?.closed}
-              className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-              value={openingHours[day]?.open || ""}
-              onChange={(e) =>
-                setOpeningHours({
-                  ...openingHours,
-                  [day]: { ...openingHours[day], open: e.target.value },
-                })
-              }
-            >
-              <option value="">Open</option>
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            {!openingHours[day]?.closed && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <select
+                  disabled={!editMode || !weekEnabled}
+                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
+                  value={openingHours[day]?.open || ""}
+                  onChange={(e) =>
+                    setOpeningHours((prev) => ({
+                      ...prev,
+                      [day]: { ...prev[day], open: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="">Open</option>
+                  {HOUR_OPTIONS.map((t) => (
+                    <option key={`${day}-open-${t}`} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
 
-            <select
-              disabled={!editMode || !weekEnabled || !!openingHours[day]?.closed}
-              className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-              value={openingHours[day]?.close || ""}
-              onChange={(e) =>
-                setOpeningHours({
-                  ...openingHours,
-                  [day]: { ...openingHours[day], close: e.target.value },
-                })
-              }
-            >
-              <option value="">Close</option>
-              {TIME_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+                <select
+                  disabled={!editMode || !weekEnabled}
+                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
+                  value={openingHours[day]?.close || ""}
+                  onChange={(e) =>
+                    setOpeningHours((prev) => ({
+                      ...prev,
+                      [day]: { ...prev[day], close: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="">Close</option>
+                  {HOUR_OPTIONS.map((t) => (
+                    <option key={`${day}-close-${t}`} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         ))}
       </Section>

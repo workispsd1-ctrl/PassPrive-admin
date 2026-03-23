@@ -460,7 +460,7 @@ function AddStorePageInner() {
       const storeId = uuid(); // store uuid (branch id)
 
       const hours = DAYS.map((day) => {
-        const d = openingHours[day];
+        const d = openingHours[day] || { open: "", close: "", closed: false };
         const closed = !!d.closed || (!d.open && !d.close);
         return { day, closed, slots: closed ? [] : [{ open: d.open, close: d.close }] };
       });

@@ -17,6 +17,11 @@ export const DAYS = [
   "Sunday",
 ] as const;
 
+export const HOUR_OPTIONS = Array.from(
+  { length: 24 },
+  (_, hour) => `${String(hour).padStart(2, "0")}:00`
+);
+
 export const DEFAULT_CATALOGUE_PRESETS: Array<{
   title: string;
   starting_from: string;

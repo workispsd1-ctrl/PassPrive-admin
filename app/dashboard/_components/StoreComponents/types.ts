@@ -5,7 +5,7 @@ export type DayName = (typeof DAYS)[number];
 export type DayHours = {
   open: string;
   close: string;
-  closed?: boolean;
+  closed: boolean;
 };
 
 export type StoreFormState = {

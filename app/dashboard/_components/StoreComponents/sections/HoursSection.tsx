@@ -2,8 +2,7 @@
 
 import React from "react";
 import { Clock3, Minus, Plus } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { DAYS, ICON_INDIGO, inputClass } from "../constants";
+import { DAYS, HOUR_OPTIONS, ICON_INDIGO } from "../constants";
 import { Section } from "../ui";
 import type { DayHours, OpenSection } from "../types";
 
@@ -31,81 +30,83 @@ export default function HoursSection({
       preserveScroll={preserveScroll}
       rightIcon={<span className={ICON_INDIGO}>{openSection === "hours" ? <Minus size={18} /> : <Plus size={18} />}</span>}
     >
-      <div className="rounded-xl border bg-white overflow-hidden">
-        <div className="grid grid-cols-12 px-4 py-3 bg-gray-50 border-b text-xs font-semibold text-gray-600 uppercase">
-          <div className="col-span-3">Day</div>
-          <div className="col-span-2">Closed</div>
-          <div className="col-span-3">Open</div>
-          <div className="col-span-3">Close</div>
-          <div className="col-span-1"></div>
-        </div>
+      <div className="space-y-3 rounded-xl border bg-white p-4">
+        {DAYS.map((day) => {
+          const dayHours = openingHours[day] || { open: "", close: "", closed: false };
 
-        {DAYS.map((day) => (
-          <div
-            key={day}
-            className="grid grid-cols-12 gap-3 px-4 py-3 border-b last:border-b-0 items-center"
-          >
-            <div className="col-span-3 text-sm font-semibold text-gray-900">{day}</div>
+          return (
+            <div key={day} className="rounded-md border border-gray-200 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-gray-900">{day}</div>
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={!!dayHours.closed}
+                    onChange={(e) =>
+                      preserveScroll(() =>
+                        setOpeningHours((prev) => ({
+                          ...prev,
+                          [day]: {
+                            ...prev[day],
+                            closed: e.target.checked,
+                            open: e.target.checked ? "" : (prev[day]?.open || ""),
+                            close: e.target.checked ? "" : (prev[day]?.close || ""),
+                          },
+                        }))
+                      )
+                    }
+                    className="h-4 w-4"
+                  />
+                  <span>Closed</span>
+                </label>
+              </div>
 
-            <div className="col-span-2 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={!!openingHours[day].closed}
-                onChange={(e) =>
-                  preserveScroll(() =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: {
-                        ...prev[day],
-                        closed: e.target.checked,
-                        open: e.target.checked ? "" : prev[day].open,
-                        close: e.target.checked ? "" : prev[day].close,
-                      },
-                    }))
-                  )
-                }
-                className="h-4 w-4"
-              />
-              <span className="text-sm text-gray-600">Closed</span>
+              {!dayHours.closed && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    className="border rounded-md px-3 py-2 text-sm bg-white"
+                    value={dayHours.open || ""}
+                    onChange={(e) =>
+                      preserveScroll(() =>
+                        setOpeningHours((prev) => ({
+                          ...prev,
+                          [day]: { ...prev[day], open: e.target.value },
+                        }))
+                      )
+                    }
+                  >
+                    <option value="">Open</option>
+                    {HOUR_OPTIONS.map((t) => (
+                      <option key={`${day}-open-${t}`} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="border rounded-md px-3 py-2 text-sm bg-white"
+                    value={dayHours.close || ""}
+                    onChange={(e) =>
+                      preserveScroll(() =>
+                        setOpeningHours((prev) => ({
+                          ...prev,
+                          [day]: { ...prev[day], close: e.target.value },
+                        }))
+                      )
+                    }
+                  >
+                    <option value="">Close</option>
+                    {HOUR_OPTIONS.map((t) => (
+                      <option key={`${day}-close-${t}`} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-
-            <div className="col-span-3">
-              <Input
-                className={inputClass}
-                type="time"
-                value={openingHours[day].open}
-                disabled={!!openingHours[day].closed}
-                onChange={(e) =>
-                  preserveScroll(() =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: { ...prev[day], open: e.target.value },
-                    }))
-                  )
-                }
-              />
-            </div>
-
-            <div className="col-span-3">
-              <Input
-                className={inputClass}
-                type="time"
-                value={openingHours[day].close}
-                disabled={!!openingHours[day].closed}
-                onChange={(e) =>
-                  preserveScroll(() =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: { ...prev[day], close: e.target.value },
-                    }))
-                  )
-                }
-              />
-            </div>
-
-            <div className="col-span-1" />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Section>
   );
