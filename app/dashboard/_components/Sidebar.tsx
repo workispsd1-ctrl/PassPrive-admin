@@ -65,7 +65,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     },
 
     { title: "Bank Offers", href: "/dashboard/bank-offers", icon: Landmark },
-    { title: "In Your PassPrive", href: "/dashboard/in-your-passprive", icon: PanelsTopLeft },
+    { title: "Restaurant In Your PassPrive", href: "/dashboard/in-your-passprive", icon: PanelsTopLeft },
+    { title: "Store In Your PassPrive", href: "/dashboard/store-in-your-passprive", icon: Store },
     { title: "Store Campaign", href: "/dashboard/store-campaign", icon: Megaphone },
     { title: "Restaurant Mood Categories", href: "/dashboard/mood-categories", icon: Tags },
     { title: "Store Mood Categories", href: "/dashboard/store-mood-categories", icon: Store },

@@ -42,6 +42,8 @@ const pathName: any = {
   "/dashboard/offers/new": "Add Home Hero Offer",
   "/dashboard/manage-corporates": "Corporate Management",
   "/dashboard/store-campaign": "Store Campaign",
+  "/dashboard/in-your-passprive": "Restaurant In Your PassPrive",
+  "/dashboard/store-in-your-passprive": "Store In Your PassPrive",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
