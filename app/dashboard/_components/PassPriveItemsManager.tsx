@@ -121,6 +121,22 @@ type PassPriveItemsManagerProps = {
   icon: LucideIcon;
 };
 
+function normalizeEntityOption(value: unknown): EntityOption | null {
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.id !== "string" || typeof record.name !== "string") return null;
+
+  return {
+    id: record.id,
+    name: record.name,
+    city: typeof record.city === "string" ? record.city : null,
+    area: typeof record.area === "string" ? record.area : null,
+    category: typeof record.category === "string" ? record.category : null,
+    subcategory: typeof record.subcategory === "string" ? record.subcategory : null,
+  };
+}
+
 function extractCardPayload(payload: unknown) {
   const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
   if (!record) return { card: null as PassPriveCard | null, items: [] as CardItem[] };
@@ -289,7 +305,11 @@ export default function PassPriveItemsManager({
       return;
     }
 
-    setOptions((data as EntityOption[]) || []);
+    const normalized = ((data as unknown[]) || [])
+      .map(normalizeEntityOption)
+      .filter(Boolean) as EntityOption[];
+
+    setOptions(normalized);
   }, [entityPluralLabel, entitySelect, entityTable]);
 
   useEffect(() => {
