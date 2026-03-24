@@ -190,11 +190,12 @@ const serializeOpeningHours = (hours: any) => {
   const result: any = {};
   DAYS.forEach((day) => {
     const dayData = hours[day] || { open: "", close: "", closed: false };
-    if (dayData.closed || !dayData.open || !dayData.close) return;
+    const isClosed = dayData.closed || (!dayData.open && !dayData.close);
 
     result[day.toLowerCase()] = {
-      open: dayData.open,
-      close: dayData.close,
+      open: dayData.open || "",
+      close: dayData.close || "",
+      closed: isClosed,
     };
   });
   return result;

@@ -307,14 +307,17 @@ export default function AddRestaurantPage() {
     let createdRestaurantId: string | null = null;
 
     try {
-      // opening_hours jsonb
-      const formattedOpeningHours: Record<string, { open: string; close: string }> = {};
-      Object.entries(openingHours).forEach(([day, dayData]) => {
-        if (dayData.closed || !dayData.open || !dayData.close) return;
+      // opening_hours jsonb - include all days for consistent backend validation
+      const formattedOpeningHours: Record<string, { open: string; close: string; closed: boolean }> = {};
+      const DAYS_LOCAL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      DAYS_LOCAL.forEach((day) => {
+        const dayData = (openingHours as any)[day] || { open: "", close: "", closed: false };
+        const isClosed = dayData.closed || (!dayData.open && !dayData.close);
 
         formattedOpeningHours[day.toLowerCase()] = {
-          open: dayData.open,
-          close: dayData.close,
+          open: dayData.open || "",
+          close: dayData.close || "",
+          closed: isClosed,
         };
       });
 
