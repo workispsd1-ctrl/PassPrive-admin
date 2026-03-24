@@ -16,8 +16,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store/store";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -88,6 +86,7 @@ const FACILITY_VARIANTS: Record<string, string[]> = {
 };
 
 const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
 
@@ -206,8 +205,6 @@ const serializeOpeningHours = (hours: any) => {
 export default function RestaurantDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-
-  const { isAdmin } = useSelector((state: RootState) => state.admin);
 
   const [restaurant, setRestaurant] = useState<any>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<any>(null);

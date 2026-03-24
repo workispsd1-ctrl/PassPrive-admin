@@ -40,6 +40,7 @@ const PARTNER_ROLE = "restaurantpartner" as const;
 
 // ✅ change this if you deploy backend
 const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
 
