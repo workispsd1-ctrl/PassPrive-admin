@@ -502,13 +502,28 @@ export default function RestaurantDetailPage() {
         avg_duration_minutes: asIntOrDefault(restaurant.avg_duration_minutes, 90),
         max_bookings_per_slot: asNullableNumber(restaurant.max_bookings_per_slot),
         advance_booking_days: asIntOrDefault(restaurant.advance_booking_days, 30),
+        booking_terms:
+          typeof restaurant.booking_terms === "string" &&
+          restaurant.booking_terms.trim().length > 0
+            ? restaurant.booking_terms.trim()
+            : null,
+        modification_available: !!restaurant.modification_available,
+        modification_cutoff_minutes: restaurant.modification_available
+          ? asNullableNumber(restaurant.modification_cutoff_minutes)
+          : null,
+        cancellation_available: !!restaurant.cancellation_available,
+        cancellation_cutoff_minutes: restaurant.cancellation_available
+          ? asNullableNumber(restaurant.cancellation_cutoff_minutes)
+          : null,
+        cover_charge_enabled: !!restaurant.cover_charge_enabled,
+        cover_charge_amount: restaurant.cover_charge_enabled
+          ? asNullableNumber(restaurant.cover_charge_amount)
+          : null,
 
         // ✅ link owner (only admins can change this successfully in backend)
         owner_user_id: restaurant.owner_user_id || null,
 
-        // keep these unchanged (read-only in UI)
-        menu: restaurant.menu,
-        reviews: restaurant.reviews,
+        // keep owner linkage if needed
       };
 
       const token = await getAccessToken();
@@ -530,11 +545,24 @@ export default function RestaurantDetailPage() {
       showToast({ type: "success", title: "Restaurant updated" });
       setEditMode(false);
 
-      // ✅ Refresh originals and reset image state
-      const updatedRestaurant = { ...restaurant, opening_hours: payload.opening_hours, food_images: finalFoodImages, ambience_images: finalAmbienceImages };
-      setRestaurant(updatedRestaurant);
-      setRestaurantOriginal(updatedRestaurant);
-      setOpeningHoursOriginal(openingHours);
+      // Use backend response as source of truth (avoids showing unsaved local state)
+      const savedRestaurant = json?.item ?? {
+        ...restaurant,
+        opening_hours: payload.opening_hours,
+        food_images: finalFoodImages,
+        ambience_images: finalAmbienceImages,
+      };
+      setRestaurant(savedRestaurant);
+      setRestaurantOriginal(savedRestaurant);
+
+      const savedOpeningHours = parseOpeningHours(savedRestaurant.opening_hours);
+      setOpeningHours(savedOpeningHours);
+      setOpeningHoursOriginal(savedOpeningHours);
+      setWeekEnabled(
+        !!savedRestaurant?.opening_hours &&
+          Object.keys(savedRestaurant.opening_hours || {}).length > 0
+      );
+
       setFoodImagesToAdd([]);
       setAmbienceImagesToAdd([]);
       setFoodImagesToDelete([]);
@@ -647,6 +675,118 @@ export default function RestaurantDetailPage() {
               onChange={(e) => setRestaurant({ ...restaurant, advance_booking_days: Number(e.target.value) })}
             />
           </Field>
+
+          <Field label="Booking Terms">
+            <Textarea
+              className={inputClass}
+              disabled={!editMode}
+              value={restaurant.booking_terms ?? ""}
+              onChange={(e) =>
+                setRestaurant({ ...restaurant, booking_terms: e.target.value })
+              }
+            />
+          </Field>
+
+          <Field label="Modification Available">
+            <Switch
+              checked={!!restaurant.modification_available}
+              disabled={false}
+              onCheckedChange={(v) =>
+                {
+                  if (!editMode) setEditMode(true);
+                  setRestaurant({
+                    ...restaurant,
+                    modification_available: v,
+                  });
+                }
+              }
+            />
+          </Field>
+
+          <Field label="Modification Cutoff (minutes)">
+            <Input
+              className={inputClass}
+              type="number"
+              disabled={!editMode}
+              value={restaurant.modification_cutoff_minutes ?? ""}
+              onChange={(e) =>
+                setRestaurant({
+                  ...restaurant,
+                  modification_cutoff_minutes: e.target.value
+                    ? Number(e.target.value)
+                    : null,
+                })
+              }
+            />
+          </Field>
+
+          <Field label="Cancellation Available">
+            <Switch
+              checked={!!restaurant.cancellation_available}
+              disabled={false}
+              onCheckedChange={(v) =>
+                {
+                  if (!editMode) setEditMode(true);
+                  setRestaurant({
+                    ...restaurant,
+                    cancellation_available: v,
+                  });
+                }
+              }
+            />
+          </Field>
+
+          <Field label="Cancellation Cutoff (minutes)">
+            <Input
+              className={inputClass}
+              type="number"
+              disabled={!editMode}
+              value={restaurant.cancellation_cutoff_minutes ?? ""}
+              onChange={(e) =>
+                setRestaurant({
+                  ...restaurant,
+                  cancellation_cutoff_minutes: e.target.value
+                    ? Number(e.target.value)
+                    : null,
+                })
+              }
+            />
+          </Field>
+
+          <Field label="Cover Charge Enabled">
+            <Switch
+              checked={!!restaurant.cover_charge_enabled}
+              disabled={false}
+              onCheckedChange={(v) =>
+                {
+                  if (!editMode) setEditMode(true);
+                  setRestaurant({
+                    ...restaurant,
+                    cover_charge_enabled: v,
+                  });
+                }
+              }
+            />
+          </Field>
+
+          <Field label="Cover Charge Amount">
+            <Input
+              className={inputClass}
+              type="number"
+              step="0.01"
+              disabled={!editMode}
+              value={restaurant.cover_charge_amount ?? ""}
+              onChange={(e) =>
+                setRestaurant({
+                  ...restaurant,
+                  cover_charge_amount: e.target.value
+                    ? Number(e.target.value)
+                    : null,
+                })
+              }
+            />
+          </Field>
+
         </Grid>
       </Section>
 

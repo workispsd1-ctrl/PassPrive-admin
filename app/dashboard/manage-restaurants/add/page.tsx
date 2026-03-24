@@ -123,6 +123,13 @@ export default function AddRestaurantPage() {
     avg_duration_minutes: "90",
     max_bookings_per_slot: "",
     advance_booking_days: "30",
+    booking_terms: "",
+    modification_available: false,
+    modification_cutoff_minutes: "",
+    cancellation_available: false,
+    cancellation_cutoff_minutes: "",
+    cover_charge_enabled: false,
+    cover_charge_amount: "",
   });
 
   const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(
@@ -355,8 +362,6 @@ export default function AddRestaurantPage() {
         is_pure_veg: !!form.is_pure_veg,
 
         opening_hours: formattedOpeningHours,
-        reviews: [],
-        menu: [],
 
         food_images: [],
         ambience_images: [],
@@ -371,6 +376,22 @@ export default function AddRestaurantPage() {
         avg_duration_minutes: form.avg_duration_minutes ? Number(form.avg_duration_minutes) : 90,
         max_bookings_per_slot: form.max_bookings_per_slot ? Number(form.max_bookings_per_slot) : null,
         advance_booking_days: form.advance_booking_days ? Number(form.advance_booking_days) : 30,
+        booking_terms: form.booking_terms.trim() || null,
+        modification_available: Boolean(form.modification_available),
+        modification_cutoff_minutes:
+          form.modification_available && form.modification_cutoff_minutes
+          ? Number(form.modification_cutoff_minutes)
+          : null,
+        cancellation_available: Boolean(form.cancellation_available),
+        cancellation_cutoff_minutes:
+          form.cancellation_available && form.cancellation_cutoff_minutes
+          ? Number(form.cancellation_cutoff_minutes)
+          : null,
+        cover_charge_enabled: Boolean(form.cover_charge_enabled),
+        cover_charge_amount:
+          form.cover_charge_enabled && form.cover_charge_amount
+            ? Number(form.cover_charge_amount)
+            : null,
 
         owner_user_id: partner.id, // ✅ link owner at creation
       });
@@ -649,6 +670,122 @@ export default function AddRestaurantPage() {
           files={ambienceImages}
           onRemove={(i) => setAmbienceImages(ambienceImages.filter((_, idx) => idx !== i))}
         />
+      </section>
+
+      {/* FEATURES */}
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">
+          Booking, Policies & Cover Charge
+        </h2>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+            <span className="text-sm">Booking Enabled</span>
+            <Switch
+              checked={!!form.booking_enabled}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, booking_enabled: value }))
+              }
+            />
+          </div>
+
+          <Input
+            type="number"
+            className={inputClass}
+            name="avg_duration_minutes"
+            placeholder="Avg Duration (minutes)"
+            value={form.avg_duration_minutes}
+            onChange={handleChange}
+          />
+
+          <Input
+            type="number"
+            className={inputClass}
+            name="max_bookings_per_slot"
+            placeholder="Max bookings per slot"
+            value={form.max_bookings_per_slot}
+            onChange={handleChange}
+          />
+
+          <Input
+            type="number"
+            className={inputClass}
+            name="advance_booking_days"
+            placeholder="Advance booking days"
+            value={form.advance_booking_days}
+            onChange={handleChange}
+          />
+        </div>
+
+        <Textarea
+          className={inputClass}
+          name="booking_terms"
+          placeholder="Booking terms"
+          value={form.booking_terms}
+          onChange={handleChange}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+            <span className="text-sm">Modification Available</span>
+            <Switch
+              checked={!!form.modification_available}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, modification_available: value }))
+              }
+            />
+          </div>
+
+          <Input
+            type="number"
+            className={inputClass}
+            name="modification_cutoff_minutes"
+            placeholder="Modification cutoff (minutes)"
+            value={form.modification_cutoff_minutes}
+            onChange={handleChange}
+          />
+
+          <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+            <span className="text-sm">Cancellation Available</span>
+            <Switch
+              checked={!!form.cancellation_available}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, cancellation_available: value }))
+              }
+            />
+          </div>
+
+          <Input
+            type="number"
+            className={inputClass}
+            name="cancellation_cutoff_minutes"
+            placeholder="Cancellation cutoff (minutes)"
+            value={form.cancellation_cutoff_minutes}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
+            <span className="text-sm">Cover Charge Enabled</span>
+            <Switch
+              checked={!!form.cover_charge_enabled}
+              onCheckedChange={(value) =>
+                setForm((prev) => ({ ...prev, cover_charge_enabled: value }))
+              }
+            />
+          </div>
+
+          <Input
+            type="number"
+            step="0.01"
+            className={inputClass}
+            name="cover_charge_amount"
+            placeholder="Cover charge amount"
+            value={form.cover_charge_amount}
+            onChange={handleChange}
+          />
+        </div>
       </section>
 
       {/* FEATURES */}
