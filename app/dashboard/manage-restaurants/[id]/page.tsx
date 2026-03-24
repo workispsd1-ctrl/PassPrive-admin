@@ -16,6 +16,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -205,6 +207,8 @@ const serializeOpeningHours = (hours: any) => {
 export default function RestaurantDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+
+  const { isAdmin } = useSelector((state: RootState) => state.admin);
 
   const [restaurant, setRestaurant] = useState<any>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<any>(null);

@@ -182,125 +182,150 @@ const SignInPage = () => {
   };
 
   return (
-    <div className="flex gap-0  lg:gap-10 lg:bg-[#ffffff] justify-center items-center min-h-screen">
-      {/* Left side - Image */}
-      {renderImage()}
+    <div className="min-h-screen bg-[#eef0fb] px-4 py-8 lg:px-8">
+      {step === "signIn" ? (
+        <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[1120px] items-center justify-center">
+          <div className="w-full max-w-[985px] rounded-2xl shadow-[0_24px_60px_rgba(58,41,99,0.16)]">
+            <div className="relative overflow-hidden rounded-2xl lg:flex lg:h-[679px] lg:w-[985px]">
+              <div className="relative hidden min-h-[510px] overflow-hidden rounded-l-2xl bg-[linear-gradient(140deg,#5800AB_0%,#8E4CCD_52%,#562981_100%)] text-white lg:flex lg:w-[430px]">
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute -left-16 -top-12 h-64 w-64 rounded-full bg-[#c4b4ff]/20 blur-[120px]" />
+                  <div className="absolute bottom-8 right-6 h-56 w-56 rounded-full bg-[#ad2bff]/20 blur-[100px]" />
+                  <div className="absolute left-8 top-24 h-72 w-72 rounded-full bg-[#2b7fff]/15 blur-[160px]" />
+                </div>
 
-      {/* Right side - Form */}
-      <div>
-        {/* Sign In Form */}
-        {step === "signIn" && (
-          <div className="w-full lg:w-auto px-4 py-8 lg:p-0">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Admin Login
-              </h1>
-              <p className="text-gray-600">
-                Sign in to manage users, restaurants, stores, and platform settings.
-              </p>
+                <div className="relative z-10 flex h-full w-full flex-col">
+                  <div className="flex flex-col items-center pt-10">
+                    <Image
+                      src="/Group 3.png"
+                      alt="Pass Prive"
+                      width={236}
+                      height={72}
+                      className="h-auto w-[236px]"
+                      priority
+                    />
+                    <p className="mt-2 whitespace-nowrap text-xs font-semibold leading-none text-white">
+                      Your Pass to the Island&apos;s Best.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-1 items-center justify-center px-3 pb-10 text-center">
+                    <div className="mx-auto w-full max-w-[415px]">
+                      <h2 className="text-[48px] font-bold leading-[48px] tracking-[-1.2px]">Welcome!</h2>
+                      <p className="mt-3 whitespace-nowrap text-[20px] font-normal leading-[32.5px] text-white/80">
+                        Manage experiences. Control your platform.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full rounded-r-2xl border-[0.67px] border-white/20 bg-white/[0.12] px-6 py-8 shadow-[0_8px_32px_rgba(31,38,135,0.15)] sm:px-10 lg:-ml-px lg:flex lg:h-[679px] lg:w-[555px] lg:border-l-0 lg:flex-col lg:px-12 lg:py-12">
+                <div className="mb-12 lg:w-[459px]">
+                  <h1 className="text-[30px] font-bold leading-[36px] text-black">Admin Login</h1>
+                  <p className="mt-1 text-base leading-6 text-[#45556C]">Access your dashboard</p>
+                </div>
+
+                {error && (
+                  <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+                {successMessage && (
+                  <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                    {successMessage}
+                  </div>
+                )}
+
+                <form onSubmit={handleSignIn} className="flex h-full flex-col lg:w-[459px]">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium leading-5 text-[#45556C]">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-[49.33px] w-full rounded-[14px] border-[0.67px] border-white/30 bg-white/60 px-4 py-3 text-base text-[#0a0a0a]/50 shadow-sm outline-none transition focus:border-[#8e4ccd] focus:ring-2 focus:ring-[#8e4ccd]/25"
+                      placeholder="admin@passprive.com"
+                      required
+                    />
+                  </div>
+
+                  <div className="mt-6 space-y-2">
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium leading-5 text-[#45556C]"
+                    >
+                      Password
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-[49.33px] w-full rounded-[14px] border-[0.67px] border-white/30 bg-white/60 px-4 py-3 pr-11 text-base text-[#0a0a0a]/50 shadow-sm outline-none transition focus:border-[#8e4ccd] focus:ring-2 focus:ring-[#8e4ccd]/25"
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#6d7081] hover:text-[#43465c]"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center">
+                    <label className="flex items-center gap-[10px] text-sm leading-5 text-[#45556C]">
+                      <input
+                        id="remember-me"
+                        name="remember-me"
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="h-4 w-4 rounded-[4px] border-[0.2px] border-black bg-white text-[#701ad2] focus:ring-[#8e4ccd]"
+                      />
+                      Remember me
+                    </label>
+                  </div>
+
+                  <div className="mt-auto pt-32">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="h-[58px] w-full rounded-[20px] bg-[linear-gradient(90deg,#5800AB_0%,#A866E7_100%)] px-[154px] py-[13px] text-sm font-semibold leading-[1] text-white shadow-[0_10px_24px_rgba(88,0,171,0.35)] transition hover:brightness-110 disabled:opacity-50"
+                    >
+                      {isLoading ? "Signing in..." : "Login"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep("forgotPassword")}
+                      className="mt-10 block w-full text-center text-[10px] font-normal leading-4 text-[#45556C] transition hover:text-[#2f3b53]"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-            {successMessage && (
-              <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
-                {successMessage}
-              </div>
-            )}
-
-            <form onSubmit={handleSignIn} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 text-gray-600"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-1 placeholder-gray-400"
-                >
-                  Password
-                </label>
-
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 text-gray-600"
-                    required
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 cursor-pointer"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                  <label
-                    htmlFor="remember-me"
-                    className="ml-2 block text-sm text-gray-700"
-                  >
-                    Remember me
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <button
-                    type="button"
-                    onClick={() => setStep("forgotPassword")}
-                    className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="cursor-pointer pointer-cursor w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                >
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </button>
-              </div>
-            </form>
           </div>
-        )}
+        </div>
+      ) : (
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center gap-0 lg:gap-10">
+          {renderImage()}
 
-        {/* Forgot Password Form */}
-        {step === "forgotPassword" && (
+          <div>
+            {/* Forgot Password Form */}
+            {step === "forgotPassword" && (
           <div className="w-full lg:w-auto px-4 py-8 lg:p-0">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -355,110 +380,112 @@ const SignInPage = () => {
           </div>
         )}
 
-        {/* OTP Verification Form */}
-        {step === "verifyOTP" && (
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Verify Your Email
-              </h1>
-              <p className="text-gray-600">
-                Verification Link Has been Sent on your email
-                <span className="font-semibold"> {email}</span>
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Reset Password Form */}
-        {step === "resetPassword" && (
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Create New Password
-              </h1>
-              <p className="text-gray-600">
-                Your new password must be different from previous passwords
-              </p>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-            {successMessage && (
-              <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
-                {successMessage}
+            {/* OTP Verification Form */}
+            {step === "verifyOTP" && (
+              <div className="w-full max-w-md">
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    Verify Your Email
+                  </h1>
+                  <p className="text-gray-600">
+                    Verification Link Has been Sent on your email
+                    <span className="font-semibold"> {email}</span>
+                  </p>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleResetPassword} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter new password"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Minimum 8 characters with letters and numbers
-                </p>
-              </div>
+            {/* Reset Password Form */}
+            {step === "resetPassword" && (
+              <div className="w-full max-w-md">
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    Create New Password
+                  </h1>
+                  <p className="text-gray-600">
+                    Your new password must be different from previous passwords
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm New Password
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Confirm new password"
-                  required
-                />
-              </div>
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+                {successMessage && (
+                  <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">
+                    {successMessage}
+                  </div>
+                )}
 
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                >
-                  {isLoading ? "Resetting..." : "Reset Password"}
-                </button>
-              </div>
+                <form onSubmit={handleResetPassword} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="Enter new password"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Minimum 8 characters with letters and numbers
+                    </p>
+                  </div>
 
-              <div className="text-center text-sm">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep("verifyOTP");
-                    setNewPassword("");
-                    setConfirmPassword("");
-                  }}
-                  className="font-medium text-indigo-600 hover:text-indigo-500 mr-4"
-                >
-                  Back to Verification
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStep("signIn")}
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Back to Login
-                </button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="Confirm new password"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                    >
+                      {isLoading ? "Resetting..." : "Reset Password"}
+                    </button>
+                  </div>
+
+                  <div className="text-center text-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep("verifyOTP");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                      }}
+                      className="font-medium text-indigo-600 hover:text-indigo-500 mr-4"
+                    >
+                      Back to Verification
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep("signIn")}
+                      className="font-medium text-indigo-600 hover:text-indigo-500"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
