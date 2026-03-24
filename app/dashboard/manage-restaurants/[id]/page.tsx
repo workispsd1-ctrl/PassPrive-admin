@@ -744,6 +744,9 @@ export default function RestaurantDetailPage() {
                   modification_cutoff_minutes: e.target.value
                     ? Number(e.target.value)
                     : null,
+                  modification_available: e.target.value
+                    ? true
+                    : restaurant.modification_available,
                 })
               }
             />
@@ -777,6 +780,9 @@ export default function RestaurantDetailPage() {
                   cancellation_cutoff_minutes: e.target.value
                     ? Number(e.target.value)
                     : null,
+                  cancellation_available: e.target.value
+                    ? true
+                    : restaurant.cancellation_available,
                 })
               }
             />
@@ -811,6 +817,9 @@ export default function RestaurantDetailPage() {
                   cover_charge_amount: e.target.value
                     ? Number(e.target.value)
                     : null,
+                  cover_charge_enabled: e.target.value
+                    ? true
+                    : restaurant.cover_charge_enabled,
                 })
               }
             />

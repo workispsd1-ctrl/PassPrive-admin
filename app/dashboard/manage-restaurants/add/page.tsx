@@ -751,7 +751,14 @@ export default function AddRestaurantPage() {
             name="modification_cutoff_minutes"
             placeholder="Modification cutoff (minutes)"
             value={form.modification_cutoff_minutes}
-            onChange={handleChange}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                modification_cutoff_minutes: e.target.value,
+                modification_available:
+                  e.target.value.trim().length > 0 ? true : prev.modification_available,
+              }))
+            }
           />
 
           <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
@@ -770,7 +777,14 @@ export default function AddRestaurantPage() {
             name="cancellation_cutoff_minutes"
             placeholder="Cancellation cutoff (minutes)"
             value={form.cancellation_cutoff_minutes}
-            onChange={handleChange}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                cancellation_cutoff_minutes: e.target.value,
+                cancellation_available:
+                  e.target.value.trim().length > 0 ? true : prev.cancellation_available,
+              }))
+            }
           />
         </div>
 
@@ -792,7 +806,14 @@ export default function AddRestaurantPage() {
             name="cover_charge_amount"
             placeholder="Cover charge amount"
             value={form.cover_charge_amount}
-            onChange={handleChange}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                cover_charge_amount: e.target.value,
+                cover_charge_enabled:
+                  e.target.value.trim().length > 0 ? true : prev.cover_charge_enabled,
+              }))
+            }
           />
         </div>
       </section>
