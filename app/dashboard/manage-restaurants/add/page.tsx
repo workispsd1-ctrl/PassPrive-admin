@@ -81,6 +81,15 @@ function offerToPayload(offer: unknown) {
   return null;
 }
 
+function bookingTermsToPayload(value: string): string[] | null {
+  const normalized = value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return normalized.length > 0 ? normalized : null;
+}
+
 async function getAccessToken() {
   const { data, error } = await supabaseBrowser.auth.getSession();
   if (error) throw error;
@@ -376,7 +385,7 @@ export default function AddRestaurantPage() {
         avg_duration_minutes: form.avg_duration_minutes ? Number(form.avg_duration_minutes) : 90,
         max_bookings_per_slot: form.max_bookings_per_slot ? Number(form.max_bookings_per_slot) : null,
         advance_booking_days: form.advance_booking_days ? Number(form.advance_booking_days) : 30,
-        booking_terms: form.booking_terms.trim() || null,
+        booking_terms: bookingTermsToPayload(form.booking_terms),
         modification_available: Boolean(form.modification_available),
         modification_cutoff_minutes:
           form.modification_available && form.modification_cutoff_minutes

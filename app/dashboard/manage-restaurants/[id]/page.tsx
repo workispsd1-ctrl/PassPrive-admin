@@ -154,6 +154,39 @@ function asIntOrDefault(value: unknown, fallback: number): number {
   return Math.trunc(n);
 }
 
+function bookingTermsToTextarea(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  if (typeof value === "string") return value;
+  return "";
+}
+
+function bookingTermsToPayload(value: unknown): string[] | null {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  return null;
+}
+
 async function getAccessToken() {
   const { data, error } = await supabaseBrowser.auth.getSession();
   if (error) throw error;
@@ -502,11 +535,7 @@ export default function RestaurantDetailPage() {
         avg_duration_minutes: asIntOrDefault(restaurant.avg_duration_minutes, 90),
         max_bookings_per_slot: asNullableNumber(restaurant.max_bookings_per_slot),
         advance_booking_days: asIntOrDefault(restaurant.advance_booking_days, 30),
-        booking_terms:
-          typeof restaurant.booking_terms === "string" &&
-          restaurant.booking_terms.trim().length > 0
-            ? restaurant.booking_terms.trim()
-            : null,
+        booking_terms: bookingTermsToPayload(restaurant.booking_terms),
         modification_available: !!restaurant.modification_available,
         modification_cutoff_minutes: restaurant.modification_available
           ? asNullableNumber(restaurant.modification_cutoff_minutes)
@@ -680,7 +709,7 @@ export default function RestaurantDetailPage() {
             <Textarea
               className={inputClass}
               disabled={!editMode}
-              value={restaurant.booking_terms ?? ""}
+              value={bookingTermsToTextarea(restaurant.booking_terms)}
               onChange={(e) =>
                 setRestaurant({ ...restaurant, booking_terms: e.target.value })
               }
