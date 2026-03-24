@@ -182,12 +182,12 @@ const SignInPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#eef0fb] px-4 py-8 lg:px-8">
+    <div className="min-h-screen bg-[#eef0fb] px-3 py-4 sm:px-4 sm:py-8 lg:px-8">
       {step === "signIn" ? (
-        <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[1120px] items-center justify-center">
+        <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1120px] items-center justify-center sm:min-h-[calc(100vh-4rem)]">
           <div className="w-full max-w-[985px] rounded-2xl shadow-[0_24px_60px_rgba(58,41,99,0.16)]">
             <div className="relative overflow-hidden rounded-2xl lg:flex lg:h-[679px] lg:w-[985px]">
-              <div className="relative hidden min-h-[510px] overflow-hidden rounded-l-2xl bg-[linear-gradient(140deg,#5800AB_0%,#8E4CCD_52%,#562981_100%)] text-white lg:flex lg:w-[430px]">
+              <div className="relative flex min-h-[240px] overflow-hidden rounded-t-2xl bg-[linear-gradient(140deg,#5800AB_0%,#8E4CCD_52%,#562981_100%)] text-white sm:min-h-[320px] lg:min-h-[510px] lg:w-[430px] lg:rounded-l-2xl lg:rounded-tr-none">
                 <div className="pointer-events-none absolute inset-0">
                   <div className="absolute -left-16 -top-12 h-64 w-64 rounded-full bg-[#c4b4ff]/20 blur-[120px]" />
                   <div className="absolute bottom-8 right-6 h-56 w-56 rounded-full bg-[#ad2bff]/20 blur-[100px]" />
@@ -195,24 +195,34 @@ const SignInPage = () => {
                 </div>
 
                 <div className="relative z-10 flex h-full w-full flex-col">
-                  <div className="flex flex-col items-center pt-10">
-                    <Image
-                      src="/Group 3.png"
-                      alt="Pass Prive"
-                      width={236}
-                      height={72}
-                      className="h-auto w-[236px]"
-                      priority
-                    />
-                    <p className="mt-2 whitespace-nowrap text-xs font-semibold leading-none text-white">
+                  <div className="flex flex-col items-center pt-6 sm:pt-8 lg:pt-10">
+                    <div className="flex items-center gap-3">
+                      <Image
+                        src="/passprive.jpeg"
+                        alt="Passprive Icon"
+                        width={50}
+                        height={50}
+                        className="h-auto w-[40px] sm:w-[45px] lg:w-[50px]"
+                        priority
+                      />
+                      <Image
+                        src="/Group 3.png"
+                        alt="Pass Prive"
+                        width={180}
+                        height={55}
+                        className="h-auto w-[130px] sm:w-[160px] lg:w-[180px]"
+                        priority
+                      />
+                    </div>
+                    <p className="mt-2 px-3 text-center text-[11px] font-semibold leading-none text-white sm:whitespace-nowrap sm:text-xs">
                       Your Pass to the Island&apos;s Best.
                     </p>
                   </div>
 
-                  <div className="flex flex-1 items-center justify-center px-3 pb-10 text-center">
+                  <div className="flex flex-1 items-center justify-center px-4 pb-6 text-center sm:px-3 sm:pb-10">
                     <div className="mx-auto w-full max-w-[415px]">
-                      <h2 className="text-[48px] font-bold leading-[48px] tracking-[-1.2px]">Welcome!</h2>
-                      <p className="mt-3 whitespace-nowrap text-[20px] font-normal leading-[32.5px] text-white/80">
+                      <h2 className="text-[40px] font-bold leading-[1.05] tracking-[-1px] sm:text-[48px] sm:leading-[48px] sm:tracking-[-1.2px]">Welcome!</h2>
+                      <p className="mt-2 text-base font-normal leading-7 text-white/80 sm:mt-3 sm:whitespace-nowrap sm:text-[20px] sm:leading-[32.5px]">
                         Manage experiences. Control your platform.
                       </p>
                     </div>
@@ -220,9 +230,9 @@ const SignInPage = () => {
                 </div>
               </div>
 
-              <div className="w-full rounded-r-2xl border-[0.67px] border-white/20 bg-white/[0.12] px-6 py-8 shadow-[0_8px_32px_rgba(31,38,135,0.15)] sm:px-10 lg:-ml-px lg:flex lg:h-[679px] lg:w-[555px] lg:border-l-0 lg:flex-col lg:px-12 lg:py-12">
-                <div className="mb-12 lg:w-[459px]">
-                  <h1 className="text-[30px] font-bold leading-[36px] text-black">Admin Login</h1>
+              <div className="w-full rounded-b-2xl border-[0.67px] border-white/20 bg-white/[0.12] px-5 py-6 shadow-[0_8px_32px_rgba(31,38,135,0.15)] sm:px-8 sm:py-8 lg:-ml-px lg:flex lg:h-[679px] lg:w-[555px] lg:rounded-r-2xl lg:rounded-bl-none lg:border-l-0 lg:flex-col lg:px-12 lg:py-12">
+                <div className="mb-8 lg:mb-12 lg:w-[459px]">
+                  <h1 className="text-[28px] font-bold leading-[1.15] text-black sm:text-[30px] sm:leading-[36px]">Admin Login</h1>
                   <p className="mt-1 text-base leading-6 text-[#45556C]">Access your dashboard</p>
                 </div>
 
@@ -237,7 +247,7 @@ const SignInPage = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleSignIn} className="flex h-full flex-col lg:w-[459px]">
+                <form onSubmit={handleSignIn} className="flex h-full w-full flex-col lg:w-[459px]">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium leading-5 text-[#45556C]">
                       Email Address
@@ -297,11 +307,11 @@ const SignInPage = () => {
                     </label>
                   </div>
 
-                  <div className="mt-auto pt-32">
+                  <div className="mt-auto pt-10 sm:pt-20 lg:pt-32">
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="h-[58px] w-full rounded-[20px] bg-[linear-gradient(90deg,#5800AB_0%,#A866E7_100%)] px-[154px] py-[13px] text-sm font-semibold leading-[1] text-white shadow-[0_10px_24px_rgba(88,0,171,0.35)] transition hover:brightness-110 disabled:opacity-50"
+                      className="h-[58px] w-full rounded-[20px] bg-[linear-gradient(90deg,#5800AB_0%,#A866E7_100%)] px-6 py-[13px] text-sm font-semibold leading-[1] text-white shadow-[0_10px_24px_rgba(88,0,171,0.35)] transition hover:brightness-110 disabled:opacity-50 lg:px-[154px]"
                     >
                       {isLoading ? "Signing in..." : "Login"}
                     </button>
@@ -309,7 +319,7 @@ const SignInPage = () => {
                     <button
                       type="button"
                       onClick={() => setStep("forgotPassword")}
-                      className="mt-10 block w-full text-center text-[10px] font-normal leading-4 text-[#45556C] transition hover:text-[#2f3b53]"
+                      className="mt-8 block w-full text-center text-xs font-normal leading-4 text-[#45556C] transition hover:text-[#2f3b53] lg:mt-10 lg:text-[10px]"
                     >
                       Forgot Password?
                     </button>
