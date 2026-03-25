@@ -32,6 +32,19 @@ const DashboardLayout = ({ children }) => {
     }
   }, [isLargeScreen]);
 
+  useEffect(() => {
+    const handleDashboardToggle = () => {
+      if (isLargeScreen) {
+        setSidebarCollapsed((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("dashboard-toggle-sidebar", handleDashboardToggle);
+    return () => {
+      window.removeEventListener("dashboard-toggle-sidebar", handleDashboardToggle);
+    };
+  }, [isLargeScreen]);
+
   // if (isLoading) {
   //   return <Loader />;
   // }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   Chart as ChartJS,
@@ -78,6 +79,7 @@ export default function AdminDashboard() {
   const [weeklyStores, setWeeklyStores] = useState<number[]>([]);
   const [monthlyLabels, setMonthlyLabels] = useState<string[]>([]);
   const [monthlyCounts, setMonthlyCounts] = useState<number[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const parseAmount = (raw: unknown) => {
     if (!raw) return 0;
@@ -320,6 +322,11 @@ export default function AdminDashboard() {
     };
   }, [monthlyLabels, monthlyCounts]);
 
+  const handleToggleSidebar = () => {
+    window.dispatchEvent(new Event("dashboard-toggle-sidebar"));
+    setSidebarOpen((prev) => !prev);
+  };
+
   return (
     <div className="min-h-full w-full bg-[#ecf2f8] p-1 md:p-2">
       {loading ? (
@@ -328,6 +335,18 @@ export default function AdminDashboard() {
         <div className="space-y-4">
           <div className="flex h-14 items-center justify-between">
             <div className="flex items-center">
+              <button
+                type="button"
+                onClick={handleToggleSidebar}
+                aria-label="Toggle sidebar"
+                className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-white/70"
+              >
+                {sidebarOpen ? (
+                  <ChevronLeft className="h-5 w-5" />
+                ) : (
+                  <ChevronRight className="h-5 w-5" />
+                )}
+              </button>
               <h1 className="text-[20px] font-normal leading-[32px] text-[#1D293D]">Dashboard - Superadmin</h1>
             </div>
             <div className="flex items-center gap-3 text-[#1f2a37]">
