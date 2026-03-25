@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "./_components/Sidebar";
 import Navbar from "./_components/Navbar";
 import { useAuth } from "@/store/hooks/useAuth";
@@ -7,9 +8,11 @@ import { useAuth } from "@/store/hooks/useAuth";
 
 
 const DashboardLayout = ({ children }) => {
+  const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
   const { isLoading, isAuthenticated, isAdmin } = useAuth();
+  const isDashboardHome = pathname === "/dashboard";
   // Track screen width
   useEffect(() => {
     const checkScreenSize = () => {
@@ -59,11 +62,19 @@ const DashboardLayout = ({ children }) => {
           sidebarCollapsed ? "ml-16" : "ml-64"
         }`}
       >
-        <Navbar
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-        />
-        <main className="flex-1 p-6 overflow-y-auto bg-white">{children}</main>
+        {!isDashboardHome && (
+          <Navbar
+            collapsed={sidebarCollapsed}
+            setCollapsed={setSidebarCollapsed}
+          />
+        )}
+        <main
+          className={`flex-1 overflow-y-auto ${
+            isDashboardHome ? "bg-[#ecf2f8] p-3 md:p-4" : "bg-white p-6"
+          }`}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

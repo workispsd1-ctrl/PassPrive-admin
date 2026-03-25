@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Users, Hotel, Store, Coins } from "lucide-react";
+import Image from "next/image";
 
 import {
   Chart as ChartJS,
@@ -221,26 +221,23 @@ export default function AdminDashboard() {
         {
           label: "Restaurants",
           data: weeklyRestaurants,
-          fill: true as const,
-          borderColor: "#DA3224",
-          borderWidth: 2,
-          tension: 0.4,
-          pointRadius: 5,
+          borderRadius: 8,
+          maxBarThickness: 48,
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart as {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "#DA322422";
+            if (!chartArea) return "#5800AB4D";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0, "#DA322444");
-            gradient.addColorStop(1, "#DA322400");
+            gradient.addColorStop(0, "#5800AB4D");
+            gradient.addColorStop(1, "#5800AB1A");
             return gradient;
           },
         },
@@ -256,25 +253,26 @@ export default function AdminDashboard() {
           label: "Stores",
           data: weeklyStores,
           fill: true as const,
-          borderColor: "#3F6DF2",
+          borderColor: "#5800AB",
           borderWidth: 2,
-          tension: 0.4,
-          pointRadius: 5,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 3,
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart as {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "#3F6DF222";
+            if (!chartArea) return "#5800AB4D";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0, "#3F6DF255");
-            gradient.addColorStop(1, "#3F6DF200");
+            gradient.addColorStop(0, "#5800AB4D");
+            gradient.addColorStop(1, "#5800AB00");
             return gradient;
           },
         },
@@ -287,76 +285,152 @@ export default function AdminDashboard() {
       ? `${((stats.activeSubscribers / stats.totalUsers) * 100).toFixed(1)}%`
       : "0.0%";
 
+  const monthlyChartData = useMemo(() => {
+    return {
+      labels: monthlyLabels,
+      datasets: [
+        {
+          label: "Subscriptions",
+          data: monthlyCounts,
+          fill: true as const,
+          borderColor: "#5800AB",
+          borderWidth: 2,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          backgroundColor: (context: any) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart as {
+              ctx: CanvasRenderingContext2D;
+              chartArea?: ChartArea;
+            };
+            if (!chartArea) return "#5800AB4D";
+            const gradient = ctx.createLinearGradient(
+              0,
+              chartArea.top,
+              0,
+              chartArea.bottom
+            );
+            gradient.addColorStop(0, "#5800AB4D");
+            gradient.addColorStop(1, "#5800AB00");
+            return gradient;
+          },
+        },
+      ],
+    };
+  }, [monthlyLabels, monthlyCounts]);
+
   return (
-    <div className="min-h-full w-full">
+    <div className="min-h-full w-full bg-[#ecf2f8] p-1 md:p-2">
       {loading ? (
         <DashboardSkeleton />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center">
+              <h1 className="text-[20px] font-normal leading-[32px] text-[#1D293D]">Dashboard - Superadmin</h1>
+            </div>
+            <div className="flex items-center gap-3 text-[#1f2a37]">
+              <button
+                type="button"
+                className="rounded-md p-1.5 transition hover:bg-white/70"
+                aria-label="Download"
+              >
+                <Image
+                  src="/download.png"
+                  alt="Download"
+                  width={16}
+                  height={16}
+                  className="h-4 w-4 object-contain"
+                />
+              </button>
+              <button
+                type="button"
+                className="rounded-md p-1.5 transition hover:bg-white/70"
+                aria-label="Refresh"
+              >
+                <Image
+                  src="/refresh.png"
+                  alt="Refresh"
+                  width={16}
+                  height={16}
+                  className="h-4 w-4 object-contain"
+                />
+              </button>
+              <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
+                <div className="h-7 w-7 rounded-full bg-[#929292]" />
+                <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
+                  Admin
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* KPIs */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <KPI
-              icon={<Users />}
+              iconSrc="/dashboardusers.png"
               label="Total Users"
               value={stats.totalUsers}
-              tone="indigo"
             />
             <KPI
-              icon={<Hotel />}
+              iconSrc="/dashboardrestaurents.png"
               label="Restaurants"
               value={stats.totalRestaurants}
-              tone="violet"
             />
             <KPI
-              icon={<Store />}
+              iconSrc="/dashboardstore.png"
               label="Stores"
               value={stats.totalStores}
-              tone="purple"
             />
             <KPI
-              icon={<Users />}
+              iconSrc="/qr_code_scanner.png"
               label="Active Subs"
               value={stats.activeSubscribers}
-              tone="emerald"
             />
             <KPI
-              icon={<Coins />}
+              iconSrc="/attach_money.png"
               label="Revenue (INR)"
               value={new Intl.NumberFormat("en-IN").format(revenueINR)}
-              tone="amber"
             />
           </div>
 
           {/* MONTHLY CHART */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="rounded-xl border border-indigo-200 bg-white shadow-sm lg:col-span-2">
-              <div className="border-b border-gray-300 p-4">
-                <h3 className="font-semibold text-gray-800">
-                  Subscriptions / Month
-                </h3>
-                <p className="text-xs text-gray-500">Last 12 months</p>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+            <div className="flex h-[460px] min-w-0 flex-col rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm lg:basis-[68.5%]">
+              <div className="flex items-start justify-between p-4 pb-0">
+                <div>
+                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">Subscriptions</h3>
+                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Last 12 months</p>
+                </div>
+                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all statistic</button>
               </div>
 
-              <div className="h-80 p-3">
-                <Bar
-                  data={{
-                    labels: monthlyLabels,
-                    datasets: [
-                      {
-                        label: "Subscriptions",
-                        data: monthlyCounts,
-                        backgroundColor: "#4F46E5",
-                        borderRadius: 6,
-                        maxBarThickness: 28,
-                      },
-                    ],
-                  }}
+              <div className="h-[349px] p-3">
+                <Line
+                  data={monthlyChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                      y: { beginAtZero: true, ticks: { precision: 0 } },
+                      y: {
+                        beginAtZero: true,
+                        suggestedMax: 500,
+                        ticks: {
+                          precision: 0,
+                          stepSize: 100,
+                          color: "#94A3B8",
+                          font: { size: 11, weight: "400" },
+                        },
+                        grid: { color: "#E7ECF4" },
+                        border: { display: false },
+                      },
+                      x: {
+                        ticks: { color: "#94A3B8", font: { size: 11, weight: "400" } },
+                        grid: { display: false },
+                        border: { color: "#E7ECF4" },
+                      },
                     },
                   }}
                 />
@@ -364,48 +438,95 @@ export default function AdminDashboard() {
             </div>
 
             {/* RIGHT COLUMN */}
-            <div className="space-y-3 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm">
+            <div className="flex h-[460px] w-full flex-col rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm lg:basis-[31.5%]">
+              <div className="mb-1 flex items-center justify-between">
+                <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">Overview</h3>
+                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
+              </div>
               <MiniStat label="Conversion Rate" value={conversionRate} />
-              <MiniStat
-                label="Total Revenue"
-                value={new Intl.NumberFormat("en-IN").format(stats.totalRevenue)}
-              />
+              <MiniStat label="Total Revenue" value={new Intl.NumberFormat("en-IN").format(stats.totalRevenue)} />
               <MiniStat label="Restaurants" value={stats.totalRestaurants} />
               <MiniStat label="Stores" value={stats.totalStores} />
             </div>
           </div>
 
           {/* WEEKLY TRENDS */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Restaurants Weekly */}
-            <div className="rounded-xl border border-gray-300 bg-white p-4 shadow">
-              <h3 className="mb-2 font-semibold text-gray-800">
-                New Restaurants per Week
-              </h3>
-              <div className="h-[260px]">
-                <Line
+            <div className="h-[400px] rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm">
+              <div className="mb-2 flex items-start justify-between">
+                <div>
+                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">New Restaurants</h3>
+                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Per week growth</p>
+                </div>
+                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
+              </div>
+              <div className="h-[310px]">
+                <Bar
                   data={restaurantChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        suggestedMax: 50,
+                        ticks: {
+                          precision: 0,
+                          stepSize: 10,
+                          color: "#94A3B8",
+                          font: { size: 11, weight: "400" },
+                        },
+                        grid: { color: "#E7ECF4" },
+                        border: { display: false },
+                      },
+                      x: {
+                        ticks: { color: "#94A3B8", font: { size: 11, weight: "400" } },
+                        grid: { display: false },
+                        border: { color: "#E7ECF4" },
+                      },
+                    },
                   }}
                 />
               </div>
             </div>
 
             {/* Stores Weekly */}
-            <div className="rounded-xl border border-gray-300 bg-white p-4 shadow">
-              <h3 className="mb-2 font-semibold text-gray-800">
-                New Stores per Week
-              </h3>
-              <div className="h-[260px]">
+            <div className="h-[400px] rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm">
+              <div className="mb-2 flex items-start justify-between">
+                <div>
+                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">New Stores</h3>
+                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Per week growth</p>
+                </div>
+                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
+              </div>
+              <div className="h-[310px]">
                 <Line
                   data={storeChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        suggestedMax: 50,
+                        ticks: {
+                          precision: 0,
+                          stepSize: 10,
+                          color: "#94A3B8",
+                          font: { size: 11, weight: "400" },
+                        },
+                        grid: { color: "#E7ECF4" },
+                        border: { display: false },
+                      },
+                      x: {
+                        ticks: { color: "#94A3B8", font: { size: 11, weight: "400" } },
+                        grid: { display: false },
+                        border: { color: "#E7ECF4" },
+                      },
+                    },
                   }}
                 />
               </div>
@@ -493,47 +614,38 @@ function DashboardSkeleton() {
 /* -------------------------- UI COMPONENTS -------------------------- */
 
 function KPI({
-  icon,
+  iconSrc,
   label,
   value,
-  tone,
-  extra,
 }: {
-  icon: React.ReactNode;
+  iconSrc: string;
   label: string;
   value: React.ReactNode;
-  tone: "indigo" | "violet" | "purple" | "emerald" | "amber";
-  extra?: React.ReactNode;
 }) {
-  const toneMap: Record<string, string> = {
-    indigo: "from-indigo-50 to-white border-indigo-200 text-indigo-800",
-    violet: "from-violet-50 to-white border-violet-200 text-violet-800",
-    purple: "from-purple-50 to-white border-purple-200 text-purple-800",
-    emerald: "from-emerald-50 to-white border-emerald-200 text-emerald-800",
-    amber: "from-amber-50 to-white border-amber-200 text-amber-800",
-  };
-
   return (
-    <div
-      className={`rounded-xl border bg-gradient-to-br p-4 shadow-sm ${toneMap[tone]}`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          {icon}
-          <span className="text-gray-600">{label}</span>
+    <div className="h-[90px] rounded-2xl border border-white/60 border-l-4 border-l-[#5800AB] bg-[linear-gradient(180deg,rgba(255,255,255,0.4)_0%,rgba(255,255,255,0.3)_50%,rgba(255,255,255,0.2)_100%)] px-4 py-3 shadow-sm">
+      <div className="flex h-full items-center gap-5">
+        <Image
+          src={iconSrc}
+          alt={label}
+          width={38}
+          height={38}
+          className="h-[38px] w-[38px] shrink-0 object-contain"
+        />
+        <div>
+          <div className="text-[12px] font-normal leading-4 text-[#45556C]">{label}</div>
+          <div className="text-[24px] font-normal leading-8 text-[#0F172B]">{value}</div>
         </div>
-        {extra}
       </div>
-      <div className="mt-2 text-2xl font-bold">{value}</div>
     </div>
   );
 }
 
 function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-indigo-100 px-3 py-2">
-      <span className="text-sm text-gray-600">{label}</span>
-      <span className="text-sm font-semibold text-gray-900">{value}</span>
+    <div className="flex items-center justify-between py-[2px]">
+      <span className="text-[12px] font-normal leading-4 text-[#45556C]">{label}</span>
+      <span className="text-[14px] font-normal leading-5 text-[#0F172B]">{value}</span>
     </div>
   );
 }

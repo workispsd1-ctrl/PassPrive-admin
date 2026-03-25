@@ -82,6 +82,8 @@ export default function AdminPage() {
   const [admins, setAdmins] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [fetchingCurrentUser, setFetchingCurrentUser] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -136,13 +138,56 @@ export default function AdminPage() {
 
   const [deleteRefresh, setDeleteRefresh] = useState<any>(null);
 
+  // Fetch current user's role to check deletion permissions
+  useEffect(() => {
+    const fetchCurrentUserRole = async () => {
+      try {
+        const { data: { user }, error } = await supabaseBrowser.auth.getUser();
+        if (error || !user) {
+          console.error("Failed to get current user");
+          setCurrentUserRole(null);
+          return;
+        }
+        
+        const { data: userData } = await supabaseBrowser
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        
+        setCurrentUserRole(userData?.role || null);
+      } catch (err) {
+        console.error("Error fetching current user role:", err);
+        setCurrentUserRole(null);
+      } finally {
+        setFetchingCurrentUser(false);
+      }
+    };
+    
+    fetchCurrentUserRole();
+  }, []);
+
   const handleRefresh = () => {
     setPage(1);
     setDeleteRefresh(Math.random());
   };
 
+  const canDeleteAdmin = currentUserRole === "superadmin";
+
   const handleDeleteUser = async () => {
     if (!rowData) return;
+    
+    // Check permission
+    if (!canDeleteAdmin) {
+      showToast({
+        title: "Permission Denied",
+        description: "Only superadmins can delete admin accounts",
+        type: "error"
+      });
+      setIsConfirmOpen(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const token = await getAccessToken();
@@ -566,10 +611,14 @@ export default function AdminPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="hover:bg-gray-200"
+                          className={`hover:bg-gray-200 ${!canDeleteAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
+                          disabled={!canDeleteAdmin}
+                          title={!canDeleteAdmin ? "Only superadmins can delete admins" : "Delete admin"}
                           onClick={() => {
-                            setIsConfirmOpen(true);
-                            setRowData(admmin);
+                            if (canDeleteAdmin) {
+                              setIsConfirmOpen(true);
+                              setRowData(admmin);
+                            }
                           }}
                         >
                           <Trash2 className="w-4 h-4 text-red-500" />

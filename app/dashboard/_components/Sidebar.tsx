@@ -2,24 +2,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Users,
-  LogOut,
-  LayoutDashboard,
-  Code,
-  BookUser,
-  WalletMinimal,
-  Hotel,
-  Store,
-  Spotlight,
-  BadgePercent,
-  Building,
-  Landmark,
-  Tags,
-  PanelsTopLeft,
-  Megaphone,
-} from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -36,9 +21,31 @@ interface SidebarProps {
   onToggle?: () => void; // Add this line
 }
 
+type MenuItem = {
+  title: string;
+  href: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  iconSrc?: string;
+};
+
 export default function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const sidebarLabelClass = "text-[14px] leading-5 font-medium whitespace-nowrap";
+
+  const isActiveRoute = (href: string) => {
+    const normalizedHref = href.trim().replace(/\/$/, "");
+    const normalizedPath = (pathname || "").replace(/\/$/, "");
+
+    if (normalizedHref === "/dashboard") {
+      return normalizedPath === "/dashboard";
+    }
+
+    return (
+      normalizedPath === normalizedHref ||
+      normalizedPath.startsWith(`${normalizedHref}/`)
+    );
+  };
 
   /** sign-out -> clear Redux -> go home */
   async function handleLogout() {
@@ -46,38 +53,62 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     if (error) return console.error("Sign-out failed:", error.message);
     router.push("/");
   }
-  const menuItems = [
-    { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  const menuItems: MenuItem[] = [
+    { title: "Dashboard", href: "/dashboard", icon: LayoutGrid },
     {
       title: "Restaurants Management",
       href: "/dashboard/manage-restaurants",
-      icon: Hotel,
+      iconSrc: "/restaurant_menu.png",
     },
     {
       title: "Stores Management",
       href: "/dashboard/manage-stores",
-      icon: Store,
+      iconSrc: "/storefront.png",
     },
     {
       title: "Corporate Management",
-      href:" /dashboard/manage-corporates",
-      icon: Building,
+      href: "/dashboard/manage-corporates",
+      iconSrc: "/corporatemangement.png",
     },
 
-    { title: "Bank Offers", href: "/dashboard/bank-offers", icon: Landmark },
-    { title: "Restaurant In Your PassPrive", href: "/dashboard/in-your-passprive", icon: PanelsTopLeft },
-    { title: "Store In Your PassPrive", href: "/dashboard/store-in-your-passprive", icon: Store },
-    { title: "Store Campaign", href: "/dashboard/store-campaign", icon: Megaphone },
-    { title: "Restaurant Mood Categories", href: "/dashboard/mood-categories", icon: Tags },
-    { title: "Store Mood Categories", href: "/dashboard/store-mood-categories", icon: Store },
-    { title: "Offers", href: "/dashboard/offers", icon: BadgePercent },
-    { title: "Spotlight", href: "/dashboard/spotlight", icon: Spotlight },
-    { title: "User Management", href: "/dashboard/users", icon: Users },
+    {
+      title: "Bank Offers",
+      href: "/dashboard/bank-offers",
+      iconSrc: "/bankoffers.png",
+    },
+    {
+      title: "Restaurant In Your PassPrive",
+      href: "/dashboard/in-your-passprive",
+      iconSrc: "/restaurant.png",
+    },
+    {
+      title: "Store In Your PassPrive",
+      href: "/dashboard/store-in-your-passprive",
+      iconSrc: "/store_mall_directory (1).png",
+    },
+    {
+      title: "Store Campaign",
+      href: "/dashboard/store-campaign",
+      iconSrc: "/campaign.png",
+    },
+    {
+      title: "Restaurant Mood Categories",
+      href: "/dashboard/mood-categories",
+      iconSrc: "/menu.png",
+    },
+    {
+      title: "Store Mood Categories",
+      href: "/dashboard/store-mood-categories",
+      iconSrc: "/menu.png",
+    },
+    { title: "Offers", href: "/dashboard/offers", iconSrc: "/bankoffers.png" },
+    { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
+    { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
 
     {
       title: "Admin Management",
       href: "/dashboard/admin",
-      icon: BookUser,
+      iconSrc: "/admin_panel_settings.png",
     },
 
     //{
@@ -90,10 +121,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     {
       title: "Subscriptions",
       href: "/dashboard/subscription-plans",
-      icon: WalletMinimal,
+      iconSrc: "/subscriptions.png",
     },
 
-    { title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
+    { title: "Promo Code", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
     //{ title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
     //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
   ];
@@ -107,8 +138,15 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     >
       {/* ────────────────── BRAND ────────────────── */}
       <div className="px-3 py-3 border-b border-gray-300 flex items-center justify-start gap-2">
-        <div className="flex-shrink-0 h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg select-none">
-          P
+        <div className="flex-shrink-0 h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
+          <Image
+            src="/passprive.jpeg"
+            alt="PassPrive Logo"
+            width={40}
+            height={40}
+            className="h-full w-full object-cover"
+            priority
+          />
         </div>
 
         {!collapsed && (
@@ -121,23 +159,37 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       {/* ────────────────── NAV LINKS ────────────────── */}
       <nav className="flex-1 mt-6 overflow-y-auto">
         <TooltipProvider delayDuration={80}>
-          {menuItems.map(({ title, href, icon: Icon }) => {
-            const active = pathname === href;
+          {menuItems.map(({ title, href, icon: Icon, iconSrc }) => {
+            const active = isActiveRoute(href);
             return (
               <Tooltip key={href}>
                 <TooltipTrigger asChild>
                   <Link
                     href={href}
                     className={cn(
-                      "group mx-2 flex items-center rounded-lg px-4 py-3 text-sm transition-colors",
+                      "group mx-2 flex items-center rounded-lg px-4 py-3 transition-colors",
                       active
-                        ? "bg-[#F4F8FF] text-indigo-800 font-semibold"
-                        : " hover:bg-gray-100 text-gray-700 "
+                        ? "rounded-[16px] bg-[linear-gradient(90deg,#5B10B5_0%,#9E69EA_100%)] text-white"
+                        : "hover:bg-gray-100 text-gray-700"
                     )}
                   >
-                    <Icon className={cn("h-5 w-5", !collapsed && "mr-3")} />
+                    {iconSrc ? (
+                      <Image
+                        src={iconSrc}
+                        alt={title}
+                        width={20}
+                        height={20}
+                        className={cn(
+                          "h-5 w-5 shrink-0 object-contain",
+                          !collapsed && "mr-3",
+                          active ? "brightness-0 invert" : "brightness-0"
+                        )}
+                      />
+                    ) : Icon ? (
+                      <Icon className={cn("h-5 w-5", !collapsed && "mr-3")} />
+                    ) : null}
                     {!collapsed && (
-                      <span className="font-medium text-[14px]">{title}</span>
+                      <span className={sidebarLabelClass}>{title}</span>
                     )}
                   </Link>
                 </TooltipTrigger>
@@ -167,7 +219,13 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 className="w-full h-12 cursor-pointer text-red-600 hover:text-red-800"
                 onClick={handleLogout}
               >
-                <LogOut className="h-5 w-5" />
+                <Image
+                  src="/login.png"
+                  alt="Log out"
+                  width={20}
+                  height={20}
+                  className="h-5 w-5 object-contain brightness-0"
+                />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">Log out</TooltipContent>
@@ -178,8 +236,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             className="w-full justify-start h-12 cursor-pointer text-red-600 hover:text-red-800"
             onClick={handleLogout}
           >
-            <LogOut className="mr-3 h-5 w-5" />
-            Log out
+            <Image
+              src="/login.png"
+              alt="Log out"
+              width={20}
+              height={20}
+              className="mr-3 h-5 w-5 object-contain brightness-0"
+            />
+            <span className={sidebarLabelClass}>Log out</span>
           </Button>
         )}
       </div>
