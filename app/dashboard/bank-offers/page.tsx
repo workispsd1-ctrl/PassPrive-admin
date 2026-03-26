@@ -787,12 +787,12 @@ export default function BankOffersPage() {
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-50 to-blue-50">
+    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
       {/* Enhanced Header */}
       <div className="sticky top-0 z-20 border-b border-slate-200/40 bg-white/80 backdrop-blur-xl shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-2.5 shadow-lg">
+            <div className="rounded-xl bg-[#5800AB] p-2.5 shadow-lg">
               <BadgePercent className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -825,7 +825,7 @@ export default function BankOffersPage() {
               icon={BadgePercent}
               title={editingId ? "Edit Offer" : "Create Offer"}
               description="Build your offer step by step"
-              gradient="from-emerald-50 to-green-50"
+              gradient="from-white to-[#F8F2FF]"
             >
               {/* Step 1 */}
               <StepSection
@@ -1004,7 +1004,7 @@ export default function BankOffersPage() {
               icon={CreditCard}
               title="Eligible Cards"
               description="Specific card BINs (optional)"
-              gradient="from-blue-50 to-cyan-50"
+              gradient="from-white to-[#F8F2FF]"
               action={
                 <Button 
                   type="button" 
@@ -1045,7 +1045,7 @@ export default function BankOffersPage() {
               icon={Target}
               title="Where This Works"
               description="Geographic and merchant targeting"
-              gradient="from-purple-50 to-pink-50"
+              gradient="from-white to-[#F8F2FF]"
               action={
                 <Button 
                   type="button" 
@@ -1093,14 +1093,14 @@ export default function BankOffersPage() {
               icon={ShieldCheck}
               title="Live Offers"
               description="Review and manage offers"
-              gradient="from-amber-50 to-orange-50"
+              gradient="from-white to-[#F8F2FF]"
             >
               <div className="relative">
                 <Input 
                   value={filter} 
                   onChange={(e) => setFilter(e.target.value)} 
                   placeholder="Search offers..." 
-                  className="border-slate-200 pl-10 focus:border-emerald-400 focus:ring-emerald-400 transition-colors duration-200" 
+                  className="border-slate-200 pl-10 focus:border-[#5800AB] focus:ring-[#5800AB] transition-colors duration-200"
                 />
                 <BadgePercent className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               </div>
@@ -1133,7 +1133,7 @@ export default function BankOffersPage() {
               icon={MapPin}
               title="Redemptions"
               description={editingId ? "Recent customer usage" : "Open an offer to view usage"}
-              gradient="from-rose-50 to-pink-50"
+              gradient="from-white to-[#F8F2FF]"
             >
               {redemptionsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -1165,7 +1165,7 @@ export default function BankOffersPage() {
         <Button
           onClick={handleSubmit}
           disabled={saving}
-          className="h-12 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-white shadow-lg hover:shadow-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50"
+          className="h-12 rounded-full bg-[#5800AB] px-6 text-white shadow-lg hover:shadow-xl hover:bg-[#4a0090] transition-all duration-300 disabled:opacity-50"
         >
           {saving ? (
             <>

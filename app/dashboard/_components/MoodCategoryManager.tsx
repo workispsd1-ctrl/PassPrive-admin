@@ -381,7 +381,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
   }
 
   return (
-    <div className="min-h-full bg-slate-100">
+    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -509,7 +509,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
               <div className="flex gap-3 border-t border-slate-100 pt-4">
                 <Button
-                  className="flex-1 bg-slate-900 text-white hover:bg-slate-800"
+                  className="flex-1 bg-[#5800AB] text-white hover:bg-[#4a0090]"
                   onClick={() => void saveCategory()}
                   disabled={saving}
                 >
@@ -591,7 +591,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
                             variant={editingId === category.id ? "default" : "outline"}
                             size="sm"
                             onClick={() => void startEdit(category.id)}
-                            className={editingId === category.id ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-white"}
+                            className={editingId === category.id ? "bg-[#5800AB] text-white hover:bg-[#4a0090]" : "bg-white"}
                             disabled={loadingEditId === category.id}
                           >
                             {loadingEditId === category.id ? (

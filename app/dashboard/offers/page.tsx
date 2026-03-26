@@ -420,12 +420,12 @@ export default function OffersPage() {
   }
 
   return (
-    <div className="min-h-full bg-slate-50/70 p-4 md:p-6">
+    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#5800AB]">
                 Offers Section
               </p>
               <h1 className="mt-2 text-3xl font-semibold text-slate-900">
@@ -478,7 +478,7 @@ export default function OffersPage() {
                   {config.supportsEdit ? (
                     <Link
                       href="/dashboard/offers/new"
-                      className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                      className="rounded-xl bg-[#5800AB] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4a0090]"
                     >
                       {config.addLabel}
                     </Link>
@@ -489,7 +489,7 @@ export default function OffersPage() {
                           current === config.key ? null : config.key
                         )
                       }
-                      className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                      className="rounded-xl bg-[#5800AB] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4a0090]"
                     >
                       {formOpen ? "Close Form" : config.addLabel}
                     </button>
@@ -525,7 +525,7 @@ export default function OffersPage() {
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm">
-                        <thead className="bg-slate-100">
+                        <thead className="bg-white">
                           <tr>
                             <th className="px-4 py-3 text-left font-medium text-slate-600">ID</th>
                             <th className="px-4 py-3 text-left font-medium text-slate-600">Title</th>
@@ -536,7 +536,7 @@ export default function OffersPage() {
                             <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 bg-white">
+                        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
                           {items.map((item) => {
                             const rowDeleteKey = `${config.key}-${item.id}`;
                             return (

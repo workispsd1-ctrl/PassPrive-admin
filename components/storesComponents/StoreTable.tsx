@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Trash2, Info, Pencil } from "lucide-react";
 import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -98,52 +98,54 @@ export const StoreTable = ({
 
   return (
     <>
-      <table className="w-full border-spacing-0">
-        <thead className="bg-indigo-100">
-          <tr>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
+      <table className="w-full border-collapse">
+        <thead className="bg-white">
+          <tr className="border-b border-gray-200">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
               NAME
             </th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
               LOCATION
             </th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
               CATEGORY
             </th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
               STATUS
             </th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
               FEATURED
             </th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
               ACTIONS
             </th>
           </tr>
         </thead>
 
-        <tbody>
-          {stores.map((s) => {
+        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+          {stores.map((s, idx) => {
             if (!s.id) return null;
 
             return (
               <tr
                 key={s.id}
-                className="border-b border-gray-300 hover:bg-gray-50 transition cursor-pointer text-gray-600 text-sm"
+                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-sm ${
+                  idx !== stores.length - 1 ? "border-b" : ""
+                }`}
                 onClick={() => onRowClick?.(s.id)}
               >
-                <td className="px-4 py-4 font-medium">{s.name}</td>
+                <td className="px-6 py-3 font-medium text-[#1D293D]">{s.name}</td>
 
-                <td className="px-4 py-4">{formatLocation(s)}</td>
+                <td className="px-6 py-3 text-[#5b6473]">{formatLocation(s)}</td>
 
-                <td className="px-4 py-4">
+                <td className="px-6 py-3 text-[#5b6473]">
                   {s.category || "-"}
                   {s.subcategory ? (
-                    <span className="text-xs text-gray-500"> • {s.subcategory}</span>
+                    <span className="text-xs text-[#929292]"> • {s.subcategory}</span>
                   ) : null}
                 </td>
 
-                <td className="px-4 py-4">
+                <td className="px-6 py-3">
                   {s.is_active === false ? (
                     <span className="text-xs font-semibold text-red-600">Disabled</span>
                   ) : (
@@ -151,17 +153,17 @@ export const StoreTable = ({
                   )}
                 </td>
 
-                <td className="px-4 py-4">
+                <td className="px-6 py-3">
                   {s.is_featured ? (
-                    <span className="text-xs font-semibold text-indigo-700">Yes</span>
+                    <span className="text-xs font-semibold text-[#5800AB]">Yes</span>
                   ) : (
-                    <span className="text-xs text-gray-500">No</span>
+                    <span className="text-xs text-[#5b6473]">No</span>
                   )}
                 </td>
 
-                <td className="px-4 py-4">
-                  <div className="flex gap-2">
-                    {/* INFO */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    {/* VIEW */}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -169,9 +171,15 @@ export const StoreTable = ({
                         e.stopPropagation();
                         setSelected(s);
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer p-0 h-auto"
                     >
-                      <Info className="w-4 h-4" />
+                      <Image
+                        src="/view.png"
+                        alt="View"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
 
                     {/* EDIT -> go to /dashboard/manage-stores/[id] */}
@@ -182,9 +190,15 @@ export const StoreTable = ({
                         e.stopPropagation();
                         router.push(`/dashboard/manage-stores/${s.id}`);
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer p-0 h-auto"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Image
+                        src="/edit.png"
+                        alt="Edit"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
 
                     {/* DELETE */}
@@ -195,9 +209,15 @@ export const StoreTable = ({
                         e.stopPropagation();
                         setConfirmDelete(s);
                       }}
-                      className="cursor-pointer"
+                      className="cursor-pointer p-0 h-auto"
                     >
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <Image
+                        src="/delete.png"
+                        alt="Delete"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
                   </div>
                 </td>

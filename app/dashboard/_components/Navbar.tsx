@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RefreshCw, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { usePathname } from "next/navigation";
@@ -394,22 +395,26 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
     }
   };
 
+  const roleLabel = userRole
+    ? userRole.charAt(0).toUpperCase() + userRole.slice(1)
+    : "Admin";
+
   return (
-    <header className="h-[74px] bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      <div className="flex items-center space-x-2">
+    <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] px-6">
+      <div className="flex items-center">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed?.(!collapsed)}
-          className="h-10 w-8 text-gray-600 hover:text-indigo-800 cursor-pointer"
+          className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-white/70"
         >
           {collapsed ? (
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5" />
           ) : (
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5" />
           )}
         </Button>
-        <span className="lg:text-lg md:text-md text-sm font-bold text-gray-800">
+        <span className="text-[20px] font-normal leading-[32px] text-[#1D293D]">
           {(() => {
             let title = pathName[pathname] || "";
 
@@ -461,27 +466,43 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
         </span>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-3 text-[#1f2a37]">
         {pathName[pathname] !== "Training Videos" && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={handleExport}
-            className="cursor-pointer text-gray-600 hover:text-gray-900"
+            className="rounded-md p-1.5 transition hover:bg-white/70"
             aria-label="Export"
           >
-            <Download className="w-5 h-5" />
-          </Button>
+            <Image
+              src="/download.png"
+              alt="Download"
+              width={16}
+              height={16}
+              className="h-4 w-4 object-contain"
+            />
+          </button>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={handleRefresh}
-          className="cursor-pointer text-gray-600 hover:text-gray-900"
+          className="rounded-md p-1.5 transition hover:bg-white/70"
           aria-label="Refresh"
         >
-          <RefreshCw className="w-5 h-5" />
-        </Button>
+          <Image
+            src="/refresh.png"
+            alt="Refresh"
+            width={16}
+            height={16}
+            className="h-4 w-4 object-contain"
+          />
+        </button>
+        <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
+          <div className="h-7 w-7 rounded-full bg-[#929292]" />
+          <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
+            {roleLabel}
+          </span>
+        </div>
       </div>
     </header>
   );

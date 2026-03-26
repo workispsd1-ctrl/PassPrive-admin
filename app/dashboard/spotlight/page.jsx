@@ -12,7 +12,7 @@ export default function SpotlightAdminPage() {
   const isEditing = !!editingItem;
 
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
       {/* Top header */}
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
@@ -41,7 +41,7 @@ export default function SpotlightAdminPage() {
                     setEditingItem(null);
                     setShowForm(true);
                   }}
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#5800AB] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#4a0090] focus:outline-none focus:ring-2 focus:ring-purple-200"
                 >
                   <Plus className="h-4 w-4" />
                   Add Spotlight
@@ -82,7 +82,7 @@ export default function SpotlightAdminPage() {
                 setEditingItem(null);
                 setShowForm(true);
               }}
-              className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-200 sm:hidden"
+              className="fixed bottom-5 right-5 inline-flex items-center gap-2 rounded-full bg-[#5800AB] px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-[#4a0090] focus:outline-none focus:ring-2 focus:ring-purple-200 sm:hidden"
             >
               <Plus className="h-4 w-4" />
               Add

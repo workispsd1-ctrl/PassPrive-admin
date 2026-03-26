@@ -10,15 +10,13 @@ import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Download,
   FileText,
   History,
-  Info,
-  Trash2,
   Ban,
   CheckCircle,
-  Pencil,
   File,
 } from "lucide-react";
 import Modal from "@/app/dashboard/_components/Modal";
@@ -195,51 +193,53 @@ export const UserTable = ({
             Export
           </button>
         </div> */}
-        <table className="w-full border-spacing-0">
-          <thead className="bg-indigo-100">
+        <table className="w-full border-collapse">
+          <thead className="bg-white">
             <tr className="border-b border-gray-200 ">
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 NAME
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold  text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 PHONE
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 EMAIL
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 PLAN
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 SUBSCRIPTION DATE
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 JOIN DATE
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 LAST OPENED
               </th>
-              <th className="text-left py-4 lg:px-4 md:px-4 px-3 font-semibold text-black text-[12px]">
+              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
                 ACTIONS
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
             {users.length > 0 ? (
-              users.map((user) => (
+              users.map((user, idx) => (
                 <tr
                   key={user.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors lg:text-md md:text-md text-sm"
+                  className={`border-b border-gray-200 hover:bg-white/20 transition-colors lg:text-md md:text-md text-sm ${
+                    idx !== users.length - 1 ? "border-b" : ""
+                  }`}
                 >
-                  <td className="py-4 px-4  text-gray-900">{user.full_name || user.display_name}</td>
-                  <td className="py-4 px-4 text-center  text-gray-900">
+                  <td className="py-3 px-6 text-[#1D293D] font-medium">{user.full_name || user.display_name}</td>
+                  <td className="py-3 px-6 text-center text-[#5b6473]">
                     {user.phone ?? "-"}
                   </td>
-                  <td className="py-4 px-4 text-gray-900 ">{user.email}</td>
-                  <td className="py-4 px-4">
+                  <td className="py-3 px-6 text-[#5b6473]">{user.email}</td>
+                  <td className="py-3 px-6">
                     <StatusBadge status={user.subscription} />
                   </td>
-                  <td className="py-4 px-4 text-gray-600">
+                  <td className="py-3 px-6 text-[#5b6473]">
                     {(user.user_subscription?.length ?? 0) > 0
                       ? formatStartDateIST(
                           user.user_subscription[0]?.start_date ??
@@ -247,37 +247,55 @@ export const UserTable = ({
                         )
                       : "-"}
                   </td>
-                  <td className="py-4 px-4 text-gray-600">
+                  <td className="py-3 px-6 text-[#5b6473]">
                     {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
                     {displayValidTill(user.created_at, user.created_at)}
                   </td>
-                  <td className="py-4 px-4 text-gray-600">
+                  <td className="py-4 px-6 text-[#5b6473]">
                     {formatToIndia(user.website_last_opened)}
                   </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-x-2">
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="hover:bg-gray-200"
+                        className="cursor-pointer p-0 h-auto hover:bg-transparent"
                         onClick={() => {
                           setIsConfirmOpen(true);
                           setRowData(user);
                         }}
                       >
-                        <Trash2 className="w-4 h-4 text-red-500" />
+                        <Image
+                          src="/delete.png"
+                          alt="Delete"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
                       </Button>
                       <button
                         onClick={() => {
                           handleUserDetails(user);
                         }}
-                        className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        className="cursor-pointer p-0"
                       >
-                        <Info className="w-4 h-4" />
+                        <Image
+                          src="/view.png"
+                          alt="View"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
                       </button>
                       <Link href={`/dashboard/users/${user.id}/edit`}>
-                        <button className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200">
-                          <Pencil className="w-4 h-4" />
+                        <button className="cursor-pointer p-0">
+                          <Image
+                            src="/edit.png"
+                            alt="Edit"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
                         </button>
                       </Link>
                     </div>

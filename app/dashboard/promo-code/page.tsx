@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Trash2, Edit, FileText } from "lucide-react";
+import Image from "next/image";
+import { Calendar, FileText } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { Plus } from "lucide-react";
 import {
@@ -225,17 +226,15 @@ export default function SeminarPage() {
 
   return (
     <>
-      <div className="min-h-full bg-white">
+      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
         {/* Add button */}
-        <div className="bg-white">
-          <button
-            onClick={() => setDialogOpen(true)}
-            className="fixed bottom-6 right-6 z-50 rounded-full p-4 bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300"
-            title="Add seminar"
-          >
-            <Plus className="h-6 w-6" />
-          </button>
-        </div>
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
+          title="Add promo code"
+        >
+          <Plus className="h-6 w-6 mx-auto" />
+        </button>
 
         {promos.length === 0 ? (
           <div className="flex flex-col justify-center items-center text-gray-900 p-6">
@@ -243,34 +242,39 @@ export default function SeminarPage() {
             <h2 className="text-2xl font-semibold mb-2">No Data Found</h2>
           </div>
         ) : (
-          <div className="overflow-x-auto lg:w-full md:w-full w-[320px] bg-white rounded-lg shadow-md">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+            <table className="min-w-full border-collapse">
+              <thead className="bg-white">
+                <tr className="border-b border-gray-200">
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
                     Promo Code
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
                     Plans
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
                     Discount %
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
                     Code valid till
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {promos.map((pr) => (
-                  <tr key={pr.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+                {promos.map((pr, idx) => (
+                  <tr
+                    key={pr.id}
+                    className={`border-b border-gray-200 hover:bg-white/20 transition text-sm ${
+                      idx !== promos.length - 1 ? "border-b" : ""
+                    }`}
+                  >
+                    <td className="px-6 py-3 text-[#1D293D]">
                       <span className="flex items-center">{pr.code}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-3 text-[#5b6473]">
                       {pr.plans.map((plan, index) => (
                         <span key={index} className="mr-2">
                           {plan}
@@ -278,26 +282,40 @@ export default function SeminarPage() {
                         </span>
                       ))}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-3 text-[#5b6473]">
                       {pr.discount}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-3 text-[#5b6473]">
                       {displayValidTill(pr.valid_date, pr.valid_time)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-4">
-                        <Trash2
-                          className="h-4 w-4 text-red-500 hover:text-red-700 transition-colors duration-150 cursor-pointer"
+                    <td className="px-6 py-3 text-[#1D293D]">
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="cursor-pointer p-0 h-auto"
                           onClick={() => setPendingId(pr.id || null)}
-                        />
+                        >
+                          <Image
+                            src="/delete.png"
+                            alt="Delete"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
+                        </button>
                         <button
                           disabled={loading}
                           onClick={() => {
                             handleEditForm(pr);
                           }}
-                          className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          className="cursor-pointer p-0 h-auto"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Image
+                            src="/edit.png"
+                            alt="Edit"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
                         </button>
                       </div>
                     </td>
@@ -459,13 +477,13 @@ export default function SeminarPage() {
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
                 disabled={saving}
-                className="bg-red-500 hover:bg-red-600 text-white cursor-pointer"
+                className="bg-gray-500 hover:bg-gray-600 text-white cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                className="bg-[#5800AB] hover:bg-[#4a0090] text-white cursor-pointer"
                 onClick={async () => {
                   setSaving(true);
 

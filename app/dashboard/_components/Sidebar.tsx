@@ -132,7 +132,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-gray-200 transition-all duration-300",
+        "fixed inset-y-0 left-0 z-30 flex flex-col bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] border-r border-gray-200 transition-all duration-300",
         collapsed ? "w-16" : "w-64"
       )}
     >

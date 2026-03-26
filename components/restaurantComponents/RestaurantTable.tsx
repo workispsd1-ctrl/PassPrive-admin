@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Trash2, Info, Pencil } from "lucide-react";
 import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -85,41 +85,51 @@ export const RestaurantTable = ({
 
   return (
     <>
-      <table className="w-full border-spacing-0">
-        <thead className="bg-indigo-100">
-          <tr>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">NAME</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">LOCATION</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">RATING</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">COST FOR TWO</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">OFFER</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">ACTIONS</th>
+      <table className="w-full border-collapse">
+        <thead className="bg-white">
+          <tr className="border-b border-gray-200">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">NAME</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">LOCATION</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">RATING</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">COST FOR TWO</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">OFFER</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">ACTIONS</th>
           </tr>
         </thead>
 
-        <tbody>
-          {restaurants.map((r) => {
+        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+          {restaurants.map((r, idx) => {
             if (!r.id) return null;
 
             return (
               <tr
                 key={r.id}
-                className="border-b border-gray-300 hover:bg-gray-50 transition cursor-pointer text-gray-600 text-sm"
+                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-sm ${
+                  idx !== restaurants.length - 1 ? "border-b" : ""
+                }`}
                 onClick={() => onRowClick?.(r.id)}
               >
-                <td className="px-4 py-4 font-medium">{r.name}</td>
-                <td className="px-4 py-4">
+                <td className="px-6 py-3 font-medium text-[#1D293D]">{r.name}</td>
+                <td className="px-6 py-3 text-[#5b6473]">
                   {r.area}, {r.city}
                 </td>
-                <td className="px-4 py-4">{r.rating ?? "-"}</td>
-                <td className="px-4 py-4">
+                <td className="px-6 py-3 text-[#5b6473]">{r.rating ?? "-"}</td>
+                <td className="px-6 py-3 text-[#5b6473]">
                   {r.cost_for_two ? `₹${r.cost_for_two}` : "-"}
                 </td>
-                <td className="px-4 py-4">{r.offer || "-"}</td>
+                <td className="px-6 py-3">
+                  {r.offer && r.offer !== "—" ? (
+                    <span className="inline-block px-2.5 py-1 bg-[#5800AB] text-white text-[11px] font-medium rounded-full">
+                      Offer
+                    </span>
+                  ) : (
+                    <span className="text-[#5b6473]">—</span>
+                  )}
+                </td>
 
                 <td className="px-4 py-4">
-                  <div className="flex gap-2">
-                    {/* INFO */}
+                  <div className="flex items-center gap-3">
+                    {/* VIEW */}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -127,9 +137,15 @@ export const RestaurantTable = ({
                         e.stopPropagation();
                         setSelected(r);
                       }}
-                       className=" cursor-pointer"
+                       className="cursor-pointer p-0 h-auto"
                     >
-                      <Info className="w-4 h-4" />
+                      <Image
+                        src="/view.png"
+                        alt="View"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
 
                     {/* EDIT -> go to /dashboard/manage-restaurants/[id] */}
@@ -140,9 +156,15 @@ export const RestaurantTable = ({
                         e.stopPropagation();
                         router.push(`/dashboard/manage-restaurants/${r.id}`);
                       }}
-                      className=" cursor-pointer"
+                      className="cursor-pointer p-0 h-auto"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Image
+                        src="/edit.png"
+                        alt="Edit"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
 
                     {/* DELETE */}
@@ -153,9 +175,15 @@ export const RestaurantTable = ({
                         e.stopPropagation();
                         setConfirmDelete(r);
                       }}
-                       className=" cursor-pointer"
+                       className="cursor-pointer p-0 h-auto"
                     >
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <Image
+                        src="/delete.png"
+                        alt="Delete"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
                   </div>
                 </td>

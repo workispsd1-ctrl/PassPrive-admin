@@ -278,7 +278,7 @@ export default function PassPriveCardManager({
   }
 
   return (
-    <div className="min-h-full bg-slate-100">
+    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -297,7 +297,7 @@ export default function PassPriveCardManager({
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
-              <Button className="bg-slate-900 text-white hover:bg-slate-800" onClick={openCreateDialog}>
+              <Button className="bg-[#5800AB] text-white hover:bg-[#4a0090]" onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add new card
               </Button>
@@ -437,7 +437,7 @@ export default function PassPriveCardManager({
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={() => void saveCard()} disabled={saving} className="bg-slate-900 text-white hover:bg-slate-800">
+            <Button onClick={() => void saveCard()} disabled={saving} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editingCard ? "Save changes" : "Create card"}
             </Button>

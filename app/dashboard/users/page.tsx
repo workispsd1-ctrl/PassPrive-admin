@@ -113,7 +113,7 @@ function UsersPage() {
     <>
 
       {/* Filters + Table */}
-      <div className="space-y-4">
+      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -125,31 +125,29 @@ function UsersPage() {
 
         />
 
-        <Card className="border border-gray-200 shadow-sm w-full overflow-x-auto">
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="p-4">
-                <LoadingSkeleton />
-              </div>
-            ) : error ? (
-              <div className="p-6">
-                <ComingSoon />
-              </div>
-            ) : (
-              <UserTable
-                users={users || []}
-                handleExportFile={handleExportFile}
-                setPage={setPage}
-                page={page}
-                totalPages={totalPages}
-                limit={limit}
-                totalRecord={total}
-                setLimit={setLimit}
-                setDeleteRefresh={setDeleteRefresh}
-              />
-            )}
-          </CardContent>
-        </Card>
+        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+          {loading ? (
+            <div className="p-6">
+              <LoadingSkeleton />
+            </div>
+          ) : error ? (
+            <div className="p-6">
+              <ComingSoon />
+            </div>
+          ) : (
+            <UserTable
+              users={users || []}
+              handleExportFile={handleExportFile}
+              setPage={setPage}
+              page={page}
+              totalPages={totalPages}
+              limit={limit}
+              totalRecord={total}
+              setLimit={setLimit}
+              setDeleteRefresh={setDeleteRefresh}
+            />
+          )}
+        </div>
       </div>
 
       {/* Create user dialog */}

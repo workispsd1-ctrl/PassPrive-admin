@@ -151,7 +151,7 @@ export default function StoresPage() {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -159,36 +159,36 @@ export default function StoresPage() {
           placeholder="Search stores by name, category, city, or location..."
         />
 
-        <Card className="w-full overflow-x-auto border border-gray-200 shadow-sm">
-          <CardContent className="p-0">
-            {loading ? (
+        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+          {loading ? (
+            <div className="p-6">
               <StoresTableSkeleton />
-            ) : stores.length === 0 ? (
-              <div className="p-6">
-                <ComingSoon />
-              </div>
-            ) : (
-              <StoreTable
-                stores={stores}
-                page={page}
-                setPage={setPage}
-                totalPages={totalPages}
-                totalRecord={total}
-                limit={limit}
-                setLimit={setLimit}
-                setRefresh={setRefresh}
-                onRowClick={(id: string) =>
-                  router.push(`/dashboard/manage-stores/${id}`)
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ) : stores.length === 0 ? (
+            <div className="p-6">
+              <ComingSoon />
+            </div>
+          ) : (
+            <StoreTable
+              stores={stores}
+              page={page}
+              setPage={setPage}
+              totalPages={totalPages}
+              totalRecord={total}
+              limit={limit}
+              setLimit={setLimit}
+              setRefresh={setRefresh}
+              onRowClick={(id: string) =>
+                router.push(`/dashboard/manage-stores/${id}`)
+              }
+            />
+          )}
+        </div>
       </div>
 
       {/* Floating Add Button */}
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
         onClick={() => router.push("/dashboard/manage-stores/add")}
       >
         <Plus className="h-6 w-6" />

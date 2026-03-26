@@ -269,7 +269,7 @@ export default function StoreCampaignPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] min-h-full">
       <Card className="border border-slate-200 shadow-sm">
         <CardHeader className="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
@@ -293,7 +293,7 @@ export default function StoreCampaignPage() {
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Button onClick={openCreateDialog} className="bg-slate-900 text-white hover:bg-slate-800">
+            <Button onClick={openCreateDialog} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
               <Plus className="mr-2 h-4 w-4" />
               Create Campaign
             </Button>
@@ -365,7 +365,7 @@ export default function StoreCampaignPage() {
                       variant={campaign.is_active ? "destructive" : "default"}
                       onClick={() => void toggleCampaignStatus(campaign)}
                       disabled={saving}
-                      className={!campaign.is_active ? "bg-slate-900 text-white hover:bg-slate-800" : undefined}
+                      className={!campaign.is_active ? "bg-[#5800AB] text-white hover:bg-[#4a0090]" : undefined}
                     >
                       {campaign.is_active ? "Deactivate" : "Activate"}
                     </Button>
@@ -480,7 +480,7 @@ export default function StoreCampaignPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={() => void saveCampaign()} disabled={saving} className="bg-slate-900 text-white hover:bg-slate-800">
+            <Button onClick={() => void saveCampaign()} disabled={saving} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editingCampaign ? "Save changes" : "Create campaign"}
             </Button>

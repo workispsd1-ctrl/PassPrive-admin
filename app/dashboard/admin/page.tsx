@@ -3,11 +3,9 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import {
   Search,
-  Trash2,
-  Info,
-  Edit,
   FileText,
   EyeOff,
   Eye,
@@ -502,7 +500,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="min-h-full bg-white">
+      <div className="min-h-full p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           {/* Search Input */}
           <form
@@ -544,7 +542,7 @@ export default function AdminPage() {
               });
               setDialogOpen(true);
             }}
-            className="flex items-center space-x-2 px-4 py-2 bg-indigo-700 text-white rounded-md shadow-md hover:bg-indigo-600 focus:ring-4 focus:ring-blue-300 transition-colors duration-200 w-full sm:w-auto cursor-pointer justify-center"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#5800AB] text-white rounded-md shadow-md hover:bg-[#4a0090] focus:ring-4 focus:ring-violet-300 transition-colors duration-200 w-full sm:w-auto cursor-pointer justify-center"
             title="Add New Admin"
           >
             <Plus className="h-5 w-5" />
@@ -565,53 +563,53 @@ export default function AdminPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-lg shadow-md lg:w-full md:w-full w-[320px]">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-indigo-100">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm lg:w-full md:w-full w-[320px]">
+            <table className="min-w-full divide-y divide-gray-200 border-collapse">
+              <thead className="bg-white">
+                <tr className="border-b border-gray-200">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
                     Phone
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="bg-white divide-y divide-gray-200">
-                {admins.map((admmin) => (
-                  <tr key={admmin.id} className="hover:bg-gray-50">
-                    <td className="wrap-break-word px-6 py-4 text-sm font-medium text-gray-900">
+              <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] divide-y divide-gray-200">
+                {admins.map((admmin, idx) => (
+                  <tr key={admmin.id} className={`border-b border-gray-200 hover:bg-white/20 transition ${idx !== admins.length - 1 ? "border-b" : ""}`}>
+                    <td className="wrap-break-word px-6 py-3 text-sm font-medium text-[#1D293D]">
                       {admmin?.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-[#5b6473]">
                       <span className="flex items-center">
                         {admmin?.full_name || admmin?.name}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-[#5b6473]">
                       <span className="flex items-center">
                         {formatRole(admmin?.role)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#5b6473]">
                       {admmin?.phone}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-4 ">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-3">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`hover:bg-gray-200 ${!canDeleteAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
+                          className={`p-0 h-auto hover:bg-transparent ${!canDeleteAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                           disabled={!canDeleteAdmin}
                           title={!canDeleteAdmin ? "Only superadmins can delete admins" : "Delete admin"}
                           onClick={() => {
@@ -621,7 +619,13 @@ export default function AdminPage() {
                             }
                           }}
                         >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <Image
+                            src="/delete.png"
+                            alt="Delete"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
                         </Button>
 
                         <button
@@ -629,9 +633,15 @@ export default function AdminPage() {
                           onClick={() => {
                             handleEditForm(admmin);
                           }}
-                          className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          className="cursor-pointer p-0"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Image
+                            src="/edit.png"
+                            alt="Edit"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
                         </button>
 
                         <button
@@ -640,9 +650,15 @@ export default function AdminPage() {
                             setSelectedData(admmin);
                             setIsOpen(true);
                           }}
-                          className="cursor-pointer p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          className="cursor-pointer p-0"
                         >
-                          <Info className="w-4 h-4" />
+                          <Image
+                            src="/view.png"
+                            alt="View"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
                         </button>
                       </div>
                     </td>

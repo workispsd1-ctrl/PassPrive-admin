@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { showToast } from "@/hooks/useToast";
 import {
   Dialog,
@@ -131,26 +132,7 @@ export default function SubscriptionPlansPage() {
 
   return (
     <main className="min-h-full">
-      <div className="flex items-center justify-between mb-6">
-        <div></div>
-        <Button
-          onClick={() => {
-            setEditingPlan({
-              id: "",
-              plan_name: "",
-              amount: "",
-              type: "month",
-              product_id: "",
-              price_id: "",
-              sort_order: (plans?.length || 0) + 1,
-            });
-            setDialogOpen(true);
-          }}
-          className="bg-blue-600 text-white"
-        >
-          <Plus size={18} /> Add Plan
-        </Button>
-      </div>
+      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
 
       {loading ? (
         <main className="min-h-screen p-4">
@@ -161,39 +143,51 @@ export default function SubscriptionPlansPage() {
           </div>
         </main>
       ) : (
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-700">
-              <tr>
-                <th className="px-4 py-3">Plan Name</th>
-                <th className="px-4 py-3">Amount (₹)</th>
-                <th className="px-4 py-3">Duration</th>
-                <th className="px-4 py-3">Product ID</th>
-                <th className="px-4 py-3">Price ID</th>
-                <th className="px-4 py-3">Sort</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-white">
+              <tr className="border-b border-gray-200">
+                <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Plan Name</th>
+                <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Amount (₹)</th>
+                <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Duration</th>
+                <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Product ID</th>
+                <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Price ID</th>
+                <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Sort</th>
+                <th className="px-6 py-3 text-right text-[12px] font-semibold text-[#1D293D]">Actions</th>
               </tr>
             </thead>
 
-            <tbody>
-              {plans.map((plan) => (
-                <tr key={plan.id} className="border-b last:border-none hover:bg-gray-50">
-                  <td className="px-4 py-3">{plan.plan_name}</td>
-                  <td className="px-4 py-3">₹{plan.amount || "0"}</td>
-                  <td className="px-4 py-3">{TYPE_LABELS[plan.type] ?? plan.type}</td>
-                  <td className="px-4 py-3">{plan.product_id}</td>
-                  <td className="px-4 py-3">{plan.price_id}</td>
-                  <td className="px-4 py-3">{plan.sort_order}</td>
+            <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+              {plans.map((plan, idx) => (
+                <tr
+                  key={plan.id}
+                  className={`border-b border-gray-200 hover:bg-white/20 transition text-sm ${
+                    idx !== plans.length - 1 ? "border-b" : ""
+                  }`}
+                >
+                  <td className="px-6 py-3 font-medium text-[#1D293D]">{plan.plan_name}</td>
+                  <td className="px-6 py-3 text-[#5b6473]">₹{plan.amount || "0"}</td>
+                  <td className="px-6 py-3 text-[#5b6473]">{TYPE_LABELS[plan.type] ?? plan.type}</td>
+                  <td className="px-6 py-3 text-[#5b6473]">{plan.product_id}</td>
+                  <td className="px-6 py-3 text-[#5b6473]">{plan.price_id}</td>
+                  <td className="px-6 py-3 text-[#5b6473]">{plan.sort_order}</td>
 
-                  <td className="px-4 py-3 text-right flex gap-2 justify-end">
+                  <td className="px-6 py-3 text-right">
+                    <div className="flex items-center justify-end gap-3">
                     <button
                       onClick={() => {
                         setEditingPlan(plan);
                         setDialogOpen(true);
                       }}
-                      className="p-2"
+                      className="cursor-pointer p-0 h-auto"
                     >
-                      <Pencil size={16} />
+                      <Image
+                        src="/edit.png"
+                        alt="Edit"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </button>
 
                     <button
@@ -201,10 +195,17 @@ export default function SubscriptionPlansPage() {
                         setPlanToDelete(plan);
                         setDeleteDialogOpen(true);
                       }}
-                      className="p-2 text-red-700"
+                      className="cursor-pointer p-0 h-auto"
                     >
-                      <Trash2 size={16} />
+                      <Image
+                        src="/delete.png"
+                        alt="Delete"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -220,6 +221,25 @@ export default function SubscriptionPlansPage() {
           </table>
         </div>
       )}
+      </div>
+
+      <Button
+        onClick={() => {
+          setEditingPlan({
+            id: "",
+            plan_name: "",
+            amount: "",
+            type: "month",
+            product_id: "",
+            price_id: "",
+            sort_order: (plans?.length || 0) + 1,
+          });
+          setDialogOpen(true);
+        }}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
 
       {/* ✅ Dialog for add/edit */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -284,10 +304,10 @@ export default function SubscriptionPlansPage() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} className="bg-red-500 hover:bg-red-600 text-white">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="bg-gray-500 hover:bg-gray-600 text-white">
               Cancel
             </Button>
-            <Button onClick={() => editingPlan && handleSave(editingPlan)} className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+            <Button onClick={() => editingPlan && handleSave(editingPlan)} className="bg-[#5800AB] hover:bg-[#4a0090] text-white">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

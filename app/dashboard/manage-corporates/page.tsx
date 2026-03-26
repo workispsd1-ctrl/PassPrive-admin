@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
-import { Plus, EyeOff, Eye, Trash2, Info, Pencil } from "lucide-react";
+import { Plus, EyeOff, Eye } from "lucide-react";
 
 import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
@@ -337,7 +337,7 @@ export default function CorporatePage() {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={(v) => {
@@ -348,36 +348,36 @@ export default function CorporatePage() {
           placeholder="Search corporates by name, city, or area..."
         />
 
-        <Card className="w-full overflow-x-auto border border-gray-200 shadow-sm">
-          <CardContent className="p-0">
-            {loading ? (
+        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+          {loading ? (
+            <div className="p-6">
               <CorporatesTableSkeleton />
-            ) : corporates.length === 0 ? (
-              <div className="p-6">
-                <ComingSoon />
-              </div>
-            ) : (
-              <CorporateTable
-                corporates={corporates}
-                page={page}
-                totalPages={totalPages}
-                totalRecord={total}
-                limit={limit}
-                setPage={setPage}
-                setLimit={setLimit}
-                setRefresh={setRefresh}
-                onRowClick={(id) => {
-                  if (!id) return;
-                  router.push(`/dashboard/manage-corporates/${id}`);
-                }}
-              />
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ) : corporates.length === 0 ? (
+            <div className="p-6">
+              <ComingSoon />
+            </div>
+          ) : (
+            <CorporateTable
+              corporates={corporates}
+              page={page}
+              totalPages={totalPages}
+              totalRecord={total}
+              limit={limit}
+              setPage={setPage}
+              setLimit={setLimit}
+              setRefresh={setRefresh}
+              onRowClick={(id) => {
+                if (!id) return;
+                router.push(`/dashboard/manage-corporates/${id}`);
+              }}
+            />
+          )}
+        </div>
       </div>
 
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
         onClick={() => setOpenCreate(true)}
       >
         <Plus className="h-6 w-6" />
@@ -564,33 +564,35 @@ function CorporateTable({
 
   return (
     <>
-      <table className="w-full border-spacing-0">
-        <thead className="bg-indigo-100">
-          <tr>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">NAME</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">LOCATION</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">EMAIL</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">PLAN</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">STATUS</th>
-            <th className="px-4 py-3 text-left text-[12px] font-semibold text-gray-600">ACTIONS</th>
+      <table className="w-full border-spacing-0 border-collapse">
+        <thead className="bg-white">
+          <tr className="border-b border-gray-200">
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">NAME</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">LOCATION</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">EMAIL</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">PLAN</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">STATUS</th>
+            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">ACTIONS</th>
           </tr>
         </thead>
 
-        <tbody>
-          {corporates.map((c) => {
+        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+          {corporates.map((c, idx) => {
             if (!c.id) return null;
 
             return (
               <tr
                 key={c.id}
-                className="border-b border-gray-300 hover:bg-gray-50 transition cursor-pointer text-gray-600 text-sm"
+                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-sm ${
+                  idx !== corporates.length - 1 ? "border-b" : ""
+                }`}
                 onClick={() => onRowClick?.(c.id)}
               >
-                <td className="px-4 py-4 font-medium">{c.name}</td>
-                <td className="px-4 py-4">{formatLocation(c)}</td>
-                <td className="px-4 py-4">{c.email ?? c.owner_email ?? "-"}</td>
-                <td className="px-4 py-4">{c.plan ?? "-"}</td>
-                <td className="px-4 py-4">
+                <td className="px-6 py-3 font-medium text-[#1D293D]">{c.name}</td>
+                <td className="px-6 py-3 text-[#5b6473]">{formatLocation(c)}</td>
+                <td className="px-6 py-3 text-[#5b6473]">{c.email ?? c.owner_email ?? "-"}</td>
+                <td className="px-6 py-3 text-[#5b6473]">{c.plan ?? "-"}</td>
+                <td className="px-6 py-3">
                   {c.is_active === false ? (
                     <span className="text-xs font-semibold text-red-600">Disabled</span>
                   ) : (
@@ -598,39 +600,60 @@ function CorporateTable({
                   )}
                 </td>
 
-                <td className="px-4 py-4">
-                  <div className="flex gap-2">
+                <td className="px-6 py-3">
+                  <div className="flex items-center gap-3">
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="cursor-pointer p-0 h-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelected(c);
                       }}
                     >
-                      <Info className="w-4 h-4" />
+                      <Image
+                        src="/view.png"
+                        alt="View"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
 
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="cursor-pointer p-0 h-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/dashboard/manage-corporates/${c.id}`);
                       }}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Image
+                        src="/edit.png"
+                        alt="Edit"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
 
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="cursor-pointer p-0 h-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         setConfirmDelete(c);
                       }}
                     >
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <Image
+                        src="/delete.png"
+                        alt="Delete"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4"
+                      />
                     </Button>
                   </div>
                 </td>

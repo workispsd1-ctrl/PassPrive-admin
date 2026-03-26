@@ -13,6 +13,8 @@ const DashboardLayout = ({ children }) => {
   const [isLargeScreen, setIsLargeScreen] = useState(false);
   const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const isDashboardHome = pathname === "/dashboard";
+  const dashboardGradientClass =
+    "bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]";
   // Track screen width
   useEffect(() => {
     const checkScreenSize = () => {
@@ -61,7 +63,7 @@ const DashboardLayout = ({ children }) => {
   // }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className={`min-h-screen flex ${dashboardGradientClass}`}>
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => {
@@ -82,8 +84,8 @@ const DashboardLayout = ({ children }) => {
           />
         )}
         <main
-          className={`flex-1 overflow-y-auto ${
-            isDashboardHome ? "bg-[#ecf2f8] p-3 md:p-4" : "bg-white p-6"
+          className={`flex-1 overflow-y-auto ${dashboardGradientClass} ${
+            isDashboardHome ? "p-3 md:p-4" : "p-6"
           }`}
         >
           {children}
