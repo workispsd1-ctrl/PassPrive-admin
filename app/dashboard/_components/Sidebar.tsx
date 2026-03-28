@@ -77,6 +77,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       iconSrc: "/bankoffers.png",
     },
     {
+      title: "PassPrive Offers",
+      href: "/dashboard/passprive-offers",
+      iconSrc: "/bankoffers.png",
+    },
+    {
       title: "Restaurant In Your PassPrive",
       href: "/dashboard/in-your-passprive",
       iconSrc: "/restaurant.png",

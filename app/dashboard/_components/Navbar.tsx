@@ -18,12 +18,14 @@ interface NavbarProps {
   setCollapsed?: (collapsed: boolean) => void;
 }
 
-const pathName: any = {
+const pathName: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/dashboard/users": "User Management",
   "/dashboard/manage-restaurants": "Restaurant Management",
   "/dashboard/manage-stores": "Stores Management",
   "/dashboard/offers": "Banner Management",
+  "/dashboard/passprive-offers": "PassPrive Offers",
+  "/dashboard/passprive-offers/new": "Create PassPrive Offer",
   "/dashboard/manage-restaurants/add": " Add Restaurant",
   "/dashboard/spotlight": "Spotlight Management",
   "/dashboard/users/[id]": "User Subscription",
