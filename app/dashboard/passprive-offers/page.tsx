@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -245,6 +245,14 @@ function JsonPreview({ value }: { value: unknown }) {
 }
 
 export default function PasspriveOffersPage() {
+  return (
+    <Suspense fallback={<PasspriveOffersFallback />}>
+      <PasspriveOffersContent />
+    </Suspense>
+  );
+}
+
+function PasspriveOffersContent() {
   const searchParams = useSearchParams();
   const [offers, setOffers] = useState<JsonRecord[]>([]);
   const [subscriptions, setSubscriptions] = useState<JsonRecord[]>([]);
@@ -1101,6 +1109,30 @@ export default function PasspriveOffersPage() {
             </div>
           </TabsContent>
         </Tabs>
+      </div>
+    </div>
+  );
+}
+
+function PasspriveOffersFallback() {
+  return (
+    <div className="min-h-full bg-[linear-gradient(135deg,_#FFF7ED_0%,_#EFF6FF_100%)] p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 w-40 rounded bg-slate-200" />
+            <div className="h-10 w-72 rounded bg-slate-200" />
+            <div className="h-4 w-full max-w-3xl rounded bg-slate-100" />
+          </div>
+        </section>
+        <section className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-32 rounded-3xl border border-slate-200 bg-white shadow-sm"
+            />
+          ))}
+        </section>
       </div>
     </div>
   );
