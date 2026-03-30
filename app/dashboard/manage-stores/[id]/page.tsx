@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 
@@ -228,6 +228,7 @@ export default function StoreDetailPage() {
   const [logoToDelete, setLogoToDelete] = useState(false);
   const [coverToDelete, setCoverToDelete] = useState(false);
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
+  const hasLoadedCatalogueRef = useRef(false);
   const catalogueApi = useStoreCatalogue(
     (fn) => fn(),
     (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
@@ -329,7 +330,8 @@ export default function StoreDetailPage() {
 
   useEffect(() => {
     const loadCatalogue = async () => {
-      if (!id) return;
+      if (!id || hasLoadedCatalogueRef.current) return;
+      hasLoadedCatalogueRef.current = true;
 
       try {
         const data = await fetchStoreCatalogueAdmin(String(id));
@@ -368,6 +370,13 @@ export default function StoreDetailPage() {
         catalogueApi.replaceCatalogue(mapped);
         setCatalogueOriginal(mapped);
       } catch (error: any) {
+        if (error?.response?.status === 404) {
+          // Keep edit page usable when catalogue API is unavailable in this environment.
+          catalogueApi.replaceCatalogue([]);
+          setCatalogueOriginal([]);
+          return;
+        }
+
         showToast({
           type: "error",
           title: "Failed to load catalogue",
