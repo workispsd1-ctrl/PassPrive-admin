@@ -347,7 +347,7 @@ export default function AdminDashboard() {
                   <ChevronRight className="h-5 w-5" />
                 )}
               </button>
-              <h1 className="text-[20px] font-normal leading-[32px] text-[#1D293D]">Dashboard - Superadmin</h1>
+              <h1 className="text-[20px] font-normal leading-[32px] text-[#1D293D]">Dashboard - Super Admin</h1>
             </div>
             <div className="flex items-center gap-3 text-[#1f2a37]">
               <button
@@ -379,7 +379,7 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
                 <div className="h-7 w-7 rounded-full bg-[#929292]" />
                 <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
-                  Admin
+                  Super Admin
                 </span>
               </div>
             </div>

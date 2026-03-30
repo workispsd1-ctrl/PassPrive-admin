@@ -20,6 +20,7 @@ interface NavbarProps {
 
 const pathName: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/dashboard/bank-offers": "Bank Offers Manager",
   "/dashboard/users": "User Management",
   "/dashboard/manage-restaurants": "Restaurant Management",
   "/dashboard/manage-stores": "Stores Management",
@@ -52,6 +53,7 @@ const pathName: Record<string, string> = {
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
   const dispatch = useDispatch();
   const pathname = usePathname();
+  const isBankOffersPage = pathname === "/dashboard/bank-offers";
   const [seminarId, setSeminarId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -397,18 +399,20 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
     }
   };
 
-  const roleLabel = userRole
-    ? userRole.charAt(0).toUpperCase() + userRole.slice(1)
-    : "Admin";
+  const roleLabel = "Super Admin";
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] px-6">
+    <header
+      className={`flex justify-between bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] px-6 ${
+        isBankOffersPage ? "h-20 items-start py-4" : "h-14 items-center"
+      }`}
+    >
       <div className="flex items-center">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed?.(!collapsed)}
-          className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-white/70"
+          className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-slate-200/40"
         >
           {collapsed ? (
             <ChevronRight className="h-5 w-5" />
@@ -416,56 +420,59 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
             <ChevronLeft className="h-5 w-5" />
           )}
         </Button>
-        <span className="text-[20px] font-normal leading-[32px] text-[#1D293D]">
-          {(() => {
-            let title = pathName[pathname] || "";
+        <div>
+          <span className="text-[20px] font-normal leading-[32px] text-[#1D293D]">
+            {(() => {
+              let title = pathName[pathname] || "";
 
-            // Handle User Subscription page
-            if (
-              pathname.startsWith("/dashboard/users/") &&
-              pathname.split("/").length === 4
-            ) {
-              title = pathName["/dashboard/users/[id]"];
-            }
+              // Handle User Subscription page
+              if (
+                pathname.startsWith("/dashboard/users/") &&
+                pathname.split("/").length === 4
+              ) {
+                title = pathName["/dashboard/users/[id]"];
+              }
 
-            // Handle Edit User page
-            if (
-              pathname.startsWith("/dashboard/users/") &&
-              pathname.endsWith("/edit")
-            ) {
-              title = pathName["/dashboard/users/[id]/edit"];
-            }
-            if (
-              pathname.startsWith("/dashboard/users/") &&
-              pathname.endsWith("/leads")
-            ) {
-              title = pathName["/dashboard/users/[id]/leads"];
-            }
+              // Handle Edit User page
+              if (
+                pathname.startsWith("/dashboard/users/") &&
+                pathname.endsWith("/edit")
+              ) {
+                title = pathName["/dashboard/users/[id]/edit"];
+              }
+              if (
+                pathname.startsWith("/dashboard/users/") &&
+                pathname.endsWith("/leads")
+              ) {
+                title = pathName["/dashboard/users/[id]/leads"];
+              }
 
-            if (pathname === "/dashboard" && userRole) {
-              return `${title} - ${
-                userRole.charAt(0).toUpperCase() + userRole.slice(1)
-              }`;
-            }
-            // Handle Store Details page
-            if (
-              pathname.startsWith("/dashboard/manage-stores/") &&
-              pathname.split("/").length === 4
-            ) {
-              title = "Store Details";
-            }
+              if (pathname === "/dashboard") {
+                return `${title} - Super Admin`;
+              }
+              // Handle Store Details page
+              if (
+                pathname.startsWith("/dashboard/manage-stores/") &&
+                pathname.split("/").length === 4
+              ) {
+                title = "Store Details";
+              }
 
-            // Handle Restaurant Details page (if you want similar)
-            if (
-              pathname.startsWith("/dashboard/manage-restaurants/") &&
-              pathname.split("/").length === 4
-            ) {
-              title = "Restaurant Details";
-            }
+              // Handle Restaurant Details page (if you want similar)
+              if (
+                pathname.startsWith("/dashboard/manage-restaurants/") &&
+                pathname.split("/").length === 4
+              ) {
+                title = "Restaurant Details";
+              }
 
-            return title;
-          })()}
-        </span>
+              return title;
+            })()}
+          </span>
+          {isBankOffersPage ? (
+            <p className="text-sm leading-5 text-[#667085]">Create and manage promotional offers</p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex items-center gap-3 text-[#1f2a37]">
@@ -473,7 +480,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-md p-1.5 transition hover:bg-white/70"
+            className="rounded-md p-1.5 transition hover:bg-slate-200/40"
             aria-label="Export"
           >
             <Image
@@ -488,7 +495,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
         <button
           type="button"
           onClick={handleRefresh}
-          className="rounded-md p-1.5 transition hover:bg-white/70"
+          className="rounded-md p-1.5 transition hover:bg-slate-200/40"
           aria-label="Refresh"
         >
           <Image
@@ -499,7 +506,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
             className="h-4 w-4 object-contain"
           />
         </button>
-        <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
+        <div className="flex items-center gap-2 rounded-full border border-[#D0D5DD] bg-transparent px-2 py-[2px]">
           <div className="h-7 w-7 rounded-full bg-[#929292]" />
           <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
             {roleLabel}

@@ -788,36 +788,20 @@ export default function BankOffersPage() {
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
-      {/* Enhanced Header */}
-      <div className="sticky top-0 z-20 border-b border-slate-200/40 bg-white/80 backdrop-blur-xl shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[#5800AB] p-2.5 shadow-lg">
-              <BadgePercent className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">Bank Offers Manager</h1>
-              <p className="text-xs text-slate-500">Create and manage promotional offers</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {editingId ? (
-              <Button 
-                variant="outline" 
-                onClick={resetForm} 
-                className="border-slate-200 bg-white hover:bg-slate-50 transition-colors duration-200"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                New Offer
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[480px_1fr]">
+        {editingId ? (
+          <div className="mb-4 flex justify-end">
+            <Button
+              variant="outline"
+              onClick={resetForm}
+              className="border-slate-200 bg-white hover:bg-slate-50 transition-colors duration-200"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              New Offer
+            </Button>
+          </div>
+        ) : null}
+        <div className="grid gap-8 lg:grid-cols-[720px_1fr]">
           {/* Left Sidebar - Form */}
           <div className="space-y-6">
             {/* Main Form Card */}
@@ -825,7 +809,7 @@ export default function BankOffersPage() {
               icon={BadgePercent}
               title={editingId ? "Edit Offer" : "Create Offer"}
               description="Build your offer step by step"
-              gradient="from-white to-[#F8F2FF]"
+              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
             >
               {/* Step 1 */}
               <StepSection
@@ -1004,7 +988,7 @@ export default function BankOffersPage() {
               icon={CreditCard}
               title="Eligible Cards"
               description="Specific card BINs (optional)"
-              gradient="from-white to-[#F8F2FF]"
+              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
               action={
                 <Button 
                   type="button" 
@@ -1045,7 +1029,7 @@ export default function BankOffersPage() {
               icon={Target}
               title="Where This Works"
               description="Geographic and merchant targeting"
-              gradient="from-white to-[#F8F2FF]"
+              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
               action={
                 <Button 
                   type="button" 
@@ -1093,7 +1077,7 @@ export default function BankOffersPage() {
               icon={ShieldCheck}
               title="Live Offers"
               description="Review and manage offers"
-              gradient="from-white to-[#F8F2FF]"
+              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
             >
               <div className="relative">
                 <Input 
@@ -1133,7 +1117,7 @@ export default function BankOffersPage() {
               icon={MapPin}
               title="Redemptions"
               description={editingId ? "Recent customer usage" : "Open an offer to view usage"}
-              gradient="from-white to-[#F8F2FF]"
+              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
             >
               {redemptionsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -1194,7 +1178,7 @@ function SectionCard({
   description,
   action,
   children,
-  gradient = "from-slate-50 to-slate-50",
+  gradient = "bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -1204,7 +1188,7 @@ function SectionCard({
   gradient?: string;
 }) {
   return (
-    <section className={`rounded-2xl border border-slate-200/60 bg-gradient-to-br ${gradient} p-6 shadow-sm hover:shadow-md transition-shadow duration-300`}>
+    <section className={`rounded-2xl border border-slate-200/60 ${gradient} p-6 shadow-sm hover:shadow-md transition-shadow duration-300`}>
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
@@ -1585,7 +1569,7 @@ function BinRuleCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
+    <div className="group rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
@@ -1660,7 +1644,7 @@ function TargetRuleCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
+    <div className="group rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-700">
@@ -1773,7 +1757,7 @@ function OfferCard({
   isDeleting: boolean;
 }) {
   return (
-    <article className="group rounded-xl border border-slate-200 bg-white p-3 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
+    <article className="group rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] p-3 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
       <div className="flex gap-3">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
           {offer.bank_logo_url ? (
@@ -1841,7 +1825,7 @@ function RedemptionTable({
   currencyCode: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-left text-slate-600 font-medium border-b border-slate-200">
