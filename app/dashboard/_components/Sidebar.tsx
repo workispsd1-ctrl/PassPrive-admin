@@ -106,7 +106,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       href: "/dashboard/store-mood-categories",
       iconSrc: "/menu.png",
     },
-    { title: "Offers", href: "/dashboard/offers", iconSrc: "/bankoffers.png" },
+    { title: "Home Banners", href: "/dashboard/offers", iconSrc: "/bankoffers.png" },
+    { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/bankoffers.png" },
     { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
     { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
 
