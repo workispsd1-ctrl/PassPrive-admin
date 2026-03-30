@@ -16,6 +16,10 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useStoreCatalogue } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreCatalogue";
+import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
+import type { CatalogueCategoryDraft, OpenSection } from "@/app/dashboard/_components/StoreComponents/types";
+import { fetchStoreCatalogueAdmin, syncStoreCatalogueAdmin } from "@/lib/storeCatalogueAdmin";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -155,6 +159,44 @@ const cleanObject = (obj: Record<string, any>) => {
   return out;
 };
 
+const validateCatalogueForStoreType = (
+  categories: CatalogueCategoryDraft[],
+  storeType: "PRODUCT" | "SERVICE"
+) => {
+  const enabledCategories = categories.filter((category) => category.enabled);
+
+  for (const category of enabledCategories) {
+    if (!category.title.trim()) {
+      return `${storeType === "SERVICE" ? "Service" : "Catalogue"} category title is required.`;
+    }
+
+    for (const item of category.items) {
+      const hasMeaningfulContent =
+        item.title.trim() ||
+        item.description?.trim() ||
+        item.price.trim() ||
+        item.imageUrl?.trim() ||
+        item.imageFile;
+
+      if (!hasMeaningfulContent) continue;
+
+      if (!item.title.trim()) {
+        return `Each ${storeType === "SERVICE" ? "service" : "catalogue"} item needs a title.`;
+      }
+
+      if (item.is_billable && !item.price.trim()) {
+        return `Price is required for billable item "${item.title}".`;
+      }
+
+      if (item.supports_slot_booking && !item.duration_minutes.trim()) {
+        return `Duration is required for slot-bookable item "${item.title}".`;
+      }
+    }
+  }
+
+  return null;
+};
+
 /* ---------------- COMPONENT ---------------- */
 
 export default function StoreDetailPage() {
@@ -163,6 +205,8 @@ export default function StoreDetailPage() {
 
   const [store, setStore] = useState<any>(null);
   const [storeOriginal, setStoreOriginal] = useState<any>(null);
+  const [catalogueOriginal, setCatalogueOriginal] = useState<CatalogueCategoryDraft[]>([]);
+  const [catalogueOpenSection, setCatalogueOpenSection] = useState<OpenSection>("catalogue");
 
   const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(
     emptyWeek()
@@ -184,6 +228,10 @@ export default function StoreDetailPage() {
   const [logoToDelete, setLogoToDelete] = useState(false);
   const [coverToDelete, setCoverToDelete] = useState(false);
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
+  const catalogueApi = useStoreCatalogue(
+    (fn) => fn(),
+    (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
+  );
 
   const headerLocation = useMemo(() => {
     if (!store) return "";
@@ -278,6 +326,58 @@ export default function StoreDetailPage() {
 
     void loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    const loadCatalogue = async () => {
+      if (!id) return;
+
+      try {
+        const data = await fetchStoreCatalogueAdmin(String(id));
+        const mapped: CatalogueCategoryDraft[] = data.map((category) => ({
+          id: category.id || `cat_${Date.now()}`,
+          persistedId: category.id,
+          enabled: category.enabled,
+          title: category.title,
+          starting_from:
+            category.starting_from === null || category.starting_from === undefined
+              ? ""
+              : String(category.starting_from),
+          sort_order: String(category.sort_order ?? 0),
+          expanded: false,
+          items: category.items.map((item) => ({
+            id: item.id || `item_${Date.now()}`,
+            persistedId: item.id,
+            title: item.title,
+            price: item.price === null || item.price === undefined ? "" : String(item.price),
+            sku: item.sku || "",
+            description: item.description || "",
+            is_available: item.is_available,
+            sort_order: String(item.sort_order ?? 0),
+            item_type: item.item_type,
+            is_billable: item.is_billable,
+            duration_minutes:
+              item.duration_minutes === null || item.duration_minutes === undefined
+                ? ""
+                : String(item.duration_minutes),
+            supports_slot_booking: item.supports_slot_booking,
+            imageFile: null,
+            imageUrl: item.image_url || null,
+          })),
+        }));
+
+        catalogueApi.replaceCatalogue(mapped);
+        setCatalogueOriginal(mapped);
+      } catch (error: any) {
+        showToast({
+          type: "error",
+          title: "Failed to load catalogue",
+          description: error.message,
+        });
+      }
+    };
+
+    void loadCatalogue();
+  }, [id]);
 
   /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
 
@@ -375,6 +475,24 @@ export default function StoreDetailPage() {
     }
   };
 
+  const uploadCatalogueImage = async (
+    storeId: string,
+    categoryId: string,
+    itemId: string,
+    file: File
+  ): Promise<string> => {
+    const ext = file.name.split(".").pop() || "jpg";
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).slice(2, 9);
+    const path = `catalogue/${storeId}/${categoryId}/${itemId}-${timestamp}-${random}.${ext}`;
+
+    const { error } = await supabaseBrowser.storage.from("stores").upload(path, file);
+    if (error) throw error;
+
+    const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   /**
    * Delete images from Supabase Storage
    */
@@ -393,6 +511,8 @@ export default function StoreDetailPage() {
     setStore(storeOriginal);
     setOpeningHours(openingHoursOriginal);
     setWeekEnabled(Array.isArray(storeOriginal?.hours) && storeOriginal.hours.length > 0);
+    catalogueApi.replaceCatalogue(catalogueOriginal);
+    catalogueApi.clearDeletedTracking();
     // ✅ Reset image changes
     setLogoToAdd(null);
     setCoverToAdd(null);
@@ -406,6 +526,16 @@ export default function StoreDetailPage() {
   const handleSave = async () => {
     if (!store?.name) {
       showToast({ type: "error", title: "Store name is required" });
+      return;
+    }
+
+    const catalogueValidationError = validateCatalogueForStoreType(
+      catalogueApi.catalogueCategories,
+      (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
+    );
+    if (catalogueValidationError) {
+      showToast({ type: "error", title: catalogueValidationError });
+      setCatalogueOpenSection("catalogue");
       return;
     }
 
@@ -496,6 +626,7 @@ export default function StoreDetailPage() {
 
       const payload: any = {
         name: store.name,
+        store_type: store.store_type || "PRODUCT",
         description: store.description || null,
 
         category: categoryForSave,
@@ -548,6 +679,102 @@ export default function StoreDetailPage() {
         return;
       }
 
+      const categoriesPayload = await Promise.all(
+        catalogueApi.catalogueCategories
+          .filter((category) => category.enabled && category.title.trim())
+          .map(async (category, categoryIndex) => ({
+            id: category.persistedId,
+            clientId: category.id,
+            title: category.title.trim(),
+            starting_from: category.starting_from ? Number(category.starting_from) : null,
+            enabled: true,
+            sort_order: category.sort_order ? Number(category.sort_order) : categoryIndex,
+            items: (
+              await Promise.all(
+                category.items.map(async (item, itemIndex) => {
+                  const title = item.title.trim();
+                  const hasMeaningfulContent =
+                    title ||
+                    item.description?.trim() ||
+                    item.price.trim() ||
+                    item.imageUrl?.trim() ||
+                    item.imageFile;
+
+                  if (!hasMeaningfulContent) return null;
+
+                  let imageUrl = item.imageUrl?.trim() || null;
+                  if (item.imageFile) {
+                    imageUrl = await uploadCatalogueImage(
+                      String(id),
+                      category.persistedId || category.id,
+                      item.persistedId || item.id,
+                      item.imageFile
+                    );
+                  }
+
+                  return {
+                    id: item.persistedId,
+                    clientId: item.id,
+                    title,
+                    description: item.description?.trim() || null,
+                    price: item.price ? Number(item.price) : null,
+                    image_url: imageUrl,
+                    sku: item.sku?.trim() || null,
+                    sort_order: item.sort_order ? Number(item.sort_order) : itemIndex,
+                    is_available: !!item.is_available,
+                    item_type: item.item_type,
+                    is_billable: !!item.is_billable,
+                    duration_minutes: item.duration_minutes ? Number(item.duration_minutes) : null,
+                    supports_slot_booking: !!item.supports_slot_booking,
+                  };
+                })
+              )
+            ).filter(
+              (item): item is Exclude<typeof item, null> => item !== null
+            ),
+          }))
+      );
+
+      await syncStoreCatalogueAdmin({
+        storeId: String(id),
+        categories: categoriesPayload,
+        deletedCategoryIds: catalogueApi.deletedCategoryIds,
+        deletedItemIds: catalogueApi.deletedItemIds,
+      });
+
+      const refreshedCatalogue = await fetchStoreCatalogueAdmin(String(id));
+      const mappedCatalogue: CatalogueCategoryDraft[] = refreshedCatalogue.map((category) => ({
+        id: category.id || `cat_${Date.now()}`,
+        persistedId: category.id,
+        enabled: category.enabled,
+        title: category.title,
+        starting_from:
+          category.starting_from === null || category.starting_from === undefined
+            ? ""
+            : String(category.starting_from),
+        sort_order: String(category.sort_order ?? 0),
+        expanded: false,
+        items: category.items.map((item) => ({
+          id: item.id || `item_${Date.now()}`,
+          persistedId: item.id,
+          title: item.title,
+          price: item.price === null || item.price === undefined ? "" : String(item.price),
+          sku: item.sku || "",
+          description: item.description || "",
+          is_available: item.is_available,
+          sort_order: String(item.sort_order ?? 0),
+          item_type: item.item_type,
+          is_billable: item.is_billable,
+          duration_minutes:
+            item.duration_minutes === null || item.duration_minutes === undefined
+              ? ""
+              : String(item.duration_minutes),
+          supports_slot_booking: item.supports_slot_booking,
+          imageFile: null,
+          imageUrl: item.image_url || null,
+        })),
+      }));
+
       showToast({ type: "success", title: "Store updated" });
       setEditMode(false);
 
@@ -566,6 +793,9 @@ export default function StoreDetailPage() {
       };
       setStore(merged);
       setStoreOriginal(merged);
+      catalogueApi.replaceCatalogue(mappedCatalogue);
+      catalogueApi.clearDeletedTracking();
+      setCatalogueOriginal(mappedCatalogue);
       setOpeningHoursOriginal(openingHours);
       setLogoToAdd(null);
       setCoverToAdd(null);
@@ -659,6 +889,18 @@ export default function StoreDetailPage() {
               value={store.name || ""}
               onChange={(e) => setStore({ ...store, name: e.target.value })}
             />
+          </Field>
+
+          <Field label="Store Type">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={store.store_type || "PRODUCT"}
+              onChange={(e) => setStore({ ...store, store_type: e.target.value })}
+            >
+              <option value="PRODUCT">PRODUCT</option>
+              <option value="SERVICE">SERVICE</option>
+            </select>
           </Field>
 
           <Field label="Category">
@@ -1164,6 +1406,30 @@ export default function StoreDetailPage() {
           )}
         </div>
       </Section>
+
+      <CatalogueSection
+        openSection={catalogueOpenSection}
+        onToggle={(next) =>
+          setCatalogueOpenSection((current) => (current === next ? null : next))
+        }
+        preserveScroll={(fn) => fn()}
+        storeType={(store.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"}
+        catalogueCategories={catalogueApi.catalogueCategories}
+        customCategoryTitle={catalogueApi.customCategoryTitle}
+        setCustomCategoryTitle={catalogueApi.setCustomCategoryTitle}
+        customCategoryStartingFrom={catalogueApi.customCategoryStartingFrom}
+        setCustomCategoryStartingFrom={catalogueApi.setCustomCategoryStartingFrom}
+        customCategorySortOrder={catalogueApi.customCategorySortOrder}
+        setCustomCategorySortOrder={catalogueApi.setCustomCategorySortOrder}
+        toggleCategoryEnabled={catalogueApi.toggleCategoryEnabled}
+        toggleCategoryExpanded={catalogueApi.toggleCategoryExpanded}
+        addCategory={catalogueApi.addCategory}
+        removeCategory={catalogueApi.removeCategory}
+        updateCategoryField={catalogueApi.updateCategoryField}
+        addItemToCategory={catalogueApi.addItemToCategory}
+        removeItemFromCategory={catalogueApi.removeItemFromCategory}
+        updateItem={catalogueApi.updateItem}
+      />
 
       {/* SYSTEM (Read Only) */}
       <Section title="System Info (Read Only)">

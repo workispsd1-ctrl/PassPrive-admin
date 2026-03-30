@@ -10,6 +10,7 @@ import { showToast } from "@/hooks/useToast";
 import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
 
 import type {
+  CatalogueCategoryDraft,
   DayHours,
   OpenSection,
   PaymentDetails,
@@ -31,6 +32,7 @@ import HoursSection from "@/app/dashboard/_components/StoreComponents/sections/H
 import DiscountsSection from "@/app/dashboard/_components/StoreComponents/sections/DiscountsSection";
 import PaymentSection from "@/app/dashboard/_components/StoreComponents/sections/PaymentSection";
 import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
+import { syncStoreCatalogueAdmin } from "@/lib/storeCatalogueAdmin";
 
 /* -------------------------------------------------------
   ✅ CONSTANTS
@@ -88,6 +90,44 @@ function isVideo(file?: File | null): boolean {
   return !!file?.type?.startsWith("video/");
 }
 
+function validateCatalogueForStoreType(
+  categories: CatalogueCategoryDraft[],
+  storeType: "PRODUCT" | "SERVICE"
+) {
+  const enabledCategories = categories.filter((category) => category.enabled);
+
+  for (const category of enabledCategories) {
+    if (!category.title.trim()) {
+      return `${storeType === "SERVICE" ? "Service" : "Catalogue"} category title is required.`;
+    }
+
+    for (const item of category.items) {
+      const hasMeaningfulContent =
+        item.title.trim() ||
+        item.description?.trim() ||
+        item.price.trim() ||
+        item.imageUrl?.trim() ||
+        item.imageFile;
+
+      if (!hasMeaningfulContent) continue;
+
+      if (!item.title.trim()) {
+        return `Each ${storeType === "SERVICE" ? "service" : "catalogue"} item needs a title.`;
+      }
+
+      if (item.is_billable && !item.price.trim()) {
+        return `Price is required for billable item "${item.title}".`;
+      }
+
+      if (item.supports_slot_booking && !item.duration_minutes.trim()) {
+        return `Duration is required for slot-bookable item "${item.title}".`;
+      }
+    }
+  }
+
+  return null;
+}
+
 async function runWithConcurrency<T>(
   items: T[],
   limit: number,
@@ -142,6 +182,7 @@ function AddStorePageInner() {
 
   const [form, setForm] = useState<StoreFormState>({
     name: "",
+    store_type: "PRODUCT",
     category: "",
     subcategory: "",
     tags: "",
@@ -205,7 +246,7 @@ function AddStorePageInner() {
   }, [form.tags]);
 
   const offersApi = useStoreOffers(preserveScroll);
-  const catalogueApi = useStoreCatalogue(preserveScroll);
+  const catalogueApi = useStoreCatalogue(preserveScroll, form.store_type);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -430,6 +471,16 @@ function AddStorePageInner() {
       return;
     }
 
+    const catalogueValidationError = validateCatalogueForStoreType(
+      catalogueApi.catalogueCategories,
+      form.store_type
+    );
+    if (catalogueValidationError) {
+      showToast({ type: "error", title: catalogueValidationError });
+      setOpenSectionStable("catalogue");
+      return;
+    }
+
     const hasOwnerInQuery =
       !!(
         searchParams.get("storeOwnerId") ||
@@ -519,6 +570,7 @@ function AddStorePageInner() {
           owner_user_id: ownerUserId,
           name: form.name.trim(),
           slug: finalSlug,
+          store_type: form.store_type,
           description: form.description?.trim() || null,
 
           category: form.category?.trim() || null,
@@ -567,6 +619,7 @@ function AddStorePageInner() {
               owner_user_id: ownerUserId,
               name: form.name.trim(),
               slug: finalSlug,
+              store_type: form.store_type,
               description: form.description?.trim() || null,
               category: form.category?.trim() || null,
               subcategory: form.subcategory?.trim() || null,
@@ -668,84 +721,63 @@ function AddStorePageInner() {
       );
       if (payErr) throw payErr;
 
-      // 4) Catalogue (replace all)
-      const { error: delItemsErr } = await supabaseBrowser
-        .from("store_catalogue_items")
-        .delete()
-        .eq("store_id", storeId);
-      if (delItemsErr) throw delItemsErr;
-
-      const { error: delCatsErr } = await supabaseBrowser
-        .from("store_catalogue_categories")
-        .delete()
-        .eq("store_id", storeId);
-      if (delCatsErr) throw delCatsErr;
-
+      // 4) Catalogue / Services via admin CRUD APIs
       const enabledCats = catalogueApi.catalogueCategories
-        .filter((c) => c.enabled && c.title.trim())
-        .map((c, idx) => ({
-          draftId: c.id,
-          id: uuid(),
-          store_id: storeId,
-          title: c.title.trim(),
-          starting_from: c.starting_from ? Number(c.starting_from) : null,
+        .filter((category) => category.enabled && category.title.trim())
+        .map(async (category, idx) => ({
+          clientId: category.id,
+          title: category.title.trim(),
+          starting_from: category.starting_from ? Number(category.starting_from) : null,
           enabled: true,
-          sort_order: idx,
-          items: c.items,
+          sort_order: category.sort_order ? Number(category.sort_order) : idx,
+          items: await Promise.all(
+            category.items.map(async (item, itemIdx) => {
+              const title = item.title.trim();
+              const hasMeaningfulContent =
+                title ||
+                item.description?.trim() ||
+                item.price.trim() ||
+                item.imageUrl?.trim() ||
+                item.imageFile;
+
+              if (!hasMeaningfulContent) return null;
+
+              let imageUrl = item.imageUrl?.trim() || null;
+              if (item.imageFile) {
+                imageUrl = await uploadCatalogueImage(storeId, category.id, item.id, item.imageFile);
+              }
+
+              return {
+                clientId: item.id,
+                title,
+                description: item.description?.trim() || null,
+                price: item.price ? Number(item.price) : null,
+                image_url: imageUrl,
+                sku: item.sku?.trim() || null,
+                sort_order: item.sort_order ? Number(item.sort_order) : itemIdx,
+                is_available: !!item.is_available,
+                item_type: (item.item_type || form.store_type) as "PRODUCT" | "SERVICE",
+                is_billable: !!item.is_billable,
+                duration_minutes: item.duration_minutes ? Number(item.duration_minutes) : null,
+                supports_slot_booking: !!item.supports_slot_booking,
+              };
+            })
+          ),
         }));
 
-      if (enabledCats.length) {
-        const { error: insCatsErr } = await supabaseBrowser.from("store_catalogue_categories").insert(
-          enabledCats.map((c) => ({
-            id: c.id,
-            store_id: c.store_id,
-            title: c.title,
-            starting_from: c.starting_from,
-            enabled: c.enabled,
-            sort_order: c.sort_order,
-          }))
-        );
-        if (insCatsErr) throw insCatsErr;
-      }
+      const categoriesPayload = (await Promise.all(enabledCats)).map((category) => ({
+        ...category,
+        items: category.items.filter(
+          (item): item is Exclude<typeof item, null> => item !== null
+        ),
+      }));
 
-      const itemsToInsert: any[] = [];
-
-      for (const cat of enabledCats) {
-        for (let i = 0; i < cat.items.length; i++) {
-          const it = cat.items[i];
-          const title = (it.title || "").trim();
-          const priceNum = it.price ? Number(it.price) : null;
-
-          if (!title && !priceNum) continue;
-
-          const itemId = uuid();
-
-          let imageUrl: string | null = null;
-          if (it.imageFile) {
-            imageUrl = await uploadCatalogueImage(storeId, cat.id, itemId, it.imageFile);
-          }
-
-          itemsToInsert.push({
-            id: itemId,
-            store_id: storeId,
-            category_id: cat.id,
-            title: title || "Untitled",
-            price: Number.isFinite(priceNum as any) ? priceNum : null,
-            sku: it.sku?.trim() || null,
-            description: it.description?.trim() || null,
-            is_available: !!it.is_available,
-            image_url: imageUrl,
-            sort_order: i,
-          });
-        }
-      }
-
-      if (itemsToInsert.length) {
-        const { error: insItemsErr } = await supabaseBrowser
-          .from("store_catalogue_items")
-          .insert(itemsToInsert);
-        if (insItemsErr) throw insItemsErr;
-      }
+      await syncStoreCatalogueAdmin({
+        storeId,
+        categories: categoriesPayload,
+        deletedCategoryIds: [],
+        deletedItemIds: [],
+      });
 
       showToast({ type: "success", title: "Store saved successfully" });
       router.push("/dashboard/manage-stores");
@@ -879,11 +911,14 @@ function AddStorePageInner() {
           openSection={openSection}
           onToggle={toggleSectionStable}
           preserveScroll={preserveScroll}
+          storeType={form.store_type}
           catalogueCategories={catalogueApi.catalogueCategories}
           customCategoryTitle={catalogueApi.customCategoryTitle}
           setCustomCategoryTitle={catalogueApi.setCustomCategoryTitle}
           customCategoryStartingFrom={catalogueApi.customCategoryStartingFrom}
           setCustomCategoryStartingFrom={catalogueApi.setCustomCategoryStartingFrom}
+          customCategorySortOrder={catalogueApi.customCategorySortOrder}
+          setCustomCategorySortOrder={catalogueApi.setCustomCategorySortOrder}
           toggleCategoryEnabled={catalogueApi.toggleCategoryEnabled}
           toggleCategoryExpanded={catalogueApi.toggleCategoryExpanded}
           addCategory={catalogueApi.addCategory}

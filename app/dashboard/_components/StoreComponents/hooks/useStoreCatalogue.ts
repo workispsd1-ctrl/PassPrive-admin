@@ -1,54 +1,102 @@
 "use client";
 
-import { useState } from "react";
-import type { CatalogueCategoryDraft } from "../types";
-import { DEFAULT_CATALOGUE_PRESETS } from "../constants";
+import { useMemo, useState } from "react";
+
+import {
+  DEFAULT_PRODUCT_CATALOGUE_PRESETS,
+  DEFAULT_SERVICE_CATALOGUE_PRESETS,
+} from "../constants";
+import type { CatalogueCategoryDraft, CatalogueItemDraft } from "../types";
 import { uid } from "../utils";
 
-export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
-  const [catalogueCategories, setCatalogueCategories] = useState<CatalogueCategoryDraft[]>(
-    () =>
-      DEFAULT_CATALOGUE_PRESETS.map((p) => ({
-        id: uid("cat"),
-        enabled: false,
-        title: p.title,
-        starting_from: p.starting_from,
-        items: [],
-        expanded: false,
-      }))
-  );
+type StoreType = "PRODUCT" | "SERVICE";
 
+function createEmptyItem(storeType: StoreType): CatalogueItemDraft {
+  return {
+    id: uid("item"),
+    title: "",
+    price: "",
+    sku: "",
+    description: "",
+    is_available: true,
+    sort_order: "0",
+    item_type: storeType,
+    is_billable: storeType === "PRODUCT",
+    duration_minutes: "",
+    supports_slot_booking: false,
+    imageFile: null,
+    imageUrl: null,
+  };
+}
+
+function getPresetSource(storeType: StoreType) {
+  return storeType === "SERVICE"
+    ? DEFAULT_SERVICE_CATALOGUE_PRESETS
+    : DEFAULT_PRODUCT_CATALOGUE_PRESETS;
+}
+
+function createPresetCategories(storeType: StoreType): CatalogueCategoryDraft[] {
+  return getPresetSource(storeType).map((preset, index) => ({
+    id: uid("cat"),
+    enabled: false,
+    title: preset.title,
+    starting_from: preset.starting_from,
+    sort_order: String(index),
+    items: [],
+    expanded: false,
+  }));
+}
+
+export function useStoreCatalogue(
+  preserveScroll: (fn: () => void) => void,
+  storeType: StoreType
+) {
+  const [catalogueCategories, setCatalogueCategories] = useState<CatalogueCategoryDraft[]>(
+    () => createPresetCategories(storeType)
+  );
   const [customCategoryTitle, setCustomCategoryTitle] = useState("");
   const [customCategoryStartingFrom, setCustomCategoryStartingFrom] = useState("");
+  const [customCategorySortOrder, setCustomCategorySortOrder] = useState("");
+  const [deletedCategoryIds, setDeletedCategoryIds] = useState<string[]>([]);
+  const [deletedItemIds, setDeletedItemIds] = useState<string[]>([]);
+
+  const sortedCategories = useMemo(
+    () =>
+      [...catalogueCategories].sort(
+        (a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
+      ),
+    [catalogueCategories]
+  );
+
+  const replaceCatalogue = (categories: CatalogueCategoryDraft[]) => {
+    setCatalogueCategories(categories);
+    setDeletedCategoryIds([]);
+    setDeletedItemIds([]);
+  };
+
+  const resetForStoreType = () => {
+    setCatalogueCategories(createPresetCategories(storeType));
+    setDeletedCategoryIds([]);
+    setDeletedItemIds([]);
+  };
 
   const toggleCategoryEnabled = (catId: string, enabled: boolean) => {
     preserveScroll(() => {
       setCatalogueCategories((prev) =>
-        prev.map((c) =>
-          c.id === catId
+        prev.map((category) =>
+          category.id === catId
             ? {
-                ...c,
+                ...category,
                 enabled,
                 expanded: enabled ? true : false,
                 items:
-                  enabled && c.items.length === 0
-                    ? [
-                        {
-                          id: uid("item"),
-                          title: "",
-                          price: "",
-                          sku: "",
-                          description: "",
-                          is_available: true,
-                          imageFile: null,
-                          imageUrl: null,
-                        },
-                      ]
+                  enabled && category.items.length === 0
+                    ? [createEmptyItem(storeType)]
                     : enabled
-                    ? c.items
+                    ? category.items
                     : [],
               }
-            : c
+            : category
         )
       );
     });
@@ -57,7 +105,9 @@ export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
   const toggleCategoryExpanded = (catId: string) => {
     preserveScroll(() => {
       setCatalogueCategories((prev) =>
-        prev.map((c) => (c.id === catId ? { ...c, expanded: !c.expanded } : c))
+        prev.map((category) =>
+          category.id === catId ? { ...category, expanded: !category.expanded } : category
+        )
       );
     });
   };
@@ -73,42 +123,50 @@ export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
           enabled: true,
           title,
           starting_from: customCategoryStartingFrom.trim(),
-          items: [
-            {
-              id: uid("item"),
-              title: "",
-              price: "",
-              sku: "",
-              description: "",
-              is_available: true,
-              imageFile: null,
-              imageUrl: null,
-            },
-          ],
+          sort_order: customCategorySortOrder.trim() || String(prev.length),
+          items: [createEmptyItem(storeType)],
           expanded: true,
         },
         ...prev,
       ]);
-
       setCustomCategoryTitle("");
       setCustomCategoryStartingFrom("");
+      setCustomCategorySortOrder("");
     });
   };
 
   const removeCategory = (catId: string) => {
     preserveScroll(() => {
-      setCatalogueCategories((prev) => prev.filter((c) => c.id !== catId));
+      setCatalogueCategories((prev) => {
+        const category = prev.find((entry) => entry.id === catId);
+        if (category?.persistedId) {
+          setDeletedCategoryIds((current) => [...current, category.persistedId!]);
+        }
+
+        if (category?.items?.length) {
+          const itemIds = category.items
+            .map((item) => item.persistedId)
+            .filter((value): value is string => Boolean(value));
+          if (itemIds.length) {
+            setDeletedItemIds((current) => [...current, ...itemIds]);
+          }
+        }
+
+        return prev.filter((entry) => entry.id !== catId);
+      });
     });
   };
 
   const updateCategoryField = (
     catId: string,
-    key: "title" | "starting_from",
+    key: "title" | "starting_from" | "sort_order",
     value: string
   ) => {
     preserveScroll(() => {
       setCatalogueCategories((prev) =>
-        prev.map((c) => (c.id === catId ? { ...c, [key]: value } : c))
+        prev.map((category) =>
+          category.id === catId ? { ...category, [key]: value } : category
+        )
       );
     });
   };
@@ -116,26 +174,17 @@ export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
   const addItemToCategory = (catId: string) => {
     preserveScroll(() => {
       setCatalogueCategories((prev) =>
-        prev.map((c) =>
-          c.id === catId
+        prev.map((category) =>
+          category.id === catId
             ? {
-                ...c,
+                ...category,
                 items: [
-                  ...c.items,
-                  {
-                    id: uid("item"),
-                    title: "",
-                    price: "",
-                    sku: "",
-                    description: "",
-                    is_available: true,
-                    imageFile: null,
-                    imageUrl: null,
-                  },
+                  ...category.items,
+                  createEmptyItem(storeType),
                 ],
                 expanded: true,
               }
-            : c
+            : category
         )
       );
     });
@@ -144,9 +193,18 @@ export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
   const removeItemFromCategory = (catId: string, itemId: string) => {
     preserveScroll(() => {
       setCatalogueCategories((prev) =>
-        prev.map((c) =>
-          c.id === catId ? { ...c, items: c.items.filter((it) => it.id !== itemId) } : c
-        )
+        prev.map((category) => {
+          if (category.id !== catId) return category;
+          const item = category.items.find((entry) => entry.id === itemId);
+          if (item?.persistedId) {
+            setDeletedItemIds((current) => [...current, item.persistedId!]);
+          }
+
+          return {
+            ...category,
+            items: category.items.filter((entry) => entry.id !== itemId),
+          };
+        })
       );
     });
   };
@@ -154,30 +212,59 @@ export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
   const updateItem = (
     catId: string,
     itemId: string,
-    key: "title" | "price" | "sku" | "description" | "is_available" | "imageFile",
-    value: any
+    key:
+      | "title"
+      | "price"
+      | "sku"
+      | "description"
+      | "is_available"
+      | "imageFile"
+      | "imageUrl"
+      | "sort_order"
+      | "item_type"
+      | "is_billable"
+      | "duration_minutes"
+      | "supports_slot_booking",
+    value: string | boolean | File | null
   ) => {
     preserveScroll(() => {
       setCatalogueCategories((prev) =>
-        prev.map((c) =>
-          c.id === catId
+        prev.map((category) =>
+          category.id === catId
             ? {
-                ...c,
-                items: c.items.map((it) => (it.id === itemId ? { ...it, [key]: value } : it)),
+                ...category,
+                items: category.items.map((item) =>
+                  item.id === itemId
+                    ? {
+                        ...item,
+                        [key]: value,
+                        ...(key === "supports_slot_booking" && value === false
+                          ? { duration_minutes: item.duration_minutes }
+                          : {}),
+                      }
+                    : item
+                ),
               }
-            : c
+            : category
         )
       );
     });
   };
 
+  const clearDeletedTracking = () => {
+    setDeletedCategoryIds([]);
+    setDeletedItemIds([]);
+  };
+
   return {
-    catalogueCategories,
+    catalogueCategories: sortedCategories,
     setCatalogueCategories,
     customCategoryTitle,
     setCustomCategoryTitle,
     customCategoryStartingFrom,
     setCustomCategoryStartingFrom,
+    customCategorySortOrder,
+    setCustomCategorySortOrder,
     toggleCategoryEnabled,
     toggleCategoryExpanded,
     addCategory,
@@ -186,5 +273,10 @@ export function useStoreCatalogue(preserveScroll: (fn: () => void) => void) {
     addItemToCategory,
     removeItemFromCategory,
     updateItem,
+    replaceCatalogue,
+    resetForStoreType,
+    deletedCategoryIds,
+    deletedItemIds,
+    clearDeletedTracking,
   };
 }

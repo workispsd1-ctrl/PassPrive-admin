@@ -22,7 +22,7 @@ export const HOUR_OPTIONS = Array.from(
   (_, hour) => `${String(hour).padStart(2, "0")}:00`
 );
 
-export const DEFAULT_CATALOGUE_PRESETS: Array<{
+export const DEFAULT_PRODUCT_CATALOGUE_PRESETS: Array<{
   title: string;
   starting_from: string;
 }> = [
@@ -34,4 +34,14 @@ export const DEFAULT_CATALOGUE_PRESETS: Array<{
   { title: "Sneakers", starting_from: "" },
   { title: "Accessories", starting_from: "" },
   { title: "Home & Living", starting_from: "" },
+];
+
+export const DEFAULT_SERVICE_CATALOGUE_PRESETS: Array<{
+  title: string;
+  starting_from: string;
+}> = [
+  { title: "Popular Services", starting_from: "" },
+  { title: "Signature Treatments", starting_from: "" },
+  { title: "Consultations", starting_from: "" },
+  { title: "Packages", starting_from: "" },
 ];

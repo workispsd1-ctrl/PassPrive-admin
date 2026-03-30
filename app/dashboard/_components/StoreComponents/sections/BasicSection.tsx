@@ -71,6 +71,19 @@ export default function BasicSection({
         </div>
 
         <div>
+          <Label required>Store type</Label>
+          <select
+            name="store_type"
+            className={`${inputClass} w-full rounded-md px-3 py-2 text-sm bg-white`}
+            value={form.store_type}
+            onChange={handleChange}
+          >
+            <option value="PRODUCT">PRODUCT</option>
+            <option value="SERVICE">SERVICE</option>
+          </select>
+        </div>
+
+        <div>
           <Label required>Category</Label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

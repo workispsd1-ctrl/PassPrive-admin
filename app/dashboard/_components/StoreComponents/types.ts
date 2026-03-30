@@ -10,6 +10,7 @@ export type DayHours = {
 
 export type StoreFormState = {
   name: string;
+  store_type: "PRODUCT" | "SERVICE";
   category: string;
   subcategory: string;
   tags: string;
@@ -68,20 +69,28 @@ export type PaymentDetails = {
 
 export type CatalogueItemDraft = {
   id: string;
+  persistedId?: string;
   title: string;
   price: string;
   sku?: string;
   description?: string;
   is_available: boolean;
+  sort_order: string;
+  item_type: "PRODUCT" | "SERVICE";
+  is_billable: boolean;
+  duration_minutes: string;
+  supports_slot_booking: boolean;
   imageFile?: File | null;
   imageUrl?: string | null;
 };
 
 export type CatalogueCategoryDraft = {
   id: string;
+  persistedId?: string;
   enabled: boolean;
   title: string;
   starting_from: string;
+  sort_order: string;
   items: CatalogueItemDraft[];
   expanded: boolean;
 };
