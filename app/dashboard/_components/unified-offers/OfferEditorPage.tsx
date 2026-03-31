@@ -161,11 +161,12 @@ export function UnifiedOfferEditorPage({
 
   React.useEffect(() => {
     if (!offerId) return;
+    const currentOfferId = offerId;
 
     async function loadOffer() {
       try {
         setLoading(true);
-        const bundle = await fetchOfferBundle(offerId);
+        const bundle = await fetchOfferBundle(currentOfferId);
         setOffer(bundle.offer);
         setForm(offerToForm(bundle.offer));
         setTargets(bundle.targets);
