@@ -194,7 +194,11 @@ export function UnifiedOfferEditorPage({
 
     const payloadResult = buildOfferPayload(form);
     if ("error" in payloadResult) {
-      showToast({ title: "Validation failed", description: payloadResult.error, type: "error" });
+      showToast({
+        title: "Validation failed",
+        description: typeof payloadResult.error === "string" ? payloadResult.error : "Please review the form and try again.",
+        type: "error",
+      });
       return;
     }
 
