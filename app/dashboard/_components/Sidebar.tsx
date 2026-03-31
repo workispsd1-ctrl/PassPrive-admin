@@ -70,17 +70,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       href: "/dashboard/manage-corporates",
       iconSrc: "/corporatemangement.png",
     },
-
-    {
-      title: "Bank Offers",
-      href: "/dashboard/bank-offers",
-      iconSrc: "/bankoffers.png",
-    },
-    {
-      title: "PassPrive Offers",
-      href: "/dashboard/passprive-offers",
-      iconSrc: "/bankoffers.png",
-    },
     {
       title: "Restaurant In Your PassPrive",
       href: "/dashboard/in-your-passprive",
