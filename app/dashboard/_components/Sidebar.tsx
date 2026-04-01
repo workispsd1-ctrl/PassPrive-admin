@@ -86,6 +86,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       iconSrc: "/campaign.png",
     },
     {
+      title: "Editorial Collections",
+      href: "/dashboard/editorial-collections",
+      iconSrc: "/highlight.png",
+    },
+    {
       title: "Restaurant Mood Categories",
       href: "/dashboard/mood-categories",
       iconSrc: "/menu.png",
