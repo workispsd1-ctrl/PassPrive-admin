@@ -111,12 +111,19 @@ function normalizeEntityOption(value: unknown, type: ItemEntityType): EntityOpti
   const record = value as Record<string, unknown>;
   if (typeof record.id !== "string" || typeof record.name !== "string") return null;
 
+  const areaValue =
+    typeof record.area === "string"
+      ? record.area
+      : typeof record.location_name === "string"
+      ? record.location_name
+      : null;
+
   return {
     id: record.id,
     type,
     name: record.name,
     city: typeof record.city === "string" ? record.city : null,
-    area: typeof record.area === "string" ? record.area : null,
+    area: areaValue,
     category: typeof record.category === "string" ? record.category : null,
   };
 }
@@ -328,7 +335,10 @@ export default function EditorialCollectionItemsManager({
   const loadOptions = useCallback(async () => {
     const [restaurantResponse, storeResponse] = await Promise.all([
       supabaseBrowser.from("restaurants").select("id,name,city,area").order("name", { ascending: true }),
-      supabaseBrowser.from("stores").select("id,name,city,area,category").order("name", { ascending: true }),
+      supabaseBrowser
+        .from("stores")
+        .select("id,name,city,location_name,category")
+        .order("name", { ascending: true }),
     ]);
 
     const nextOptions: EntityOption[] = [];
@@ -404,13 +414,21 @@ export default function EditorialCollectionItemsManager({
       return;
     }
 
-    const payload = {
-      store_id: form.entity_type === "STORE" ? form.entity_id : null,
-      restaurant_id: form.entity_type === "RESTAURANT" ? form.entity_id : null,
+    const payload: Record<string, unknown> = {
       sort_order: sortOrder,
-      note: form.note.trim() || null,
       is_active: form.is_active,
     };
+
+    if (form.entity_type === "STORE") {
+      payload.store_id = form.entity_id;
+    } else {
+      payload.restaurant_id = form.entity_id;
+    }
+
+    const trimmedNote = form.note.trim();
+    if (trimmedNote) {
+      payload.note = trimmedNote;
+    }
 
     try {
       setSaving(true);
@@ -451,15 +469,28 @@ export default function EditorialCollectionItemsManager({
 
     try {
       setSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${collectionId}/items/${deletingItem.id}`, {
+      let deletionMode: "hard" | "soft" = "hard";
+      let response = await fetch(`${API_BASE}${apiPath}/${collectionId}/items/${deletingItem.id}`, {
         method: "DELETE",
       });
+
+      // Fallback to soft-delete when backend delete endpoint is not implemented yet.
+      if ([404, 405, 501].includes(response.status)) {
+        deletionMode = "soft";
+        response = await fetch(`${API_BASE}${apiPath}/${collectionId}/items/${deletingItem.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ is_active: false }),
+        });
+      }
 
       if (!response.ok) {
         throw new Error(await getErrorFromResponse(response, "Failed to delete editorial item."));
       }
 
-      showToast({ title: "Editorial item deleted" });
+      showToast({ title: deletionMode === "hard" ? "Editorial item deleted" : "Editorial item deactivated" });
       setDeletingItem(null);
       await loadCollection();
     } catch (error: unknown) {
@@ -655,7 +686,11 @@ export default function EditorialCollectionItemsManager({
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </Button>
-                        <Button variant="destructive" onClick={() => setDeletingItem(item)}>
+                        <Button
+                          variant="outline"
+                          className="bg-white border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => setDeletingItem(item)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </Button>
@@ -804,7 +839,7 @@ export default function EditorialCollectionItemsManager({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this item?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the linked store or restaurant from this collection.
+              We first try permanent delete. If delete endpoint is unavailable, this item will be marked inactive.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

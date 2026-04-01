@@ -370,15 +370,28 @@ export default function EditorialCollectionManager({
 
     try {
       setSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
+      let deletionMode: "hard" | "soft" = "hard";
+      let response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
         method: "DELETE",
       });
+
+      // Fallback to soft-delete when backend does not expose hard delete.
+      if ([404, 405, 501].includes(response.status)) {
+        deletionMode = "soft";
+        response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ is_active: false }),
+        });
+      }
 
       if (!response.ok) {
         throw new Error(await getErrorFromResponse(response, "Failed to delete collection."));
       }
 
-      showToast({ title: "Collection deleted" });
+      showToast({ title: deletionMode === "hard" ? "Collection deleted" : "Collection deactivated" });
       setDeletingCollection(null);
       await loadCollections();
     } catch (error: unknown) {
@@ -496,7 +509,11 @@ export default function EditorialCollectionManager({
                           {detailLabel}
                         </Link>
                       </Button>
-                      <Button variant="destructive" onClick={() => setDeletingCollection(collection)}>
+                      <Button
+                        variant="outline"
+                        className="bg-white border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => setDeletingCollection(collection)}
+                      >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </Button>
@@ -739,7 +756,7 @@ export default function EditorialCollectionManager({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this collection?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the collection and all linked editorial items.
+              We first try permanent delete. If delete endpoint is unavailable, this collection will be marked inactive.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
