@@ -112,68 +112,6 @@ function extractCategoryList(payload: unknown): MoodCategoryRecord[] {
   return [];
 }
 
-function offerToInputValue(offer: unknown): string {
-  if (offer === null || offer === undefined) return "";
-  if (typeof offer === "string") return offer;
-  if (typeof offer === "object") {
-    const record = offer as Record<string, unknown>;
-    if (typeof record.text === "string") return record.text;
-    if (typeof record.title === "string") return record.title;
-    if (typeof record.label === "string") return record.label;
-    return "";
-  }
-  return "";
-}
-
-function offerMinimumBillToInputValue(offer: unknown): string {
-  if (!offer || typeof offer !== "object") return "";
-
-  const record = offer as Record<string, unknown>;
-  const rawValue =
-    record.minimum_bill_amount ??
-    record.min_bill ??
-    record.minimumBill;
-
-  if (rawValue === null || rawValue === undefined || rawValue === "") return "";
-  const parsed = Number(rawValue);
-  return Number.isFinite(parsed) && parsed >= 0 ? String(parsed) : "";
-}
-
-function parseMinimumBill(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return parsed;
-}
-
-function offerToPayload(offer: unknown, minimumBill?: unknown) {
-  const parsedMinimumBill = parseMinimumBill(minimumBill);
-
-  if (offer === null || offer === undefined) {
-    return parsedMinimumBill === null ? null : { minimum_bill_amount: parsedMinimumBill };
-  }
-
-  if (typeof offer === "string") {
-    const text = offer.trim();
-    if (!text && parsedMinimumBill === null) return null;
-
-    const payload: Record<string, unknown> = {};
-    if (text) payload.text = text;
-    if (parsedMinimumBill !== null) payload.minimum_bill_amount = parsedMinimumBill;
-    return payload;
-  }
-
-  if (typeof offer === "object") {
-    const payload = { ...(offer as Record<string, unknown>) };
-    if (parsedMinimumBill !== null) {
-      payload.minimum_bill_amount = parsedMinimumBill;
-    }
-    return payload;
-  }
-
-  return parsedMinimumBill === null ? null : { minimum_bill_amount: parsedMinimumBill };
-}
-
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -431,13 +369,8 @@ export default function RestaurantDetailPage() {
         return;
       }
 
-      const hydratedRestaurant = {
-        ...data,
-        offer_minimum_bill: offerMinimumBillToInputValue(data.offer),
-      };
-
-      setRestaurant(hydratedRestaurant);
-      setRestaurantOriginal(hydratedRestaurant);
+      setRestaurant(data);
+      setRestaurantOriginal(data);
 
       const parsed = parseOpeningHours(data.opening_hours);
       setOpeningHours(parsed);
@@ -554,7 +487,6 @@ export default function RestaurantDetailPage() {
         cuisines: asStringArray(restaurant.cuisines),
         cost_for_two: asNullableNumber(restaurant.cost_for_two),
         distance: asNullableNumber(restaurant.distance),
-        offer: offerToPayload(restaurant.offer, restaurant.offer_minimum_bill),
         facilities: asStringArray(restaurant.facilities),
         highlights: asStringArray(restaurant.highlights),
         worth_visit: asStringArray(restaurant.worth_visit),
@@ -594,7 +526,9 @@ export default function RestaurantDetailPage() {
           : null,
 
         // ✅ link owner (only admins can change this successfully in backend)
-        owner_user_id: restaurant.owner_user_id || null,
+        ...(isAdmin
+          ? { owner_user_id: restaurant.owner_user_id || null }
+          : {}),
 
         // keep owner linkage if needed
       };
@@ -612,6 +546,12 @@ export default function RestaurantDetailPage() {
       const json = await res.json();
       if (!res.ok) {
         const details = json?.details ? ` ${JSON.stringify(json.details)}` : "";
+        if (res.status === 403) {
+          throw new Error(
+            json?.error ||
+              "You do not have permission to save these changes. Please contact an admin or sign in with an admin account."
+          );
+        }
         throw new Error(`${json?.error || "Update failed"}${details}`.trim());
       }
 
@@ -625,7 +565,6 @@ export default function RestaurantDetailPage() {
         food_images: finalFoodImages,
         ambience_images: finalAmbienceImages,
       };
-      savedRestaurant.offer_minimum_bill = offerMinimumBillToInputValue(savedRestaurant.offer);
       setRestaurant(savedRestaurant);
       setRestaurantOriginal(savedRestaurant);
 
@@ -643,10 +582,16 @@ export default function RestaurantDetailPage() {
       setAmbienceImagesToDelete([]);
       setSaving(false);
     } catch (error: any) {
+      const isPermissionError =
+        typeof error?.message === "string" &&
+        /permission|access denied|unauthorized/i.test(error.message);
+
       showToast({
         type: "error",
-        title: "Unexpected error",
-        description: error.message,
+        title: isPermissionError ? "Permission denied" : "Unexpected error",
+        description: isPermissionError
+          ? error.message
+          : error.message,
       });
       setSaving(false);
     }
@@ -923,8 +868,8 @@ export default function RestaurantDetailPage() {
         </Field>
       </Section>
 
-      {/* CUISINES & OFFER */}
-      <Section title="Cuisine & Offer">
+      {/* CUISINES */}
+      <Section title="Cuisine">
         <Grid>
           <Field label="Cuisines">
             <Input
@@ -939,30 +884,6 @@ export default function RestaurantDetailPage() {
                     .map((v) => v.trim())
                     .filter(Boolean),
                 })
-              }
-            />
-          </Field>
-
-          <Field label="Offer">
-            <Input
-              className={inputClass}
-              disabled={!editMode}
-              value={offerToInputValue(restaurant.offer)}
-              onChange={(e) => setRestaurant({ ...restaurant, offer: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Minimum Bill To Apply Offer">
-            <Input
-              className={inputClass}
-              type="number"
-              min="0"
-              step="0.01"
-              disabled={!editMode}
-              value={restaurant.offer_minimum_bill ?? ""}
-              placeholder="Optional"
-              onChange={(e) =>
-                setRestaurant({ ...restaurant, offer_minimum_bill: e.target.value })
               }
             />
           </Field>

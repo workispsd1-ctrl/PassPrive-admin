@@ -16,7 +16,6 @@ interface Restaurant {
   area: string;
   rating: number | null;
   cost_for_two: number | null;
-  offer?: string | null;
   created_at: string;
 }
 
@@ -92,7 +91,6 @@ export const RestaurantTable = ({
             <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">LOCATION</th>
             <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">RATING</th>
             <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">COST FOR TWO</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">OFFER</th>
             <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">ACTIONS</th>
           </tr>
         </thead>
@@ -116,15 +114,6 @@ export const RestaurantTable = ({
                 <td className="px-6 py-3 text-[#5b6473]">{r.rating ?? "-"}</td>
                 <td className="px-6 py-3 text-[#5b6473]">
                   {r.cost_for_two ? `₹${r.cost_for_two}` : "-"}
-                </td>
-                <td className="px-6 py-3">
-                  {r.offer && r.offer !== "—" ? (
-                    <span className="inline-block px-2.5 py-1 bg-[#5800AB] text-white text-[11px] font-medium rounded-full">
-                      Offer
-                    </span>
-                  ) : (
-                    <span className="text-[#5b6473]">—</span>
-                  )}
                 </td>
 
                 <td className="px-4 py-4">
@@ -215,9 +204,6 @@ export const RestaurantTable = ({
           </p>
           <p>
             <b>Rating:</b> {selected?.rating ?? "-"}
-          </p>
-          <p>
-            <b>Offer:</b> {selected?.offer || "-"}
           </p>
         </div>
       </Modal>

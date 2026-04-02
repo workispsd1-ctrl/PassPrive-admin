@@ -22,48 +22,6 @@ function useDebounced<T>(value: T, ms = 350) {
   return v;
 }
 
-function getOfferDisplay(offer: any) {
-  const withMinimumBill = (label: string, source: any) => {
-    const rawMinimumBill =
-      source?.minimum_bill_amount ??
-      source?.min_bill ??
-      source?.minimumBill;
-
-    if (rawMinimumBill === null || rawMinimumBill === undefined || rawMinimumBill === "") {
-      return label;
-    }
-
-    const parsedMinimumBill = Number(rawMinimumBill);
-    if (!Number.isFinite(parsedMinimumBill) || parsedMinimumBill < 0) return label;
-
-    return `${label} (Min bill ${parsedMinimumBill})`;
-  };
-
-  if (offer == null) return "—";
-  if (typeof offer === "string" || typeof offer === "number") return String(offer);
-
-  if (Array.isArray(offer)) {
-    if (offer.length === 0) return "—";
-    const first = offer[0];
-    if (first && typeof first === "object") {
-      if (first.text) return withMinimumBill(String(first.text), first);
-      if (first.title) return withMinimumBill(String(first.title), first);
-      if (first.promoCode) return withMinimumBill(String(first.promoCode), first);
-      return withMinimumBill("Offer", first);
-    }
-    return `${offer.length} offer${offer.length > 1 ? "s" : ""}`;
-  }
-
-  if (typeof offer === "object") {
-    if (offer.text) return withMinimumBill(String(offer.text), offer);
-    if (offer.title) return withMinimumBill(String(offer.title), offer);
-    if (offer.promoCode) return withMinimumBill(String(offer.promoCode), offer);
-    return withMinimumBill("Offer", offer);
-  }
-
-  return "—";
-}
-
 /* -------------------------- SKELETON (LOADING ONLY) -------------------------- */
 
 function Skeleton({ className = "" }: { className?: string }) {
@@ -165,12 +123,7 @@ export default function RestaurantsPage() {
         setRestaurants([]);
         setTotal(0);
       } else {
-        const normalized = (data || []).map((r: any) => ({
-          ...r,
-          offer_raw: r.offer,
-          offer: getOfferDisplay(r.offer),
-        }));
-        setRestaurants(normalized);
+        setRestaurants(data || []);
         setTotal(count || 0);
       }
 
