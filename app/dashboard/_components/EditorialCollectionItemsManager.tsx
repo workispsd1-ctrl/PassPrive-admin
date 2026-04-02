@@ -430,14 +430,25 @@ export default function EditorialCollectionItemsManager({
       payload.note = trimmedNote;
     }
 
+    const duplicateItem = items.find((item) => {
+      if (editingItem && item.id === editingItem.id) return false;
+      if (form.entity_type === "STORE") {
+        return item.store_id === form.entity_id;
+      }
+      return item.restaurant_id === form.entity_id;
+    });
+
+    const targetItemId = editingItem?.id || duplicateItem?.id || null;
+    const requestMethod = targetItemId ? "PUT" : "POST";
+
     try {
       setSaving(true);
-      const endpoint = editingItem
-        ? `${API_BASE}${apiPath}/${collectionId}/items/${editingItem.id}`
+      const endpoint = targetItemId
+        ? `${API_BASE}${apiPath}/${collectionId}/items/${targetItemId}`
         : `${API_BASE}${apiPath}/${collectionId}/items`;
 
       const response = await fetch(endpoint, {
-        method: editingItem ? "PUT" : "POST",
+        method: requestMethod,
         headers: {
           "Content-Type": "application/json",
         },
@@ -448,7 +459,7 @@ export default function EditorialCollectionItemsManager({
         throw new Error(await getErrorFromResponse(response, "Failed to save editorial item."));
       }
 
-      showToast({ title: editingItem ? "Editorial item updated" : "Editorial item added" });
+      showToast({ title: targetItemId ? "Editorial item updated" : "Editorial item added" });
       setDialogOpen(false);
       setEditingItem(null);
       setForm(initialForm);

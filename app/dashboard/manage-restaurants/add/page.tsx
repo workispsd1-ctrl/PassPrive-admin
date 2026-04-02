@@ -71,14 +71,39 @@ function slugify(input: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
-function offerToPayload(offer: unknown) {
-  if (offer === null || offer === undefined) return null;
+function parseMinimumBill(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function offerToPayload(offer: unknown, minimumBill?: unknown) {
+  const parsedMinimumBill = parseMinimumBill(minimumBill);
+
+  if (offer === null || offer === undefined) {
+    return parsedMinimumBill === null ? null : { minimum_bill_amount: parsedMinimumBill };
+  }
+
   if (typeof offer === "string") {
     const text = offer.trim();
-    return text ? { text } : null;
+    if (!text && parsedMinimumBill === null) return null;
+
+    const payload: Record<string, unknown> = {};
+    if (text) payload.text = text;
+    if (parsedMinimumBill !== null) payload.minimum_bill_amount = parsedMinimumBill;
+    return payload;
   }
-  if (typeof offer === "object") return offer;
-  return null;
+
+  if (typeof offer === "object") {
+    const payload = { ...(offer as Record<string, unknown>) };
+    if (parsedMinimumBill !== null) {
+      payload.minimum_bill_amount = parsedMinimumBill;
+    }
+    return payload;
+  }
+
+  return parsedMinimumBill === null ? null : { minimum_bill_amount: parsedMinimumBill };
 }
 
 function bookingTermsToPayload(value: string): string[] | null {
@@ -122,6 +147,7 @@ export default function AddRestaurantPage() {
     cost_for_two: "",
     distance: "",
     offer: "",
+    minimum_bill_amount: "",
     facilities: "",
     highlights: "",
     worth_visit: "",
@@ -362,7 +388,7 @@ export default function AddRestaurantPage() {
         cuisines: form.cuisines ? form.cuisines.split(",").map((v) => v.trim()) : [],
         cost_for_two: form.cost_for_two ? Number(form.cost_for_two) : null,
         distance: form.distance ? Number(form.distance) : null,
-        offer: offerToPayload(form.offer),
+        offer: offerToPayload(form.offer, form.minimum_bill_amount),
 
         facilities: form.facilities ? form.facilities.split(",").map((v) => v.trim()) : [],
         highlights: form.highlights ? form.highlights.split(",").map((v) => v.trim()) : [],
@@ -623,6 +649,18 @@ export default function AddRestaurantPage() {
             onChange={handleChange} 
           />
           <Input className={inputClass} name="offer" placeholder="Offer (optional)" onChange={handleChange} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            className={inputClass}
+            name="minimum_bill_amount"
+            placeholder="Minimum bill to apply offer (optional)"
+            onChange={handleChange}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
