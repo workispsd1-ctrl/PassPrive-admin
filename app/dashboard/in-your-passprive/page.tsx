@@ -16,6 +16,8 @@ export default function InYourPassPrivePage() {
       emptyDescription="Create your first restaurant card to start curating venues for this section."
       detailLabel="Manage Restaurants"
       icon={PanelsTopLeft}
+      editIconSrc="/restaurentpasspriveedit.png"
+      manageIconSrc="/restaurentpassprivemange.png"
     />
   );
 }

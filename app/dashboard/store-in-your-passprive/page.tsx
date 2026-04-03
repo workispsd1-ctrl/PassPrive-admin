@@ -16,6 +16,8 @@ export default function StoreInYourPassPrivePage() {
       emptyDescription="Create your first store card to start curating stores for this section."
       detailLabel="Manage Stores"
       icon={Store}
+      editIconSrc="/restaurentpasspriveedit.png"
+      manageIconSrc="/restaurentpassprivemange.png"
     />
   );
 }

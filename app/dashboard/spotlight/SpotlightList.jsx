@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
-  Pencil,
   Trash2,
   Image as ImageIcon,
   Video as VideoIcon,
   Tag,
   Filter,
   Search,
-  RefreshCw,
 } from "lucide-react";
 
 const MODULE_BADGE = {
@@ -107,18 +106,18 @@ export default function SpotlightList({ onEdit }) {
   };
 
   return (
-    <div className="mt-2">
+    <div className="mt-1">
       {/* Toolbar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           {/* Search */}
           <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search spotlight..."
-              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
             />
           </div>
 
@@ -128,7 +127,7 @@ export default function SpotlightList({ onEdit }) {
             <select
               value={moduleFilter}
               onChange={(e) => setModuleFilter(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-8 text-sm text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              className="h-10 w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-8 text-sm text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
             >
               <option value="all">All modules</option>
               <option value="global">Global</option>
@@ -151,10 +150,7 @@ export default function SpotlightList({ onEdit }) {
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
-            >
+            <div key={i} className="flex items-center gap-4 rounded-[14px] border border-slate-200/80 bg-white p-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
               <div className="h-[72px] w-[120px] rounded-xl bg-gray-100 animate-pulse" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 w-2/3 rounded bg-gray-100 animate-pulse" />
@@ -169,7 +165,7 @@ export default function SpotlightList({ onEdit }) {
 
       {/* Empty */}
       {!loading && filtered.length === 0 && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+        <div className="rounded-[16px] border border-dashed border-slate-200 bg-white p-10 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 ring-1 ring-gray-200">
             <Tag className="h-5 w-5 text-gray-700" />
           </div>
@@ -193,7 +189,11 @@ export default function SpotlightList({ onEdit }) {
             return (
               <div
                 key={item.id}
-                className="group flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row sm:items-center"
+                className="group flex flex-col gap-4 rounded-[14px] border border-slate-200/80 p-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)] sm:flex-row sm:items-center"
+                style={{
+                  background:
+                    "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
+                }}
               >
                 {/* Thumbnail */}
                 <div className="flex items-center gap-3">
@@ -247,15 +247,15 @@ export default function SpotlightList({ onEdit }) {
                 <div className="flex items-center gap-2 sm:ml-auto">
                   <button
                     onClick={() => onEdit(item)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#5800AB] px-3 py-2.5 text-sm font-semibold text-white hover:bg-[#4a0090] focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Image src="/restaurentpasspriveedit.png" alt="Edit" width={14} height={14} className="h-3.5 w-3.5" />
                     Edit
                   </button>
 
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-red-200 bg-white px-3 text-[13px] font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete

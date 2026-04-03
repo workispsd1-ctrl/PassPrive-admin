@@ -1,19 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import {
-  Loader2,
-  Megaphone,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Settings2,
-} from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -269,113 +262,132 @@ export default function StoreCampaignPage() {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] min-h-full">
-      <Card className="border border-slate-200 shadow-sm">
-        <CardHeader className="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-2xl font-semibold text-slate-900">
-              <Megaphone className="h-5 w-5 text-slate-500" />
-              Store Campaign
-            </CardTitle>
-            <CardDescription className="text-sm text-slate-600">
-              Create and manage store home campaigns and the stores attached to each section.
-            </CardDescription>
-          </div>
+    <div
+      className="min-h-screen"
+      style={{
+        background: "#FFFFFF4D",
+      }}
+    >
+      <div
+        className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col"
+        style={{
+          background: "#FFFFFF4D",
+        }}
+      >
+        <div className="flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6">
+          <Card
+            className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+            style={{
+              background:
+                "linear-gradient(310.35deg, rgba(255, 255, 255, 0.4) 4.07%, rgba(255, 255, 255, 0.3) 48.73%, rgba(255, 255, 255, 0.2) 100%)",
+            }}
+          >
+            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <CardTitle className="text-[18px] leading-6 text-slate-900">Cards</CardTitle>
+                  <CardDescription className="mt-1 text-[12px] leading-5 text-slate-500">
+                    Create and manage store home campaigns and the stores attached to each section.
+                  </CardDescription>
+                </div>
+                <Button className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreateDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add new card
+                </Button>
+              </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search campaign title, subtitle, or slug..."
-              className="w-full sm:w-72"
-            />
-            <Button variant="outline" onClick={() => void loadCampaigns()} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-            <Button onClick={openCreateDialog} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Campaign
-            </Button>
-          </div>
-        </CardHeader>
+              <div className="relative w-full lg:max-w-[1120px]">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search campaign title, subtitle, or slug..."
+                  className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
+                />
+              </div>
+            </CardHeader>
 
-        <CardContent className="p-0">
+            <CardContent className="px-4 py-4 sm:px-5">
           {loading ? (
-            <div className="flex items-center justify-center gap-3 px-6 py-20 text-sm text-slate-600">
+            <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading campaigns...
             </div>
           ) : pageError ? (
-            <div className="px-6 py-16 text-center">
+            <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
               <p className="text-sm font-medium text-slate-900">{pageError}</p>
               <p className="mt-2 text-sm text-slate-500">
                 Try again later or check whether this account has access to campaign management.
               </p>
             </div>
           ) : filteredCampaigns.length === 0 ? (
-            <div className="px-6 py-16 text-center">
+            <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
               <p className="text-sm font-medium text-slate-900">No campaigns found.</p>
               <p className="mt-2 text-sm text-slate-500">
                 Create your first store campaign to start curating stores for the home section.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="flex flex-col gap-3">
               {filteredCampaigns.map((campaign) => (
                 <div
                   key={campaign.id}
-                  className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between"
+                  className="rounded-[14px] border border-slate-200/80 px-4 py-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
+                  style={{
+                    background:
+                      "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
+                  }}
                 >
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-base font-semibold text-slate-900">{campaign.title}</p>
-                      <Badge
-                        variant="outline"
-                        className={
-                          campaign.is_active
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-slate-100 text-slate-600"
-                        }
-                      >
-                        {campaign.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-[14px] font-semibold leading-5 text-slate-900">{campaign.title}</p>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${campaign.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                          {campaign.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[12px] leading-5 text-slate-500">{campaign.subtitle || "No subtitle added yet."}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
+                        <span className="font-mono">/{campaign.slug}</span>
+                        <span>Max items: {campaign.max_items ?? "—"}</span>
+                        <span>Stores: {itemCount(campaign)}</span>
+                        <span>Updated: {formatDate(campaign.updated_at || campaign.created_at)}</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-slate-600">{campaign.subtitle || "No subtitle added yet."}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
-                      <span className="font-mono">/{campaign.slug}</span>
-                      <span>Max items: {campaign.max_items ?? "—"}</span>
-                      <span>Stores: {itemCount(campaign)}</span>
-                      <span>Updated: {formatDate(campaign.updated_at || campaign.created_at)}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={() => openEditDialog(campaign)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button asChild variant="outline">
-                      <Link href={`/dashboard/store-campaign/${campaign.id}`}>
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Manage Stores
-                      </Link>
-                    </Button>
-                    <Button
-                      variant={campaign.is_active ? "destructive" : "default"}
-                      onClick={() => void toggleCampaignStatus(campaign)}
-                      disabled={saving}
-                      className={!campaign.is_active ? "bg-[#5800AB] text-white hover:bg-[#4a0090]" : undefined}
-                    >
-                      {campaign.is_active ? "Deactivate" : "Activate"}
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(campaign)}>
+                        <Image src="/restaurentpasspriveedit.png" alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <Button asChild variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
+                        <Link href={`/dashboard/store-campaign/${campaign.id}`}>
+                          <Image src="/restaurentpassprivemange.png" alt="Manage" width={14} height={14} className="mr-2 h-3.5 w-3.5" />
+                          Manage Stores
+                        </Link>
+                      </Button>
+                      <Button
+                        variant={campaign.is_active ? "destructive" : "default"}
+                        onClick={() => void toggleCampaignStatus(campaign)}
+                        disabled={saving}
+                        className={`h-9 rounded-xl px-3 text-[13px] font-medium ${
+                          campaign.is_active
+                            ? "bg-red-600 text-white hover:bg-red-700"
+                            : "bg-[#5800AB] text-white hover:bg-[#4a0090]"
+                        }`}
+                      >
+                        {campaign.is_active ? "Deactivate" : "Activate"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <Dialog
         open={dialogOpen}

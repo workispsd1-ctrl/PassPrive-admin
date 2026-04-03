@@ -48,6 +48,8 @@ const pathName: Record<string, string> = {
   "/dashboard/store-campaign": "Store Campaign",
   "/dashboard/in-your-passprive": "Restaurant In Your PassPrive",
   "/dashboard/store-in-your-passprive": "Store In Your PassPrive",
+  "/dashboard/editorial-collections": "Editorial Collections",
+  "/dashboard/editorial-collections/[id]": "Editorial Collection",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
@@ -445,6 +447,13 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
                 pathname.endsWith("/leads")
               ) {
                 title = pathName["/dashboard/users/[id]/leads"];
+              }
+
+              if (
+                pathname.startsWith("/dashboard/editorial-collections/") &&
+                pathname.split("/").length === 4
+              ) {
+                title = pathName["/dashboard/editorial-collections/[id]"];
               }
 
               if (pathname === "/dashboard") {

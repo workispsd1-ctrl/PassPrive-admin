@@ -133,7 +133,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
   const isImage = mediaType === "image";
 
   return (
-    <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-[14px] border border-slate-200/80 bg-white p-6 shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -148,7 +148,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
         <div className="flex items-center gap-2">
           <button
             onClick={onCancel}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="h-9 rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
           >
             Cancel
           </button>
@@ -156,7 +156,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
           <button
             onClick={handleSubmit}
             disabled={loading || !canSave}
-            className="rounded-xl bg-[#5800AB] px-4 py-2 text-sm font-medium text-white hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-9 rounded-xl bg-[#5800AB] px-4 text-[13px] font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
               <span className="inline-flex items-center gap-2">
@@ -175,7 +175,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
         {/* Left: Inputs */}
         <div className="lg:col-span-7 space-y-6">
           {/* Content card */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
               <h3 className="text-sm font-semibold text-gray-900">Content</h3>
               <p className="text-xs text-gray-500">Title is required. Subtitle is optional.</p>
@@ -188,7 +188,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Weekend Food Fest"
-                  className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                 />
                 <div className="mt-1 text-[11px] text-gray-400">{title.trim().length}/80</div>
               </div>
@@ -199,14 +199,14 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                   value={subtitle}
                   onChange={(e) => setSubtitle(e.target.value)}
                   placeholder="e.g., Book your table now"
-                  className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                 />
               </div>
             </div>
           </div>
 
           {/* Target card */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
               <h3 className="text-sm font-semibold text-gray-900">Target</h3>
               <p className="text-xs text-gray-500">
@@ -225,23 +225,23 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                     className={[
                       "flex items-start gap-3 rounded-2xl border p-4 text-left transition",
                       active
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 bg-white hover:bg-gray-50",
+                        ? "border-[#5800AB] bg-[#F4EEFF]"
+                        : "border-slate-200 bg-white hover:bg-slate-50",
                     ].join(" ")}
                   >
                     <div
                       className={[
                         "mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border",
-                        active ? "border-blue-600 bg-white" : "border-gray-200 bg-white",
+                        active ? "border-[#5800AB] bg-white" : "border-slate-200 bg-white",
                       ].join(" ")}
                     >
-                      <Icon className={active ? "h-4 w-4 text-blue-700" : "h-4 w-4 text-gray-700"} />
+                      <Icon className={active ? "h-4 w-4 text-[#5800AB]" : "h-4 w-4 text-gray-700"} />
                     </div>
 
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-gray-900">{label}</p>
-                        <span className={active ? "h-2.5 w-2.5 rounded-full bg-blue-600" : "h-2.5 w-2.5 rounded-full bg-gray-200"} />
+                        <span className={active ? "h-2.5 w-2.5 rounded-full bg-[#5800AB]" : "h-2.5 w-2.5 rounded-full bg-gray-200"} />
                       </div>
                       <p className="mt-1 text-xs text-gray-600">{desc}</p>
                     </div>
@@ -254,7 +254,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
 
         {/* Right: Media */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">Media</h3>

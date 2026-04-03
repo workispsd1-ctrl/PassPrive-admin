@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Loader2,
-  Pencil,
   Plus,
   Search,
   Store,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -351,53 +350,73 @@ export default function StoreCampaignDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button asChild variant="outline">
-          <Link href="/dashboard/store-campaign">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to campaigns
-          </Link>
-        </Button>
+    <div className="min-h-screen" style={{ background: "#FFFFFF4D" }}>
+      <div className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col" style={{ background: "#FFFFFF4D" }}>
+        <div className="flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6">
+          <Card
+            className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+            style={{
+              background:
+                "linear-gradient(310.35deg, rgba(255, 255, 255, 0.4) 4.07%, rgba(255, 255, 255, 0.3) 48.73%, rgba(255, 255, 255, 0.2) 100%)",
+            }}
+          >
+            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="mb-3 flex items-center gap-3">
+                    <Button asChild variant="outline" size="sm" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
+                      <Link href="/dashboard/store-campaign">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to campaigns
+                      </Link>
+                    </Button>
+                  </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => void loadCampaignContext()} disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Refresh
-          </Button>
-          <Button onClick={openCreateDialog} className="bg-slate-900 text-white hover:bg-slate-800">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Store
-          </Button>
-        </div>
-      </div>
+                  <CardTitle className="text-[18px] leading-6 text-slate-900">{campaign?.title || "Store Campaign"}</CardTitle>
+                  <CardDescription className="mt-1 text-[12px] leading-5 text-slate-500">
+                    {campaign?.subtitle || "Manage the stores attached to this campaign."}
+                  </CardDescription>
+                  {campaign ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
+                      <span className="font-mono">/{campaign.slug}</span>
+                      <span>Max items: {campaign.max_items ?? "—"}</span>
+                      <span>Updated: {formatDate(campaign.updated_at || campaign.created_at)}</span>
+                      <span>Status: {campaign.is_active ? "Active" : "Inactive"}</span>
+                    </div>
+                  ) : null}
+                </div>
 
-      <Card className="border border-slate-200 shadow-sm">
-        <CardHeader className="border-b border-slate-100">
-          <CardTitle className="text-2xl font-semibold text-slate-900">
-            {campaign?.title || "Store Campaign"}
-          </CardTitle>
-          <CardDescription className="space-y-2 text-sm text-slate-600">
-            <span className="block">{campaign?.subtitle || "Manage the stores attached to this campaign."}</span>
-            {campaign ? (
-              <span className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
-                <span className="font-mono">/{campaign.slug}</span>
-                <span>Max items: {campaign.max_items ?? "—"}</span>
-                <span>Updated: {formatDate(campaign.updated_at || campaign.created_at)}</span>
-                <span>Status: {campaign.is_active ? "Active" : "Inactive"}</span>
-              </span>
-            ) : null}
-          </CardDescription>
-        </CardHeader>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" className="h-10 rounded-2xl border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50" onClick={() => void loadCampaignContext()} disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Refresh
+                  </Button>
+                  <Button onClick={openCreateDialog} className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Store
+                  </Button>
+                </div>
+              </div>
 
-        <CardContent className="p-0">
+              <div className="relative w-full lg:max-w-[1120px]">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search store name, city, category, or source type..."
+                  className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
+                />
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-4 py-4 sm:px-5">
           {loading ? (
-            <div className="flex items-center justify-center gap-3 px-6 py-20 text-sm text-slate-600">
+            <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading campaign stores...
             </div>
           ) : pageError ? (
-            <div className="px-6 py-16 text-center">
+            <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
               <p className="text-sm font-medium text-slate-900">{pageError}</p>
               <p className="mt-2 text-sm text-slate-500">
                 Try again later or check whether the backend is returning this campaign to your account.
@@ -405,80 +424,60 @@ export default function StoreCampaignDetailPage() {
             </div>
           ) : (
             <>
-              <div className="border-b border-slate-100 px-6 py-4">
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search store name, city, category, or source type..."
-                  className="max-w-md"
-                />
-              </div>
-
               {filteredItems.length === 0 ? (
-                <div className="px-6 py-16 text-center">
+                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
                   <p className="text-sm font-medium text-slate-900">No stores attached yet.</p>
                   <p className="mt-2 text-sm text-slate-500">
                     Add a manual store to this campaign or wait for AUTO rows to appear from backend sync.
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="flex flex-col gap-3">
                   {filteredItems.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between"
+                      className="rounded-[14px] border border-slate-200/80 px-4 py-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
+                      style={{
+                        background:
+                          "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
+                      }}
                     >
-                      <div className="min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-base font-semibold text-slate-900">
-                            {resolveStoreField(item, "name")}
-                          </p>
-                          <Badge
-                            variant="outline"
-                            className={
-                              item.source_type === "MANUAL"
-                                ? "border-blue-200 bg-blue-50 text-blue-700"
-                                : "border-amber-200 bg-amber-50 text-amber-700"
-                            }
-                          >
-                            {item.source_type || "AUTO"}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={
-                              item.is_active
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-slate-200 bg-slate-100 text-slate-600"
-                            }
-                          >
-                            {item.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-[14px] font-semibold leading-5 text-slate-900">{resolveStoreField(item, "name")}</p>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${item.source_type === "MANUAL" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>
+                              {item.source_type || "AUTO"}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${item.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                              {item.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] leading-5 text-slate-500">
+                            <span>{resolveStoreField(item, "city")}</span>
+                            <span>
+                              {resolveStoreField(item, "category")}
+                              {resolveStoreField(item, "subcategory") !== "—"
+                                ? ` • ${resolveStoreField(item, "subcategory")}`
+                                : ""}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
+                            <span>Sort order: {item.sort_order ?? "—"}</span>
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600">
-                          <span>{resolveStoreField(item, "city")}</span>
-                          <span>
-                            {resolveStoreField(item, "category")}
-                            {resolveStoreField(item, "subcategory") !== "—"
-                              ? ` • ${resolveStoreField(item, "subcategory")}`
-                              : ""}
-                          </span>
-                          <span>Sort order: {item.sort_order ?? "—"}</span>
+                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                          <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(item)}>
+                            <Image src="/restaurentpasspriveedit.png" alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" className="h-9 rounded-xl border-red-200 bg-white px-3 text-[13px] font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700" onClick={() => setRemovingItem(item)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {item.is_active ? "Remove" : "Remove Again"}
+                          </Button>
                         </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" onClick={() => openEditDialog(item)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant={item.is_active ? "destructive" : "outline"}
-                          onClick={() => setRemovingItem(item)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {item.is_active ? "Remove" : "Remove Again"}
-                        </Button>
                       </div>
                     </div>
                   ))}
@@ -486,8 +485,10 @@ export default function StoreCampaignDetailPage() {
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <Dialog
         open={dialogOpen}

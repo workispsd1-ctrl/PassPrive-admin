@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowUp, Loader2, Pencil, Plus, Search, Store, Trash2, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Loader2, Plus, Search, Store, Trash2, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -214,7 +215,7 @@ export default function EditorialCollectionItemsManager({
   emptyDescription,
   searchPlaceholder,
   pickerPlaceholder,
-  icon: Icon,
+  icon: _icon,
 }: Props) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -564,85 +565,77 @@ export default function EditorialCollectionItemsManager({
   }
 
   return (
-    <div className="min-h-full bg-slate-100">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-                <Icon className="h-5 w-5 text-slate-700" />
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <Button asChild variant="outline" size="sm" className="bg-white">
-                    <Link href={basePath}>
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      {backLabel}
-                    </Link>
+    <div className="min-h-screen" style={{ background: "#FFFFFF4D" }}>
+      <div className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col" style={{ background: "#FFFFFF4D" }}>
+        <div className="flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6">
+          <Card
+            className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+            style={{
+              background:
+                "linear-gradient(310.35deg, rgba(255, 255, 255, 0.4) 4.07%, rgba(255, 255, 255, 0.3) 48.73%, rgba(255, 255, 255, 0.2) 100%)",
+            }}
+          >
+            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-4 py-4 sm:px-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="mb-3 flex items-center gap-3">
+                    <Button asChild variant="outline" size="sm" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
+                      <Link href={basePath}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        {backLabel}
+                      </Link>
+                    </Button>
+                  </div>
+
+                  <CardTitle className="text-[18px] leading-6 text-slate-900">{collection?.title || pageTitle}</CardTitle>
+                  <CardDescription className="mt-1 text-[12px] leading-5 text-slate-500">{collection?.subtitle || pageDescription}</CardDescription>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] leading-4 text-slate-400">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-4 text-slate-700">{collection?.content_type || "LIST"}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-4 text-slate-700">{collection?.entity_type || "BOTH"}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-10 rounded-2xl border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                    onClick={() => void saveReorder()}
+                    disabled={!orderDirty || reorderSaving}
+                  >
+                    {reorderSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Save order
+                  </Button>
+                  <Button className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreateDialog}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add item
                   </Button>
                 </div>
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                  {collection?.title || pageTitle}
-                </h1>
-                <p className="mt-1 text-sm text-slate-500">{collection?.subtitle || pageDescription}</p>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">{collection?.content_type || "LIST"}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">{collection?.entity_type || "BOTH"}</span>
-                </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="bg-white"
-                onClick={() => void saveReorder()}
-                disabled={!orderDirty || reorderSaving}
-              >
-                {reorderSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Save order
-              </Button>
-              <Button className="bg-slate-900 text-white hover:bg-slate-800" onClick={openCreateDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add item
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <Card className="border-slate-200 bg-white shadow-none">
-          <CardHeader className="border-b border-slate-100 pb-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle className="text-lg">Editorial Items</CardTitle>
-                <CardDescription>
-                  Manage linked items for this collection and adjust display order.
-                </CardDescription>
+              <div className="relative w-full lg:max-w-[1120px]">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
+                />
               </div>
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={searchPlaceholder}
-                className="h-11 w-full border-slate-300 bg-white lg:max-w-sm"
-              />
-            </div>
-          </CardHeader>
+            </CardHeader>
 
-          <CardContent className="p-0">
+            <CardContent className="px-4 py-4 sm:px-5">
             {loading ? (
-              <div className="flex items-center justify-center gap-3 px-6 py-20 text-sm text-slate-500">
+              <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading editorial items...
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="px-6 py-16 text-center">
+              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
                 <p className="text-sm font-medium text-slate-900">{emptyTitle}</p>
                 <p className="mt-2 text-sm text-slate-500">{emptyDescription}</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="flex flex-col gap-3">
                 {filteredItems.map((item) => {
                   const actualIndex = items.findIndex((candidate) => candidate.id === item.id);
                   const entityType = resolveItemType(item);
@@ -653,33 +646,41 @@ export default function EditorialCollectionItemsManager({
                   const meta = optionMeta(option || nested || { id: "", type: entityType, name: "" });
 
                   return (
-                    <div key={item.id} className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <p className="truncate text-base font-semibold text-slate-900">{label}</p>
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    <div
+                      key={item.id}
+                      className="rounded-[14px] border border-slate-200/80 px-4 py-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
+                      style={{
+                        background:
+                          "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
+                      }}
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-[14px] font-semibold leading-5 text-slate-900">{label}</p>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-4 text-slate-700">
                             {entityType}
-                          </span>
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${
                               item.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
                             }`}
-                          >
-                            {item.is_active ? "Active" : "Inactive"}
-                          </span>
+                            >
+                              {item.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-500">{meta || "Item linked to this collection."}</p>
+                          {item.note ? <p className="mt-1 text-[12px] leading-5 text-slate-500">Note: {item.note}</p> : null}
+                          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
+                            <span>Sort: {item.sort_order ?? 0}</span>
+                            <span>ID: {entityId}</span>
+                          </div>
                         </div>
-                        <p className="mt-2 text-sm text-slate-500">{meta || "Item linked to this collection."}</p>
-                        {item.note ? <p className="mt-1 text-sm text-slate-500">Note: {item.note}</p> : null}
-                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                          <span>Sort: {item.sort_order ?? 0}</span>
-                          <span>ID: {entityId}</span>
-                        </div>
-                      </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                         <Button
                           variant="outline"
-                          className="bg-white"
+                          className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
                           onClick={() => moveItem(actualIndex, -1)}
                           disabled={actualIndex <= 0}
                         >
@@ -687,32 +688,34 @@ export default function EditorialCollectionItemsManager({
                         </Button>
                         <Button
                           variant="outline"
-                          className="bg-white"
+                          className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
                           onClick={() => moveItem(actualIndex, 1)}
                           disabled={actualIndex === items.length - 1}
                         >
                           <ArrowDown className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" className="bg-white" onClick={() => openEditDialog(item)}>
-                          <Pencil className="mr-2 h-4 w-4" />
+                        <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(item)}>
+                          <Image src="/restaurentpasspriveedit.png" alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" />
                           Edit
                         </Button>
                         <Button
                           variant="outline"
-                          className="bg-white border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          className="h-9 rounded-xl border-red-200 bg-white px-3 text-[13px] font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
                           onClick={() => setDeletingItem(item)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </Button>
                       </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
