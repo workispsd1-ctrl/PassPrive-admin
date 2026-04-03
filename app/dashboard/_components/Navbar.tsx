@@ -52,10 +52,19 @@ const pathName: Record<string, string> = {
   "/dashboard/editorial-collections/[id]": "Editorial Collection",
 };
 
+const pathDescription: Record<string, string> = {
+  "/dashboard/bank-offers": "Create and manage promotional offers",
+  "/dashboard/in-your-passprive": "Manage the restaurant cards and linked venues shown in the Dine In home section.",
+  "/dashboard/store-in-your-passprive": "Manage the store cards and linked stores shown in the Stores home section.",
+  "/dashboard/store-campaign": "Create and manage store home campaigns and the stores attached to each section.",
+  "/dashboard/editorial-collections": "Create and manage editorial collections shown in the app.",
+};
+
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
   const dispatch = useDispatch();
   const pathname = usePathname();
   const isBankOffersPage = pathname === "/dashboard/bank-offers";
+  const navbarDescription = pathDescription[pathname] || null;
   const [seminarId, setSeminarId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -406,7 +415,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
   return (
     <header
       className={`flex justify-between bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] px-6 ${
-        isBankOffersPage ? "h-20 items-start py-4" : "h-14 items-center"
+        navbarDescription ? "h-20 items-start py-4" : "h-14 items-center"
       }`}
     >
       <div className="flex items-center">
@@ -478,9 +487,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
               return title;
             })()}
           </span>
-          {isBankOffersPage ? (
-            <p className="text-sm leading-5 text-[#667085]">Create and manage promotional offers</p>
-          ) : null}
+          {navbarDescription ? <p className="text-sm leading-5 text-[#667085]">{navbarDescription}</p> : null}
         </div>
       </div>
 
