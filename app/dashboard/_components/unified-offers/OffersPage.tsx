@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { showToast } from "@/hooks/useToast";
 
@@ -109,44 +110,49 @@ export function UnifiedOffersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[32px] border border-slate-200 bg-[linear-gradient(135deg,#0F172A_0%,#1E293B_55%,#155E75_100%)] px-6 py-7 text-white shadow-xl">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Unified Offer Engine</p>
-            <h1 className="mt-3 text-3xl font-semibold">Offers</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-200">
-              Separate from the home-banner screen. This area manages PassPrive, merchant, and bank offers with one shared admin flow.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <PrimaryButton asChild>
+    <div className="space-y-8">
+      <Card
+        className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+        style={{
+          background:
+            "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
+        }}
+      >
+        <CardContent className="space-y-4 px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap justify-end gap-3">
+            <PrimaryButton asChild className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]">
               <Link href="/dashboard/unified-offers/new">
                 <Plus className="mr-2 h-4 w-4" />
                 New offer
               </Link>
             </PrimaryButton>
-            <Button variant="outline" className="h-11 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/15" onClick={() => loadOffers(true)}>
+            <Button
+              variant="outline"
+              className="h-10 rounded-2xl border-slate-200 bg-white px-5 text-sm"
+              onClick={() => loadOffers(true)}
+            >
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
-        </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          {[
-            { label: "Total offers", value: counts.total },
-            { label: "Active", value: counts.active },
-            { label: "Bank", value: counts.banks },
-            { label: "Merchant", value: counts.merchants },
-          ].map((card) => (
-            <div key={card.label} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-4 backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">{card.label}</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{card.value}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+          <div className="grid gap-4 md:grid-cols-4">
+            {[
+              { label: "Total offers", value: counts.total },
+              { label: "Active", value: counts.active },
+              { label: "Bank", value: counts.banks },
+              { label: "Merchant", value: counts.merchants },
+            ].map((card) => (
+              <Card key={card.label} className="border-white/70 bg-white/80 shadow-sm backdrop-blur">
+                <CardContent className="p-4">
+                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{card.label}</div>
+                  <div className="mt-2 text-3xl font-semibold text-slate-900">{card.value}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <SectionCard title="Filters" description="Search by title and filter by source type, module, status, payment flow, and sponsor.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

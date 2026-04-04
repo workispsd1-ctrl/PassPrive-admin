@@ -386,43 +386,55 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-[32px] border border-slate-200 bg-[linear-gradient(135deg,#0F172A_0%,#1E293B_55%,#155E75_100%)] px-6 py-7 text-white shadow-xl">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Mood Category Engine</p>
-              <h1 className="mt-3 text-3xl font-semibold">{title}</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-200">{description}</p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => void loadCategories()} disabled={loading} className="h-11 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/15">
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              <Button variant="outline" onClick={resetForm} className="h-11 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/15">
-                <Plus className="mr-2 h-4 w-4" />
-                New category
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {[
-              { label: "Total categories", value: totalCategories },
-              { label: "Editing", value: hasActiveEdit ? form.title || "Draft" : "None" },
-              { label: "Image source", value: currentImageState },
-            ].map((card) => (
-              <div key={card.label} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">{card.label}</p>
-                <p className="mt-2 text-xl font-semibold text-white">{card.value}</p>
+      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <Card
+          className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+          style={{
+            background:
+              "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
+          }}
+        >
+          <CardContent className="space-y-4 px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap justify-end gap-3">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => void loadCategories()}
+                  disabled={loading}
+                  className="h-10 rounded-2xl border-slate-200 bg-white px-5 text-sm"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+                <Button
+                  onClick={resetForm}
+                  className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New category
+                </Button>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
 
-        <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <Card className="h-fit border-slate-200 bg-white shadow-none">
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                { label: "Total categories", value: totalCategories },
+                { label: "Editing", value: hasActiveEdit ? form.title || "Draft" : "None" },
+                { label: "Image source", value: currentImageState },
+              ].map((card) => (
+                <Card key={card.label} className="border-white/70 bg-white/80 shadow-sm backdrop-blur">
+                  <CardContent className="p-4">
+                    <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{card.label}</div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">{card.value}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-7 xl:grid-cols-[380px_minmax(0,1fr)]">
+          <Card className="h-fit border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 pb-4">
               <CardTitle className="text-lg">{editingId ? "Edit category" : "New category"}</CardTitle>
               <CardDescription>Only the essentials are editable. Key and slug are generated automatically.</CardDescription>
@@ -515,7 +527,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-white shadow-none">
+          <Card className="border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
             <CardHeader className="border-b border-slate-100 pb-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>

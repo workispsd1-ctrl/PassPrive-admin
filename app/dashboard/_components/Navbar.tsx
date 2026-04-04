@@ -48,6 +48,11 @@ const pathName: Record<string, string> = {
   "/dashboard/store-campaign": "Store Campaign",
   "/dashboard/in-your-passprive": "Restaurant In Your PassPrive",
   "/dashboard/store-in-your-passprive": "Store In Your PassPrive",
+  "/dashboard/unified-offers": "Offers",
+  "/dashboard/unified-offers/new": "Create Offer",
+  "/dashboard/unified-offers/[id]": "Edit Offer",
+  "/dashboard/mood-categories": "Restaurant Mood Categories",
+  "/dashboard/store-mood-categories": "Store Mood Categories",
   "/dashboard/transactions": "Transactions",
   "/dashboard/editorial-collections": "Editorial Collections",
   "/dashboard/editorial-collections/[id]": "Editorial Collection",
@@ -58,7 +63,11 @@ const pathDescription: Record<string, string> = {
   "/dashboard/in-your-passprive": "Manage the restaurant cards and linked venues shown in the Dine In home section.",
   "/dashboard/store-in-your-passprive": "Manage the store cards and linked stores shown in the Stores home section.",
   "/dashboard/store-campaign": "Create and manage store home campaigns and the stores attached to each section.",
+  "/dashboard/unified-offers": "Create, edit, and manage PassPrive, bank, and merchant offers in one workspace.",
+  "/dashboard/unified-offers/new": "Set up a new offer with rules, schedule, and targeting.",
   "/dashboard/transactions": "View store and restaurant payment details in a single workspace.",
+  "/dashboard/mood-categories": "Create, edit, and organize restaurant category cards shown in the app.",
+  "/dashboard/store-mood-categories": "Create, edit, and organize store category cards shown in the app.",
   "/dashboard/editorial-collections": "Create and manage editorial collections shown in the app.",
 };
 
@@ -465,6 +474,14 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
                 pathname.split("/").length === 4
               ) {
                 title = pathName["/dashboard/editorial-collections/[id]"];
+              }
+
+              if (
+                pathname.startsWith("/dashboard/unified-offers/") &&
+                pathname.split("/").length === 4 &&
+                !pathname.endsWith("/new")
+              ) {
+                title = pathName["/dashboard/unified-offers/[id]"];
               }
 
               if (pathname === "/dashboard") {

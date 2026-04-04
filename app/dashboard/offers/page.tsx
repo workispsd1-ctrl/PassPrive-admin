@@ -5,6 +5,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 type BannerRecord = {
   id: number;
@@ -422,40 +423,48 @@ export default function OffersPage() {
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#5800AB]">
-                Offers Section
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-900">
-                Banner Management
-              </h1>
-              <p className="mt-3 text-sm text-slate-500">
-                Manage home hero offers, dine-in home banners, and store home banners from one place.
-              </p>
+      <div className="mx-auto max-w-7xl space-y-8">
+        <Card
+          className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+          style={{
+            background:
+              "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
+          }}
+        >
+          <CardContent className="space-y-4 px-4 py-4 sm:px-5">
+            <div className="flex flex-wrap justify-end gap-3">
+              <Link
+                href="/dashboard/bank-offers"
+                className="inline-flex h-10 items-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Bank Offers
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Link>
+              <Link
+                href="/dashboard/passprive-offers"
+                className="inline-flex h-10 items-center rounded-2xl bg-[#5800AB] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] transition hover:bg-[#4a0090]"
+              >
+                PassPrive Offers
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Link>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               {summary.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                >
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    {item.label}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">
-                    {item.count}
-                  </p>
-                </div>
+                <Card key={item.label} className="border-white/70 bg-white/80 shadow-sm backdrop-blur">
+                  <CardContent className="p-4">
+                    <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                      {item.label}
+                    </div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">{item.count}</div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-[18px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
           <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
               <h2 className="text-xl font-semibold text-slate-900">Offer Systems</h2>
@@ -469,7 +478,7 @@ export default function OffersPage() {
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <Link
               href="/dashboard/bank-offers"
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-slate-100"
+              className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:bg-slate-50"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -484,7 +493,7 @@ export default function OffersPage() {
 
             <Link
               href="/dashboard/passprive-offers"
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-slate-100"
+              className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:bg-slate-50"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -506,7 +515,7 @@ export default function OffersPage() {
           return (
             <section
               key={config.key}
-              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+              className="rounded-[18px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm"
             >
               <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-start md:justify-between">
                 <div className="max-w-2xl">

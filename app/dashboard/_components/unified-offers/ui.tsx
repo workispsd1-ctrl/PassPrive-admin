@@ -31,7 +31,7 @@ export function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-3xl border-slate-200 bg-white/95 shadow-sm">
+    <Card className="rounded-[18px] border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1">
           <CardTitle className="text-lg text-slate-900">{title}</CardTitle>
@@ -151,7 +151,7 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center">
+    <div className="rounded-[18px] border border-dashed border-slate-300 bg-white/85 px-6 py-14 text-center shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
       <p className="text-lg font-semibold text-slate-900">{title}</p>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-500">{description}</p>
       {action ? <div className="mt-5">{action}</div> : null}
@@ -161,7 +161,7 @@ export function EmptyState({
 
 export function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="flex min-h-40 items-center justify-center rounded-3xl border border-slate-200 bg-white/90">
+    <div className="flex min-h-40 items-center justify-center rounded-[18px] border border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
       <div className="flex items-center gap-3 text-sm text-slate-600">
         <Loader2 className="h-4 w-4 animate-spin" />
         <span>{label}</span>
