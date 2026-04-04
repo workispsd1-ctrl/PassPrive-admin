@@ -296,8 +296,12 @@ export default function AdminDashboard() {
         {
           label: "Memberships",
           data: monthlyCounts,
-          borderRadius: 8,
-          maxBarThickness: 36,
+          fill: true as const,
+          borderColor: "#5800AB",
+          borderWidth: 2,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 3,
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart as {
@@ -312,7 +316,7 @@ export default function AdminDashboard() {
               chartArea.bottom
             );
             gradient.addColorStop(0, "#5800AB4D");
-            gradient.addColorStop(1, "#5800AB1A");
+            gradient.addColorStop(1, "#5800AB00");
             return gradient;
           },
         },
@@ -428,7 +432,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="h-[349px] p-3">
-                <Bar
+                <Line
                   data={monthlyChartData}
                   options={{
                     responsive: true,
