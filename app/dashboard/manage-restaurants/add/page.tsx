@@ -646,6 +646,10 @@ export default function AddRestaurantPage() {
           Images
         </h2>
 
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-slate-900">Food Images</p>
+          <p className="text-xs text-slate-500">These images are shown as the food gallery for the restaurant.</p>
+        </div>
         <Input
           className={inputClass}
           type="file"
@@ -655,6 +659,10 @@ export default function AddRestaurantPage() {
         />
         <ImagePreviewGrid files={foodImages} onRemove={(i) => setFoodImages(foodImages.filter((_, idx) => idx !== i))} />
 
+        <div className="space-y-2 pt-4">
+          <p className="text-sm font-medium text-slate-900">Ambience Images</p>
+          <p className="text-xs text-slate-500">These images are shown as the ambience / interior gallery.</p>
+        </div>
         <Input
           className={inputClass}
           type="file"

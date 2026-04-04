@@ -198,6 +198,10 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
     };
   }, [imagePreview]);
 
+  const totalCategories = categories.length;
+  const hasActiveEdit = Boolean(editingId);
+  const currentImageState = imageFile ? "Local upload" : form.image_url ? "Uploaded image" : "Not set";
+
   function resetForm() {
     if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
     setEditingId(null);
@@ -382,53 +386,41 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-                <Tags className="h-5 w-5 text-slate-700" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">{title}</h1>
-                <p className="mt-1 text-sm text-slate-500">{description}</p>
-              </div>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="rounded-[32px] border border-slate-200 bg-[linear-gradient(135deg,#0F172A_0%,#1E293B_55%,#155E75_100%)] px-6 py-7 text-white shadow-xl">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200">Mood Category Engine</p>
+              <h1 className="mt-3 text-3xl font-semibold">{title}</h1>
+              <p className="mt-3 text-sm leading-6 text-slate-200">{description}</p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => void loadCategories()} disabled={loading} className="bg-white">
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" onClick={() => void loadCategories()} disabled={loading} className="h-11 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/15">
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
-              {editingId ? (
-                <Button variant="outline" onClick={resetForm} className="bg-white">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New category
-                </Button>
-              ) : null}
+              <Button variant="outline" onClick={resetForm} className="h-11 rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/15">
+                <Plus className="mr-2 h-4 w-4" />
+                New category
+              </Button>
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Categories</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{categories.length}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Editing</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{editingId ? form.title || "Draft" : "None"}</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Image Source</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">
-                {imageFile ? "Local upload" : form.image_url ? "Uploaded image" : "Not set"}
-              </p>
-            </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {[
+              { label: "Total categories", value: totalCategories },
+              { label: "Editing", value: hasActiveEdit ? form.title || "Draft" : "None" },
+              { label: "Image source", value: currentImageState },
+            ].map((card) => (
+              <div key={card.label} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-4 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">{card.label}</p>
+                <p className="mt-2 text-xl font-semibold text-white">{card.value}</p>
+              </div>
+            ))}
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
           <Card className="h-fit border-slate-200 bg-white shadow-none">
             <CardHeader className="border-b border-slate-100 pb-4">
@@ -548,13 +540,15 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Loading categories...
                 </div>
+              ) : filteredCategories.length === 0 ? (
+                <div className="px-6 py-16 text-center text-slate-500">No categories found.</div>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="space-y-4 p-4 sm:p-6">
                   {filteredCategories.map((category) => (
-                    <div key={category.id} className="px-6 py-5">
+                    <div key={category.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition hover:border-slate-300 hover:bg-white">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex min-w-0 items-start gap-4">
-                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                          <div className="relative h-18 w-18 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                             {category.image_url ? (
                               <Image
                                 src={category.image_url}
@@ -573,7 +567,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="truncate text-base font-semibold text-slate-900">{category.title}</p>
-                              <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                              <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-medium text-cyan-700">
                                 Sort {category.sort_order}
                               </span>
                             </div>
@@ -620,9 +614,6 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
                     </div>
                   ))}
 
-                  {filteredCategories.length === 0 ? (
-                    <div className="px-6 py-16 text-center text-slate-500">No categories found.</div>
-                  ) : null}
                 </div>
               )}
             </CardContent>

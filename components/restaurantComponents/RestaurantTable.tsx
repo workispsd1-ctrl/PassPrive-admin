@@ -9,6 +9,19 @@ import PaginationBar from "@/app/dashboard/_components/Pagination";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+async function getAccessToken() {
+  const { data, error } = await supabaseBrowser.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+  return token;
+}
+
 interface Restaurant {
   id: string;
   name: string;
@@ -61,25 +74,32 @@ export const RestaurantTable = ({
     }
 
     setLoading(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`${API_BASE}/api/restaurants/${confirmDelete.id}?hard=true`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    const { error } = await supabaseBrowser
-      .from("restaurants")
-      .delete()
-      .eq("id", confirmDelete.id);
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to delete restaurant");
+      }
 
-    if (error) {
+      showToast({ type: "success", title: "Restaurant deleted" });
+      setRefresh(Date.now());
+    } catch (error: any) {
       showToast({
         type: "error",
         title: "Delete failed",
-        description: error.message,
+        description: error?.message || "Failed to delete restaurant",
       });
-    } else {
-      showToast({ type: "success", title: "Restaurant deleted" });
-      setRefresh(Date.now());
+    } finally {
+      setLoading(false);
+      setConfirmDelete(null);
     }
-
-    setLoading(false);
-    setConfirmDelete(null);
   };
 
   return (

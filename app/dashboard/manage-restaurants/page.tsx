@@ -103,6 +103,7 @@ export default function RestaurantsPage() {
       let query = supabaseBrowser
         .from("restaurants")
         .select("*", { count: "exact" })
+        .eq("is_active", true)
         .order("created_at", { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 

@@ -48,6 +48,7 @@ const pathName: Record<string, string> = {
   "/dashboard/store-campaign": "Store Campaign",
   "/dashboard/in-your-passprive": "Restaurant In Your PassPrive",
   "/dashboard/store-in-your-passprive": "Store In Your PassPrive",
+  "/dashboard/transactions": "Transactions",
   "/dashboard/editorial-collections": "Editorial Collections",
   "/dashboard/editorial-collections/[id]": "Editorial Collection",
 };
@@ -57,6 +58,7 @@ const pathDescription: Record<string, string> = {
   "/dashboard/in-your-passprive": "Manage the restaurant cards and linked venues shown in the Dine In home section.",
   "/dashboard/store-in-your-passprive": "Manage the store cards and linked stores shown in the Stores home section.",
   "/dashboard/store-campaign": "Create and manage store home campaigns and the stores attached to each section.",
+  "/dashboard/transactions": "View store and restaurant payment details in a single workspace.",
   "/dashboard/editorial-collections": "Create and manage editorial collections shown in the app.",
 };
 
