@@ -132,7 +132,7 @@ export default function AdminDashboard() {
         const { count: activeCount } = await supabaseBrowser
           .from("users")
           .select("id", { count: "exact", head: true })
-          .not("subscription", "is", null);
+          .not("membership", "is", null);
 
         /* RESTAURANTS & STORES */
         const { data: rdata } = await supabaseBrowser
@@ -155,41 +155,43 @@ export default function AdminDashboard() {
           .select("id", { count: "exact", head: true });
 
         /* REVENUE */
-        let totalINR = 0;
-        const { data: invoiceData } = await supabaseBrowser
-          .from("invoice")
-          .select("amount, payment_provider");
+        let totalRevenue = 0;
+        const { data: transactionData } = await supabaseBrowser
+          .from("payment_sessions")
+          .select("amount_major")
+          .eq("status", "VERIFIED_SUCCESS");
 
-        (invoiceData as any[] | null)?.forEach((inv) => {
-          const amt = parseAmount(inv.amount);
-          if (inv.payment_provider === "razorpay") totalINR += amt;
+        (transactionData as any[] | null)?.forEach((transaction) => {
+          totalRevenue += parseAmount(transaction.amount_major);
         });
 
-        setRevenueINR(totalINR);
+        setRevenueINR(totalRevenue);
 
-        /* MONTHLY SUBSCRIPTIONS */
-        const year = new Date().getFullYear();
+        /* MONTHLY MEMBERSHIPS */
         const { data: monthlyData } = await supabaseBrowser
-          .from("user_subscription")
-          .select("created_at")
-          .eq("status", "payment_successful")
-          .gte("created_at", `${year}-01-01T00:00:00Z`)
-          .lte("created_at", `${year}-12-31T23:59:59Z`);
+          .from("users")
+          .select("membership_started")
+          .not("membership", "is", null)
+          .not("membership_started", "is", null);
 
         const counts = Array(12).fill(0);
+        const now = new Date();
         (monthlyData as any[] | null)?.forEach((row) => {
-          const m = new Date(row.created_at).getMonth();
-          counts[m] += 1;
+          const startedAt = new Date(row.membership_started);
+          const monthDiff =
+            (now.getFullYear() - startedAt.getFullYear()) * 12 +
+            (now.getMonth() - startedAt.getMonth());
+
+          if (monthDiff >= 0 && monthDiff < 12) {
+            counts[11 - monthDiff] += 1;
+          }
         });
 
-        const monthNow = new Date().getMonth();
-        setMonthlyCounts([
-          ...counts.slice(monthNow),
-          ...counts.slice(0, monthNow),
-        ]);
+        const monthNow = now.getMonth();
+        setMonthlyCounts(counts);
         setMonthlyLabels([
-          ...MONTHS.slice(monthNow),
-          ...MONTHS.slice(0, monthNow),
+          ...MONTHS.slice(monthNow + 1),
+          ...MONTHS.slice(0, monthNow + 1),
         ]);
 
         /* FINAL STATS */
@@ -198,7 +200,7 @@ export default function AdminDashboard() {
           activeSubscribers: activeCount || 0,
           totalRestaurants: restaurantsCount || 0,
           totalStores: storesCount || 0,
-          totalRevenue: totalINR,
+          totalRevenue,
         };
 
         setStats(nextStats);
@@ -292,14 +294,10 @@ export default function AdminDashboard() {
       labels: monthlyLabels,
       datasets: [
         {
-          label: "Subscriptions",
+          label: "Memberships",
           data: monthlyCounts,
-          fill: true as const,
-          borderColor: "#5800AB",
-          borderWidth: 2,
-          tension: 0.35,
-          pointRadius: 0,
-          pointHoverRadius: 3,
+          borderRadius: 8,
+          maxBarThickness: 36,
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart as {
@@ -314,7 +312,7 @@ export default function AdminDashboard() {
               chartArea.bottom
             );
             gradient.addColorStop(0, "#5800AB4D");
-            gradient.addColorStop(1, "#5800AB00");
+            gradient.addColorStop(1, "#5800AB1A");
             return gradient;
           },
         },
@@ -409,8 +407,12 @@ export default function AdminDashboard() {
             />
             <KPI
               iconSrc="/attach_money.png"
-              label="Revenue (INR)"
-              value={new Intl.NumberFormat("en-IN").format(revenueINR)}
+              label="Revenue (MUR)"
+              value={new Intl.NumberFormat("en-MU", {
+                style: "currency",
+                currency: "MUR",
+                maximumFractionDigits: 2,
+              }).format(revenueINR)}
             />
           </div>
 
@@ -419,14 +421,14 @@ export default function AdminDashboard() {
             <div className="flex h-[460px] min-w-0 flex-col rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm lg:basis-[68.5%]">
               <div className="flex items-start justify-between p-4 pb-0">
                 <div>
-                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">Subscriptions</h3>
-                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Last 12 months</p>
+                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">Memberships</h3>
+                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Last 12 months by membership date</p>
                 </div>
                 <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all statistic</button>
               </div>
 
               <div className="h-[349px] p-3">
-                <Line
+                <Bar
                   data={monthlyChartData}
                   options={{
                     responsive: true,
@@ -435,10 +437,10 @@ export default function AdminDashboard() {
                     scales: {
                       y: {
                         beginAtZero: true,
-                        suggestedMax: 500,
+                        suggestedMax: 50,
                         ticks: {
                           precision: 0,
-                          stepSize: 100,
+                          stepSize: 10,
                           color: "#94A3B8",
                           font: { size: 11, weight: 400 },
                         },
@@ -463,7 +465,14 @@ export default function AdminDashboard() {
                 <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
               </div>
               <MiniStat label="Conversion Rate" value={conversionRate} />
-              <MiniStat label="Total Revenue" value={new Intl.NumberFormat("en-IN").format(stats.totalRevenue)} />
+              <MiniStat
+                label="Total Revenue"
+                value={new Intl.NumberFormat("en-MU", {
+                  style: "currency",
+                  currency: "MUR",
+                  maximumFractionDigits: 2,
+                }).format(stats.totalRevenue)}
+              />
               <MiniStat label="Restaurants" value={stats.totalRestaurants} />
               <MiniStat label="Stores" value={stats.totalStores} />
             </div>
