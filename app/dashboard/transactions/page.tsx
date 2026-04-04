@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/table";
 
 type PaymentSource = "store" | "restaurant";
-
 type PaymentSessionRow = {
   id: string;
   sourceType: PaymentSource;
@@ -81,6 +80,17 @@ function formatText(value: string | null | undefined) {
   return value && value.trim().length > 0 ? value : "-";
 }
 
+function toLocalDateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getTransactionDate(row: PaymentSessionRow) {
+  return row.createdAt || row.updatedAt || row.verifiedAt;
+}
+
 function getSourceAccent(sourceType: PaymentSource) {
   return sourceType === "store"
     ? "border-sky-200 bg-sky-50 text-sky-700"
@@ -121,6 +131,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey(new Date()));
   const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
@@ -130,6 +141,7 @@ export default function TransactionsPage() {
       const { data, error } = await supabaseBrowser
         .from("payment_sessions")
         .select("*")
+        .in("status", ["PENDING", "VERIFIED_SUCCESS"])
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -193,6 +205,13 @@ export default function TransactionsPage() {
       const matchesTab = activeTab === "all" || row.sourceType === activeTab;
       if (!matchesTab) return false;
 
+      const transactionDate = getTransactionDate(row);
+      const parsedDate = transactionDate ? new Date(transactionDate) : null;
+      if (!parsedDate || Number.isNaN(parsedDate.getTime())) return false;
+      const rowDateKey = toLocalDateKey(parsedDate);
+
+      if (rowDateKey !== selectedDate) return false;
+
       if (!normalizedSearch) return true;
 
       const haystack = [
@@ -219,16 +238,17 @@ export default function TransactionsPage() {
 
       return haystack.includes(normalizedSearch);
     });
-  }, [rows, activeTab, searchTerm]);
+  }, [rows, activeTab, selectedDate, searchTerm]);
 
   const summary = useMemo(() => {
-    const stores = rows.filter((row) => row.sourceType === "store").length;
-    const restaurants = rows.filter((row) => row.sourceType === "restaurant").length;
-    const verifiedSuccess = rows.filter((row) => row.status === "VERIFIED_SUCCESS").length;
-    const pending = rows.filter((row) => row.status === "PENDING").length;
+    const stores = filteredRows.filter((row) => row.sourceType === "store").length;
+    const restaurants = filteredRows.filter((row) => row.sourceType === "restaurant").length;
+    const totalVerifiedAmount = filteredRows
+      .filter((row) => row.status === "VERIFIED_SUCCESS")
+      .reduce((total, row) => total + row.amountMajor, 0);
 
-    return { stores, restaurants, verifiedSuccess, pending };
-  }, [rows]);
+    return { stores, restaurants, totalVerifiedAmount };
+  }, [filteredRows]);
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
@@ -242,10 +262,13 @@ export default function TransactionsPage() {
         >
           <CardContent className="space-y-4 px-4 py-4 sm:px-5">
             <div className="grid gap-4 md:grid-cols-4">
-              <StatCard label="Total transactions" value={String(rows.length)} hint="All records from payment_sessions" />
+              <StatCard label="Total transactions" value={String(filteredRows.length)} hint="Filtered by selected date" />
               <StatCard label="Store transactions" value={String(summary.stores)} />
               <StatCard label="Restaurant transactions" value={String(summary.restaurants)} />
-              <StatCard label="Verified success" value={String(summary.verifiedSuccess)} hint={`${summary.pending} pending`} />
+              <StatCard
+                label="Total amount"
+                value={formatAmount(summary.totalVerifiedAmount, "MUR")}
+              />
             </div>
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -273,6 +296,13 @@ export default function TransactionsPage() {
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
+
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(event) => setSelectedDate(event.target.value || toLocalDateKey(new Date()))}
+                  className="h-10 min-w-[160px] rounded-xl border-slate-200 bg-white text-sm"
+                />
 
                 <Button
                   className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]"
