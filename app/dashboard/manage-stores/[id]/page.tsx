@@ -260,8 +260,9 @@ export default function StoreDetailPage() {
     return selectedStoreCategories.length ? selectedStoreCategories.join(", ") : null;
   }, [store, categoryOptions, selectedStoreCategories]);
 
-  useEffect(() => {
-    const fetchStore = async () => {
+  // Function to refresh store data (can be called manually)
+  const refreshStoreData = async () => {
+    try {
       const { data, error } = await supabaseBrowser
         .from("stores")
         .select("*")
@@ -274,8 +275,19 @@ export default function StoreDetailPage() {
           title: "Failed to load store",
           description: error.message,
         });
+        console.error("❌ Fetch error:", error);
         return;
       }
+
+      console.log("✅ Store data fetched from Supabase:", {
+        id: data.id,
+        name: data.name,
+        cover_image_url: data.cover_image_url,
+        cover_media_url: data.cover_media_url,
+        cover_media_type: data.cover_media_type,
+        logo_url: data.logo_url,
+        gallery_urls: data.gallery_urls,
+      });
 
       setStore(data);
       setStoreOriginal(data);
@@ -291,9 +303,15 @@ export default function StoreDetailPage() {
         !Array.isArray(data.hours) &&
         Object.keys(data.hours).length > 0;
       setWeekEnabled(hasArrayHours || hasObjectHours);
-    };
+    } catch (err) {
+      console.error("❌ Failed to refresh store:", err);
+    }
+  };
 
-    fetchStore();
+  useEffect(() => {
+    if (id) {
+      refreshStoreData();
+    }
   }, [id]);
 
   useEffect(() => {
@@ -554,7 +572,9 @@ export default function StoreDetailPage() {
       // ✅ Step 1: Delete removed images from storage
       const urlsToDelete: string[] = [];
       if (logoToDelete && store.logo_url) urlsToDelete.push(store.logo_url);
-      if (coverToDelete && store.cover_image_url) urlsToDelete.push(store.cover_image_url);
+      if (coverToDelete && (store.cover_image_url || store.cover_media_url)) {
+        urlsToDelete.push(store.cover_image_url || store.cover_media_url);
+      }
       if (galleryToDelete.length > 0) urlsToDelete.push(...galleryToDelete);
 
       if (urlsToDelete.length > 0) {
@@ -603,6 +623,9 @@ export default function StoreDetailPage() {
         ...(store.gallery_urls || []).filter((url: string) => !galleryToDelete.includes(url)),
         ...newGalleryUrls,
       ];
+
+      // ✅ Determine cover media type (for consistency with add page)
+      const coverMediaType: "image" | "video" | null = finalCoverUrl ? "image" : null;
 
       const tagsArray =
         typeof store.tags === "string"
@@ -667,9 +690,11 @@ export default function StoreDetailPage() {
         is_active: !!store.is_active,
         is_featured: !!store.is_featured,
 
-        // ✅ Updated images
+        // ✅ Updated images (matching add page structure)
         logo_url: finalLogoUrl || null,
         cover_image_url: finalCoverUrl || null,
+        cover_media_url: finalCoverUrl || null, // Also set cover_media_url for consistency
+        cover_media_type: coverMediaType,
         gallery_urls: finalGalleryUrls,
       };
 
@@ -798,10 +823,18 @@ export default function StoreDetailPage() {
         lng: payload.lng,
         logo_url: finalLogoUrl,
         cover_image_url: finalCoverUrl,
+        cover_media_url: finalCoverUrl,
+        cover_media_type: coverMediaType,
         gallery_urls: finalGalleryUrls,
       };
       setStore(merged);
       setStoreOriginal(merged);
+      
+      // Log the saved cover image URL for debugging
+      console.log("✅ Store saved successfully. Cover Image URL:", finalCoverUrl);
+      console.log("✅ Cover Media URL:", finalCoverUrl);
+      console.log("✅ Cover Media Type:", coverMediaType);
+      
       catalogueApi.replaceCatalogue(mappedCatalogue);
       catalogueApi.clearDeletedTracking();
       setCatalogueOriginal(mappedCatalogue);
@@ -811,6 +844,11 @@ export default function StoreDetailPage() {
       setGalleryToAdd([]);
       setLogoToDelete(false);
       setCoverToDelete(false);
+      
+      // Verify data was persisted by fetching fresh from Supabase
+      setTimeout(() => {
+        refreshStoreData();
+      }, 500);
       setGalleryToDelete([]);
 
       setSaving(false);
