@@ -26,8 +26,10 @@ type PaymentSessionRow = {
   id: string;
   sourceType: PaymentSource;
   sourceId: string;
+  sourceName: string | null;
+  sourceLocation: string | null;
   paymentProvider: string;
-  paymentContext: "BOOKING" | "BILL_PAYMENT";
+  paymentContext: "BOOKING" | "BILL_PAYMENT" | "MEMBERSHIP";
   contextReferenceId: string | null;
   userId: string;
   merchantTrace: string;
@@ -141,7 +143,6 @@ export default function TransactionsPage() {
       const { data, error } = await supabaseBrowser
         .from("payment_sessions")
         .select("*")
-        .in("status", ["PENDING", "VERIFIED_SUCCESS"])
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -155,16 +156,116 @@ export default function TransactionsPage() {
         return;
       }
 
+      const storeIdSet = new Set<string>();
+      const restaurantIdSet = new Set<string>();
+
+      (data || []).forEach((item: any) => {
+        if (item.store_id) {
+          storeIdSet.add(item.store_id);
+        }
+
+        if (item.restaurant_id) {
+          restaurantIdSet.add(item.restaurant_id);
+        }
+
+        if (!item.context_reference_id) {
+          return;
+        }
+
+        if (item.payment_context === "BOOKING") {
+          restaurantIdSet.add(item.context_reference_id);
+        }
+
+        if (item.payment_context === "BILL_PAYMENT") {
+          storeIdSet.add(item.context_reference_id);
+          restaurantIdSet.add(item.context_reference_id);
+        }
+      });
+
+      const storeIds = Array.from(storeIdSet);
+      const restaurantIds = Array.from(restaurantIdSet);
+
+      const [storesResult, restaurantsResult] = await Promise.all([
+        storeIds.length > 0
+          ? supabaseBrowser
+              .from("stores")
+              .select("id,name,city,location_name")
+              .in("id", storeIds)
+          : Promise.resolve({ data: [], error: null }),
+        restaurantIds.length > 0
+          ? supabaseBrowser
+              .from("restaurants")
+              .select("id,name,city,area")
+              .in("id", restaurantIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (storesResult.error || restaurantsResult.error) {
+        showToast({
+          type: "error",
+          title: "Source data missing",
+          description:
+            storesResult.error?.message ||
+            restaurantsResult.error?.message ||
+            "Failed to load source entities",
+        });
+      }
+
+      const storeMap = new Map<string, { name: string | null; location: string | null }>();
+      const restaurantMap = new Map<string, { name: string | null; location: string | null }>();
+
+      (storesResult.data || []).forEach((store: any) => {
+        const location = [store.location_name, store.city].filter(Boolean).join(", ");
+        storeMap.set(store.id, {
+          name: store.name || null,
+          location: location || null,
+        });
+      });
+
+      (restaurantsResult.data || []).forEach((restaurant: any) => {
+        const location = [restaurant.area, restaurant.city].filter(Boolean).join(", ");
+        restaurantMap.set(restaurant.id, {
+          name: restaurant.name || null,
+          location: location || null,
+        });
+      });
+
       const nextRows: PaymentSessionRow[] = (data || [])
-        .filter((item: any) => Boolean(item.store_id || item.restaurant_id))
         .map((item: any) => {
-          const sourceType: PaymentSource = item.store_id ? "store" : "restaurant";
-          const sourceId = item.store_id || item.restaurant_id;
+          let sourceType: PaymentSource | null = null;
+          let sourceId: string | null = null;
+
+          if (item.store_id) {
+            sourceType = "store";
+            sourceId = item.store_id;
+          } else if (item.restaurant_id) {
+            sourceType = "restaurant";
+            sourceId = item.restaurant_id;
+          } else if (item.context_reference_id && item.payment_context === "BOOKING") {
+            sourceType = "restaurant";
+            sourceId = item.context_reference_id;
+          } else if (item.context_reference_id && item.payment_context === "BILL_PAYMENT") {
+            if (storeMap.has(item.context_reference_id)) {
+              sourceType = "store";
+              sourceId = item.context_reference_id;
+            } else if (restaurantMap.has(item.context_reference_id)) {
+              sourceType = "restaurant";
+              sourceId = item.context_reference_id;
+            }
+          }
+
+          if (!sourceType || !sourceId) {
+            return null;
+          }
+
+          const sourceMeta = sourceType === "store" ? storeMap.get(sourceId) : restaurantMap.get(sourceId);
 
           return {
             id: item.id,
             sourceType,
             sourceId,
+            sourceName: sourceMeta?.name || null,
+            sourceLocation: sourceMeta?.location || null,
             paymentProvider: item.payment_provider,
             paymentContext: item.payment_context,
             contextReferenceId: item.context_reference_id,
@@ -189,7 +290,8 @@ export default function TransactionsPage() {
             createdAt: item.created_at,
             updatedAt: item.updated_at,
           };
-        });
+        })
+        .filter((item: PaymentSessionRow | null): item is PaymentSessionRow => Boolean(item));
 
       setRows(nextRows);
       setLoading(false);
@@ -244,7 +346,7 @@ export default function TransactionsPage() {
     const stores = filteredRows.filter((row) => row.sourceType === "store").length;
     const restaurants = filteredRows.filter((row) => row.sourceType === "restaurant").length;
     const totalVerifiedAmount = filteredRows
-      .filter((row) => row.status === "VERIFIED_SUCCESS")
+      .filter((row) => row.status === "VERIFIED_SUCCESS" || row.status === "FINALIZED")
       .reduce((total, row) => total + row.amountMajor, 0);
 
     return { stores, restaurants, totalVerifiedAmount };
@@ -347,7 +449,11 @@ export default function TransactionsPage() {
                             >
                               {SOURCE_LABELS[row.sourceType]}
                             </Badge>
+                            <div className="mt-2 text-[13px] font-medium leading-5 text-slate-900">
+                              {formatText(row.sourceName)}
+                            </div>
                             <div className="mt-2 break-all text-xs leading-5 text-slate-500">{row.sourceId}</div>
+                            <div className="mt-1 text-xs leading-5 text-slate-400">{formatText(row.sourceLocation)}</div>
                           </TableCell>
 
                           <TableCell className="w-[220px] whitespace-normal px-4 py-4 align-top">
@@ -378,7 +484,7 @@ export default function TransactionsPage() {
                                 variant="outline"
                                 className={cn(
                                   "rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em]",
-                                  row.status === "VERIFIED_SUCCESS"
+                                  row.status === "VERIFIED_SUCCESS" || row.status === "FINALIZED"
                                     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                                     : row.status === "PENDING"
                                       ? "border-amber-200 bg-amber-50 text-amber-700"
