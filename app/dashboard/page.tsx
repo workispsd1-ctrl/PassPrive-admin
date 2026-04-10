@@ -159,7 +159,7 @@ export default function AdminDashboard() {
         const { data: transactionData } = await supabaseBrowser
           .from("payment_sessions")
           .select("amount_major")
-          .eq("status", "VERIFIED_SUCCESS");
+          .in("status", ["VERIFIED_SUCCESS", "FINALIZED"]);
 
         (transactionData as any[] | null)?.forEach((transaction) => {
           totalRevenue += parseAmount(transaction.amount_major);
