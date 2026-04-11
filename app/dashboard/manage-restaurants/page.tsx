@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import { Plus } from "lucide-react";
 import { RestaurantTable } from "@/components/restaurantComponents/RestaurantTable";
+import { fetchRestaurantsPage, type RestaurantFlatRecord } from "@/lib/restaurantAdmin";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -85,12 +84,12 @@ export default function RestaurantsPage() {
   const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [restaurants, setRestaurants] = useState<RestaurantFlatRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(ITEMS_PER_PAGE);
-  const [refresh, setRefresh] = useState<any>(null);
+  const [refresh, setRefresh] = useState<number | null>(null);
 
   const debouncedSearch = useDebounced(searchTerm);
 
@@ -99,36 +98,27 @@ export default function RestaurantsPage() {
   useEffect(() => {
     const fetchRestaurants = async () => {
       setLoading(true);
+      try {
+        const { data, count } = await fetchRestaurantsPage({
+          page,
+          limit,
+          searchTerm: debouncedSearch,
+        });
 
-      let query = supabaseBrowser
-        .from("restaurants")
-        .select("*", { count: "exact" })
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .range((page - 1) * limit, page * limit - 1);
-
-      if (debouncedSearch) {
-        query = query.or(
-          `name.ilike.%${debouncedSearch}%,city.ilike.%${debouncedSearch}%,area.ilike.%${debouncedSearch}%`
-        );
-      }
-
-      const { data, error, count } = await query;
-
-      if (error) {
+        setRestaurants(data);
+        setTotal(count);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
         showToast({
           type: "error",
           title: "Failed to load restaurants",
-          description: error.message,
+          description: message,
         });
         setRestaurants([]);
         setTotal(0);
-      } else {
-        setRestaurants(data || []);
-        setTotal(count || 0);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchRestaurants();
