@@ -1,7 +1,12 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 export const RESTAURANT_STORAGE_BUCKET = "restaurant";
 export const RESTAURANT_STORAGE_PREFIX = "restaurant";
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
 
 export const DAY_NAMES = [
   "Monday",
@@ -826,4 +831,21 @@ export async function replaceRestaurantRelations(
       buildSubscriptionRows(restaurantId, input.subscription)
     ),
   ]);
+}
+
+export async function deleteRestaurantCascade(restaurantId: string) {
+  const token = await getTokenClient();
+  if (!token) throw new Error("Missing session. Please sign in again.");
+
+  const response = await fetch(`${API_BASE}/api/restaurants/${restaurantId}?hard=true`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error || body?.note || "Failed to delete restaurant");
+  }
 }
