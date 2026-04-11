@@ -1,6 +1,6 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-export const RESTAURANT_STORAGE_BUCKET = "restaurants";
+export const RESTAURANT_STORAGE_BUCKET = "restaurant";
 export const RESTAURANT_STORAGE_PREFIX = "restaurant";
 
 export const DAY_NAMES = [
@@ -517,7 +517,7 @@ export function extractStoragePath(publicUrl: string): string | null {
   const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
   if (objectPublicMatch?.[1]) return objectPublicMatch[1];
 
-  const bucketMatch = publicUrl.match(/\/restaurants\/(.+)$/);
+  const bucketMatch = publicUrl.match(/\/restaurant\/(.+)$/);
   return bucketMatch?.[1] ?? null;
 }
 
