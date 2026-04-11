@@ -1,12 +1,7 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { getTokenClient } from "@/lib/getTokenClient";
 
 export const RESTAURANT_STORAGE_BUCKET = "restaurant";
 export const RESTAURANT_STORAGE_PREFIX = "restaurant";
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
 
 export const DAY_NAMES = [
   "Monday",
@@ -834,18 +829,43 @@ export async function replaceRestaurantRelations(
 }
 
 export async function deleteRestaurantCascade(restaurantId: string) {
-  const token = await getTokenClient();
-  if (!token) throw new Error("Missing session. Please sign in again.");
+  const mediaResult = await supabaseBrowser
+    .from("restaurant_media_assets")
+    .select("file_url")
+    .eq("restaurant_id", restaurantId);
 
-  const response = await fetch(`${API_BASE}/api/restaurants/${restaurantId}?hard=true`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  if (mediaResult.error) throw mediaResult.error;
 
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(body?.error || body?.note || "Failed to delete restaurant");
+  const mediaUrls = (mediaResult.data || [])
+    .map((row) => asString(row.file_url))
+    .filter((value): value is string => Boolean(value));
+
+  if (mediaUrls.length) {
+    await deleteRestaurantImages(mediaUrls);
   }
+
+  const relationTables = [
+    "restaurant_reviews",
+    "restaurant_subscriptions",
+    "restaurant_offers",
+    "restaurant_opening_hours",
+    "restaurant_media_assets",
+    "restaurant_tags",
+  ];
+
+  for (const table of relationTables) {
+    const { error } = await supabaseBrowser
+      .from(table)
+      .delete()
+      .eq("restaurant_id", restaurantId);
+
+    if (error) throw error;
+  }
+
+  const { error: restaurantDeleteError } = await supabaseBrowser
+    .from("restaurants")
+    .delete()
+    .eq("id", restaurantId);
+
+  if (restaurantDeleteError) throw restaurantDeleteError;
 }
