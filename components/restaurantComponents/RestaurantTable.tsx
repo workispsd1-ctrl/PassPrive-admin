@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
+import { type RestaurantFlatRecord } from "@/lib/restaurantAdmin";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -22,25 +23,15 @@ async function getAccessToken() {
   return token;
 }
 
-interface Restaurant {
-  id: string;
-  name: string;
-  city: string;
-  area: string;
-  rating: number | null;
-  cost_for_two: number | null;
-  created_at: string;
-}
-
 interface Props {
-  restaurants: Restaurant[];
+  restaurants: Pick<RestaurantFlatRecord, "id" | "name" | "city" | "area" | "rating" | "cost_for_two">[];
   page: number;
   totalPages: number;
   totalRecord: number;
   limit: number;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
-  setLimit: React.Dispatch<React.SetStateAction<number>>;
-  setRefresh: (v: any) => void;
+  setPage: Dispatch<SetStateAction<number>>;
+  setLimit: Dispatch<SetStateAction<number>>;
+  setRefresh: (value: number) => void;
   onRowClick?: (id: string) => void;
 }
 
@@ -57,8 +48,8 @@ export const RestaurantTable = ({
 }: Props) => {
   const router = useRouter();
 
-  const [selected, setSelected] = useState<Restaurant | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<Restaurant | null>(null);
+  const [selected, setSelected] = useState<Props["restaurants"][number] | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Props["restaurants"][number] | null>(null);
   const [loading, setLoading] = useState(false);
 
   /* -----------------------------------------
@@ -90,11 +81,12 @@ export const RestaurantTable = ({
 
       showToast({ type: "success", title: "Restaurant deleted" });
       setRefresh(Date.now());
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to delete restaurant";
       showToast({
         type: "error",
         title: "Delete failed",
-        description: error?.message || "Failed to delete restaurant",
+        description: message,
       });
     } finally {
       setLoading(false);
