@@ -29,9 +29,9 @@ import {
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
 const OFFER_TYPE_OPTIONS = [
-  { value: "PERCENTAGE", label: "Percentage" },
-  { value: "FLAT", label: "Flat" },
-  { value: "CASHBACK", label: "Cashback" },
+  { value: "percentage", label: "Percentage" },
+  { value: "flat", label: "Flat" },
+  { value: "cover_discount", label: "Cover discount" },
 ] as const;
 const PARTNER_ROLE = "restaurantpartner" as const;
 const API_BASE =
@@ -123,8 +123,9 @@ function defaultOffer(): RestaurantOfferInput {
 }
 
 function offerAmountLabel(offerType?: string | null) {
-  if (offerType === "PERCENTAGE") return "Discount percentage";
-  if (offerType === "CASHBACK") return "Cashback amount";
+  const normalizedType = offerType?.toLowerCase();
+  if (normalizedType === "percentage" || normalizedType === "percent") return "Discount percentage";
+  if (normalizedType === "cover_discount") return "Cover discount amount";
   return "Flat amount";
 }
 

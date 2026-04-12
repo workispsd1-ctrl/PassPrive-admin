@@ -139,6 +139,23 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function toDateTimeLocal(value: unknown): string | null {
+  const raw = asString(value);
+  if (!raw) return null;
+
+  // Already in datetime-local format (or with seconds) from previous edits.
+  const directMatch = raw.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+  if (directMatch?.[1]) return directMatch[1];
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+  return local;
+}
+
 function asNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
@@ -288,20 +305,30 @@ function mediaUrls(rows: DatabaseRow[], assetType: string): string[] {
 }
 
 function normalizeOfferRow(row: DatabaseRow): RestaurantOfferInput {
+  const metadata =
+    row?.metadata && typeof row.metadata === "object"
+      ? (row.metadata as Record<string, unknown>)
+      : null;
+  const uiOfferType = typeof metadata?.offer_type_ui === "string" ? metadata.offer_type_ui : null;
+  const normalizedOfferType = (() => {
+    const rawOfferType = asString(row?.offer_type);
+    if (rawOfferType === "PERCENTAGE" || rawOfferType === "PERCENT") return "percentage";
+    if (rawOfferType === "FLAT") return "flat";
+    if (rawOfferType === "CASHBACK") return "cover_discount";
+    return rawOfferType;
+  })();
+
   return {
     title: asString(row?.title) ?? "",
     description: asString(row?.description),
     badge_text: asString(row?.badge_text),
-    offer_type: asString(row?.offer_type),
+    offer_type: uiOfferType || normalizedOfferType,
     discount_value: asNumber(row?.discount_value),
     min_spend: asNumber(row?.min_spend),
-    start_at: asString(row?.start_at),
-    end_at: asString(row?.end_at),
+    start_at: toDateTimeLocal(row?.start_at),
+    end_at: toDateTimeLocal(row?.end_at),
     is_active: row?.is_active !== false,
-    metadata:
-      row?.metadata && typeof row.metadata === "object"
-        ? (row.metadata as Record<string, unknown>)
-        : null,
+    metadata,
   };
 }
 
@@ -324,8 +351,8 @@ function pickActiveSubscription(rows: DatabaseRow[]): RestaurantSubscriptionInpu
     time_slot_enabled: asBoolean(active?.time_slot_enabled),
     repeat_rewards_enabled: asBoolean(active?.repeat_rewards_enabled),
     dish_discounts_enabled: asBoolean(active?.dish_discounts_enabled),
-    starts_at: asString(active?.starts_at),
-    expires_at: asString(active?.expires_at),
+    starts_at: toDateTimeLocal(active?.starts_at),
+    expires_at: toDateTimeLocal(active?.expires_at),
   };
 }
 
@@ -372,8 +399,8 @@ export function normalizeRestaurantRecord({
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
     ad_priority: asNumber(restaurant?.ad_priority),
-    ad_starts_at: asString(restaurant?.ad_starts_at),
-    ad_ends_at: asString(restaurant?.ad_ends_at),
+    ad_starts_at: toDateTimeLocal(restaurant?.ad_starts_at),
+    ad_ends_at: toDateTimeLocal(restaurant?.ad_ends_at),
     ad_badge_text: asString(restaurant?.ad_badge_text),
     booking_terms: asStringArray(restaurant?.booking_terms),
     cuisines: tagValues(tags, "cuisine"),
@@ -763,13 +790,29 @@ function buildOfferRows(restaurantId: string, offers: RestaurantOfferInput[] | u
       title: asString(offer.title) ?? "",
       description: asString(offer.description),
       badge_text: asString(offer.badge_text),
-      offer_type: asString(offer.offer_type),
+      offer_type:
+        (() => {
+          const offerType = asString(offer.offer_type)?.toLowerCase();
+          if (offerType === "percentage" || offerType === "percent") return "percentage";
+          if (offerType === "flat") return "flat";
+          if (offerType === "cashback" || offerType === "cover_discount") return "cover_discount";
+          return offerType;
+        })(),
       discount_value: asNumber(offer.discount_value),
       min_spend: asNumber(offer.min_spend),
       start_at: asString(offer.start_at),
       end_at: asString(offer.end_at),
       is_active: offer.is_active !== false,
-      metadata: normalizeMetadata(offer.metadata),
+      metadata: (() => {
+        const metadata = { ...(normalizeMetadata(offer.metadata) || {}) };
+        const offerType = asString(offer.offer_type);
+        if (offerType && offerType.toLowerCase() === "cover_discount") {
+          metadata.offer_type_ui = "cover_discount";
+        } else {
+          delete metadata.offer_type_ui;
+        }
+        return metadata;
+      })(),
     }));
 }
 
