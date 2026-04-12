@@ -256,6 +256,31 @@ export default function RestaurantDetailPage() {
 
   const handleSave = async () => {
     if (!restaurant) return;
+
+    if (
+      restaurant.modification_available &&
+      (!restaurant.modification_cutoff_minutes || restaurant.modification_cutoff_minutes <= 0)
+    ) {
+      showToast({
+        type: "error",
+        title: "Invalid modification cutoff",
+        description: "Set Modification Cutoff to a value greater than 0.",
+      });
+      return;
+    }
+
+    if (
+      restaurant.cancellation_available &&
+      (!restaurant.cancellation_cutoff_minutes || restaurant.cancellation_cutoff_minutes <= 0)
+    ) {
+      showToast({
+        type: "error",
+        title: "Invalid cancellation cutoff",
+        description: "Set Cancellation Cutoff to a value greater than 0.",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -321,7 +346,12 @@ export default function RestaurantDetailPage() {
       setEditMode(false);
       showToast({ type: "success", title: "Restaurant updated" });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to save restaurant";
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : "Failed to save restaurant";
       showToast({
         type: "error",
         title: "Failed to save restaurant",
@@ -492,15 +522,15 @@ export default function RestaurantDetailPage() {
           <Field label="Advance Booking Days">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.advance_booking_days ?? ""} onChange={(e) => setRestaurant({ ...restaurant, advance_booking_days: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <ToggleField label="Modification Available" checked={restaurant.modification_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, modification_available: value })} />
+          <ToggleField label="Modification Available" checked={restaurant.modification_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, modification_available: value, modification_cutoff_minutes: value ? restaurant.modification_cutoff_minutes : null })} />
           <Field label="Modification Cutoff">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.modification_cutoff_minutes ?? ""} onChange={(e) => setRestaurant({ ...restaurant, modification_cutoff_minutes: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <ToggleField label="Cancellation Available" checked={restaurant.cancellation_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cancellation_available: value })} />
+          <ToggleField label="Cancellation Available" checked={restaurant.cancellation_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cancellation_available: value, cancellation_cutoff_minutes: value ? restaurant.cancellation_cutoff_minutes : null })} />
           <Field label="Cancellation Cutoff">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.cancellation_cutoff_minutes ?? ""} onChange={(e) => setRestaurant({ ...restaurant, cancellation_cutoff_minutes: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <ToggleField label="Cover Charge Enabled" checked={restaurant.cover_charge_enabled} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cover_charge_enabled: value })} />
+          <ToggleField label="Cover Charge Enabled" checked={restaurant.cover_charge_enabled} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cover_charge_enabled: value, cover_charge_amount: value ? restaurant.cover_charge_amount : null })} />
           <Field label="Cover Charge Amount">
             <Input className={inputClass} type="number" step="0.01" disabled={!editMode} value={restaurant.cover_charge_amount ?? ""} onChange={(e) => setRestaurant({ ...restaurant, cover_charge_amount: e.target.value ? Number(e.target.value) : null })} />
           </Field>
@@ -635,7 +665,7 @@ const Grid = ({ children }: { children: ReactNode }) => (
 const ReadOnly = ({ label, value }: { label: string; value: unknown }) => (
   <div>
     <label className="text-xs text-gray-500 uppercase">{label}</label>
-    <div className="text-sm font-medium">{value ?? "-"}</div>
+    <div className="text-sm font-medium">{typeof value === "string" || typeof value === "number" ? value : value == null ? "-" : String(value)}</div>
   </div>
 );
 

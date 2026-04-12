@@ -162,6 +162,14 @@ function asNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function asNumberFromKeys(row: DatabaseRow, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = asNumber(row?.[key]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
 function asBoolean(value: unknown, fallback = false): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
@@ -242,8 +250,27 @@ function computeReviewSummary(reviews: DatabaseRow[]) {
 function dayNameFromValue(dayOfWeek: unknown): DayName | null {
   if (typeof dayOfWeek === "string") {
     const normalized = dayOfWeek.trim().toLowerCase();
+    const numericDay = Number(normalized);
+    if (Number.isFinite(numericDay)) {
+      if (numericDay >= 1 && numericDay <= 7) return DAY_NAMES[numericDay - 1];
+      if (numericDay === 0) return "Sunday";
+    }
     const match = DAY_NAMES.find((day) => day.toLowerCase() === normalized);
     if (match) return match;
+
+    const aliases: Record<string, DayName> = {
+      mon: "Monday",
+      tue: "Tuesday",
+      tues: "Tuesday",
+      wed: "Wednesday",
+      thu: "Thursday",
+      thur: "Thursday",
+      thurs: "Thursday",
+      fri: "Friday",
+      sat: "Saturday",
+      sun: "Sunday",
+    };
+    if (aliases[normalized]) return aliases[normalized];
   }
 
   if (typeof dayOfWeek === "number" && Number.isFinite(dayOfWeek)) {
@@ -262,6 +289,19 @@ function emptyOpeningHours(): Record<string, DayHours> {
   }, {});
 }
 
+function normalizeTimeForHourSlot(value: unknown): string {
+  const raw = asString(value);
+  if (!raw) return "";
+
+  // Supports DB time formats like HH:mm:ss or HH:mm.
+  const hhmmMatch = raw.match(/^(\d{2}):(\d{2})/);
+  if (hhmmMatch) return `${hhmmMatch[1]}:${hhmmMatch[2]}`;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return `${String(parsed.getHours()).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`;
+}
+
 function normalizeOpeningHours(rows: DatabaseRow[]): Record<string, DayHours> {
   const result = emptyOpeningHours();
 
@@ -270,8 +310,8 @@ function normalizeOpeningHours(rows: DatabaseRow[]): Record<string, DayHours> {
     if (!dayName) continue;
 
     const normalized: DayHours = {
-      open: asString(row?.open_time) ?? "",
-      close: asString(row?.close_time) ?? "",
+      open: normalizeTimeForHourSlot(row?.open_time),
+      close: normalizeTimeForHourSlot(row?.close_time),
       closed: Boolean(row?.is_closed),
     };
 
@@ -368,6 +408,7 @@ export function normalizeRestaurantRecord({
   const normalizedSubscription = pickActiveSubscription(subscriptions);
   const normalizedOffers = sortByOrder(offers).map(normalizeOfferRow);
   const ratings = computeReviewSummary(reviews);
+  const restaurantRow = restaurant as DatabaseRow;
 
   return {
     id: String(restaurant?.id || ""),
@@ -387,14 +428,14 @@ export function normalizeRestaurantRecord({
     is_pure_veg: asBoolean(restaurant?.is_pure_veg),
     booking_enabled: restaurant?.booking_enabled !== false,
     avg_duration_minutes: asNumber(restaurant?.avg_duration_minutes),
-    max_bookings_per_slot: asNumber(restaurant?.max_bookings_per_slot),
+    max_bookings_per_slot: asNumberFromKeys(restaurantRow, ["max_bookings_per_slot", "max_booking_per_slot"]),
     advance_booking_days: asNumber(restaurant?.advance_booking_days),
     modification_available: asBoolean(restaurant?.modification_available),
-    modification_cutoff_minutes: asNumber(restaurant?.modification_cutoff_minutes),
+    modification_cutoff_minutes: asNumberFromKeys(restaurantRow, ["modification_cutoff_minutes", "modification_cutoff"]),
     cancellation_available: asBoolean(restaurant?.cancellation_available),
-    cancellation_cutoff_minutes: asNumber(restaurant?.cancellation_cutoff_minutes),
+    cancellation_cutoff_minutes: asNumberFromKeys(restaurantRow, ["cancellation_cutoff_minutes", "cancellation_cutoff"]),
     cover_charge_enabled: asBoolean(restaurant?.cover_charge_enabled),
-    cover_charge_amount: asNumber(restaurant?.cover_charge_amount),
+    cover_charge_amount: asNumberFromKeys(restaurantRow, ["cover_charge_amount", "cover_amount"]),
     created_at: asString(restaurant?.created_at),
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
@@ -614,6 +655,16 @@ export async function deleteRestaurantImages(publicUrls: string[]) {
 }
 
 export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>) {
+  const modificationCutoff = input.modification_available
+    ? asNumber(input.modification_cutoff_minutes)
+    : null;
+  const cancellationCutoff = input.cancellation_available
+    ? asNumber(input.cancellation_cutoff_minutes)
+    : null;
+  const coverChargeAmount = input.cover_charge_enabled
+    ? asNumber(input.cover_charge_amount)
+    : null;
+
   return {
     name: asString(input.name) ?? "",
     phone: asString(input.phone),
@@ -634,11 +685,11 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     max_bookings_per_slot: asNumber(input.max_bookings_per_slot),
     advance_booking_days: asNumber(input.advance_booking_days),
     modification_available: Boolean(input.modification_available),
-    modification_cutoff_minutes: asNumber(input.modification_cutoff_minutes),
+    modification_cutoff_minutes: modificationCutoff,
     cancellation_available: Boolean(input.cancellation_available),
-    cancellation_cutoff_minutes: asNumber(input.cancellation_cutoff_minutes),
+    cancellation_cutoff_minutes: cancellationCutoff,
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
-    cover_charge_amount: asNumber(input.cover_charge_amount),
+    cover_charge_amount: coverChargeAmount,
     is_advertised: Boolean(input.is_advertised),
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
@@ -675,9 +726,9 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     avg_duration_minutes: asNumber(input.avg_duration_minutes),
     max_bookings_per_slot: asNumber(input.max_bookings_per_slot),
     advance_booking_days: asNumber(input.advance_booking_days),
-    modification_cutoff_minutes: asNumber(input.modification_cutoff_minutes),
-    cancellation_cutoff_minutes: asNumber(input.cancellation_cutoff_minutes),
-    cover_charge_amount: asNumber(input.cover_charge_amount),
+    modification_cutoff_minutes: input.modification_available ? asNumber(input.modification_cutoff_minutes) : null,
+    cancellation_cutoff_minutes: input.cancellation_available ? asNumber(input.cancellation_cutoff_minutes) : null,
+    cover_charge_amount: input.cover_charge_enabled ? asNumber(input.cover_charge_amount) : null,
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
