@@ -137,33 +137,39 @@ export async function syncStoreCatalogueAdmin(args: {
   const { storeId, categories, deletedCategoryIds, deletedItemIds } = args;
   const headers = await getAuthHeaders();
 
-  for (const itemId of deletedItemIds) {
-    await axios.delete(`${API_BASE}/api/store-catalogue/items/${itemId}`, { headers });
-  }
+  await Promise.all(
+    deletedItemIds.map((itemId) =>
+      axios.delete(`${API_BASE}/api/store-catalogue/items/${itemId}`, { headers })
+    )
+  );
 
-  for (const categoryId of deletedCategoryIds) {
-    await axios.delete(`${API_BASE}/api/store-catalogue/categories/${categoryId}`, { headers });
-  }
+  await Promise.all(
+    deletedCategoryIds.map((categoryId) =>
+      axios.delete(`${API_BASE}/api/store-catalogue/categories/${categoryId}`, { headers })
+    )
+  );
 
   const categoryIdMap = new Map<string, string>();
+  const sortedCategories = [...categories].sort((a, b) => a.sort_order - b.sort_order);
 
-  for (const category of categories.sort((a, b) => a.sort_order - b.sort_order)) {
-    const payload = {
-      store_id: storeId,
-      title: category.title,
-      starting_from: category.starting_from ?? null,
-      enabled: category.enabled,
-      sort_order: category.sort_order,
-    };
+  await Promise.all(
+    sortedCategories.map(async (category) => {
+      const payload = {
+        store_id: storeId,
+        title: category.title,
+        starting_from: category.starting_from ?? null,
+        enabled: category.enabled,
+        sort_order: category.sort_order,
+      };
 
-    if (category.id) {
-      await axios.put(
-        `${API_BASE}/api/store-catalogue/categories/${category.id}`,
-        payload,
-        { headers }
-      );
-      categoryIdMap.set(category.id, category.id);
-    } else {
+      if (category.id) {
+        await axios.put(`${API_BASE}/api/store-catalogue/categories/${category.id}`, payload, {
+          headers,
+        });
+        categoryIdMap.set(category.id, category.id);
+        return;
+      }
+
       const response = await axios.post(`${API_BASE}/api/store-catalogue/categories`, payload, {
         headers,
       });
@@ -171,42 +177,46 @@ export async function syncStoreCatalogueAdmin(args: {
       const createdId = created?.id ? String(created.id) : "";
       if (!createdId) throw new Error("Category created without id.");
       if (category.clientId) categoryIdMap.set(category.clientId, createdId);
-    }
-  }
+    })
+  );
 
-  for (const category of categories.sort((a, b) => a.sort_order - b.sort_order)) {
-    const resolvedCategoryId =
-      category.id ||
-      (category.clientId ? categoryIdMap.get(category.clientId) : undefined);
+  await Promise.all(
+    sortedCategories.flatMap((category) => {
+      const resolvedCategoryId =
+        category.id ||
+        (category.clientId ? categoryIdMap.get(category.clientId) : undefined);
 
-    if (!resolvedCategoryId) {
-      throw new Error(`Missing category id for ${category.title}.`);
-    }
-
-    for (const item of category.items.sort((a, b) => a.sort_order - b.sort_order)) {
-      const payload = {
-        store_id: storeId,
-        category_id: resolvedCategoryId,
-        title: item.title,
-        description: item.description?.trim() || null,
-        price: item.price ?? null,
-        image_url: item.image_url?.trim() || null,
-        sku: item.sku?.trim() || null,
-        sort_order: item.sort_order,
-        is_available: item.is_available,
-        item_type: item.item_type,
-        is_billable: item.is_billable,
-        duration_minutes: item.duration_minutes ?? null,
-        supports_slot_booking: item.supports_slot_booking,
-      };
-
-      if (item.id) {
-        await axios.put(`${API_BASE}/api/store-catalogue/items/${item.id}`, payload, {
-          headers,
-        });
-      } else {
-        await axios.post(`${API_BASE}/api/store-catalogue/items`, payload, { headers });
+      if (!resolvedCategoryId) {
+        throw new Error(`Missing category id for ${category.title}.`);
       }
-    }
-  }
+
+      return [...category.items]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((item) => {
+          const payload = {
+            store_id: storeId,
+            category_id: resolvedCategoryId,
+            title: item.title,
+            description: item.description?.trim() || null,
+            price: item.price ?? null,
+            image_url: item.image_url?.trim() || null,
+            sku: item.sku?.trim() || null,
+            sort_order: item.sort_order,
+            is_available: item.is_available,
+            item_type: item.item_type,
+            is_billable: item.is_billable,
+            duration_minutes: item.duration_minutes ?? null,
+            supports_slot_booking: item.supports_slot_booking,
+          };
+
+          if (item.id) {
+            return axios.put(`${API_BASE}/api/store-catalogue/items/${item.id}`, payload, {
+              headers,
+            });
+          }
+
+          return axios.post(`${API_BASE}/api/store-catalogue/items`, payload, { headers });
+        });
+    })
+  );
 }

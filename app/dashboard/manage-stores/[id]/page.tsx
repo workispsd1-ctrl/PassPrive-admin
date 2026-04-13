@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 
@@ -12,8 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   buildStorePayload,
+  deleteStoreImages,
+  fetchStoreDetail,
+  replaceStoreRelations,
   type StoreFlatRecord,
   type StoreOfferInput,
+  uploadStoreImages,
 } from "@/lib/storeAdmin";
 import {
   DropdownMenu,
@@ -141,19 +145,6 @@ const parseHours = (raw: unknown) => {
   return week;
 };
 
-const serializeHours = (week: Record<string, DayHours>) => {
-  return DAYS.map((day) => {
-    const d = week[day] || { open: "", close: "", closed: false };
-    const closed = !!d.closed || (!d.open && !d.close);
-
-    return {
-      day,
-      closed,
-      slots: closed ? [] : [{ open: d.open, close: d.close }],
-    };
-  });
-};
-
 const cleanObject = (obj: Record<string, unknown>) => {
   const out: Record<string, unknown> = {};
   Object.entries(obj).forEach(([k, v]) => {
@@ -163,42 +154,6 @@ const cleanObject = (obj: Record<string, unknown>) => {
   });
   return out;
 };
-
-function extractStoreItem(payload: unknown): StoreFlatRecord | null {
-  if (!payload || typeof payload !== "object") return null;
-  const record = payload as Record<string, unknown>;
-  const candidate = record.item ?? record.data ?? record.store ?? payload;
-  return candidate && typeof candidate === "object" ? (candidate as StoreFlatRecord) : null;
-}
-
-async function parseApiResponse(response: Response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return response.text();
-}
-
-async function getApiError(response: Response, fallback: string) {
-  const payload = await parseApiResponse(response).catch(() => null);
-
-  if (typeof payload === "string" && payload.trim()) return payload;
-  if (payload && typeof payload === "object") {
-    const record = payload as Record<string, unknown>;
-    for (const key of ["message", "error", "detail"]) {
-      const value = record[key];
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-
-  return fallback;
-}
-
-async function getAccessToken() {
-  const { data, error } = await supabaseBrowser.auth.getSession();
-  if (error) throw error;
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
-  return token;
-}
 
 const validateCatalogueForStoreType = (
   categories: CatalogueCategoryDraft[],
@@ -301,40 +256,28 @@ export default function StoreDetailPage() {
     return selectedStoreCategories.length ? selectedStoreCategories.join(", ") : null;
   }, [store, categoryOptions, selectedStoreCategories]);
 
+  const applyStoreState = (data: StoreFlatRecord) => {
+    setStore(data);
+    setStoreOriginal(data);
+
+    const parsed = parseHours(data.hours);
+    setOpeningHours(parsed);
+    setOpeningHoursOriginal(parsed);
+
+    const hasArrayHours = Array.isArray(data.hours) && data.hours.length > 0;
+    const hasObjectHours =
+      !!data.hours &&
+      typeof data.hours === "object" &&
+      !Array.isArray(data.hours) &&
+      Object.keys(data.hours).length > 0;
+    setWeekEnabled(hasArrayHours || hasObjectHours);
+  };
+
   // Function to refresh store data (can be called manually)
   const refreshStoreData = async () => {
     try {
-      const token = await getAccessToken();
-      const response = await fetch(`${API_BASE}/api/stores/${id}`, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(await getApiError(response, "Unable to load store details."));
-      }
-
-      const payload = await parseApiResponse(response);
-      const data = extractStoreItem(payload);
-      if (!data) throw new Error("Store payload missing item data.");
-
-      setStore(data);
-      setStoreOriginal(data);
-
-      const parsed = parseHours(data.hours);
-      setOpeningHours(parsed);
-      setOpeningHoursOriginal(parsed);
-
-      const hasArrayHours = Array.isArray(data.hours) && data.hours.length > 0;
-      const hasObjectHours =
-        !!data.hours &&
-        typeof data.hours === "object" &&
-        !Array.isArray(data.hours) &&
-        Object.keys(data.hours).length > 0;
-      setWeekEnabled(hasArrayHours || hasObjectHours);
+      const data = await fetchStoreDetail(String(id));
+      applyStoreState(data);
     } catch (err: unknown) {
       showToast({
         type: "error",
@@ -440,100 +383,6 @@ export default function StoreDetailPage() {
 
   /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
 
-  /**
-   * Extract storage path from Supabase public URL
-   * Example: https://xyz.supabase.co/storage/v1/object/public/stores/logo/123/abc.jpg
-   * Returns: logo/123/abc.jpg
-   */
-  const extractStoragePath = (url: string): string | null => {
-    try {
-      const match = url.match(/\/stores\/(.+)$/);
-      return match ? match[1] : null;
-    } catch {
-      return null;
-    }
-  };
-
-  /**
-   * Upload a single image to Supabase Storage
-   */
-  const uploadSingleImage = async (
-    storeId: string,
-    file: File,
-    type: "logo" | "cover" | "gallery"
-  ): Promise<string> => {
-    const ext = file.name.split(".").pop() || "jpg";
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).slice(2, 9);
-    const path = `${type}/${storeId}/${timestamp}-${random}.${ext}`;
-
-    const { error } = await supabaseBrowser.storage
-      .from("stores")
-      .upload(path, file);
-
-    if (error) throw error;
-
-    const { data } = supabaseBrowser.storage
-      .from("stores")
-      .getPublicUrl(path);
-
-    return data.publicUrl;
-  };
-
-  /**
-   * Upload multiple images to Supabase Storage
-   */
-  const uploadMultipleImages = async (
-    storeId: string,
-    files: File[],
-    type: "gallery"
-  ): Promise<string[]> => {
-    const urls: string[] = [];
-    const uploadedPaths: string[] = [];
-
-    try {
-      // Upload with concurrency limit of 3
-      const batchSize = 3;
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batch = files.slice(i, i + batchSize);
-        const batchPromises = batch.map(async (file) => {
-          const ext = file.name.split(".").pop() || "jpg";
-          const timestamp = Date.now();
-          const random = Math.random().toString(36).slice(2, 9);
-          const path = `${type}/${storeId}/${timestamp}-${random}.${ext}`;
-
-          const { error } = await supabaseBrowser.storage
-            .from("stores")
-            .upload(path, file);
-
-          if (error) throw error;
-
-          uploadedPaths.push(path);
-
-          const { data } = supabaseBrowser.storage
-            .from("stores")
-            .getPublicUrl(path);
-
-          return data.publicUrl;
-        });
-
-        const batchUrls = await Promise.all(batchPromises);
-        urls.push(...batchUrls);
-      }
-
-      return urls;
-    } catch (error) {
-      // Cleanup: delete successfully uploaded files
-      if (uploadedPaths.length > 0) {
-        await supabaseBrowser.storage
-          .from("stores")
-          .remove(uploadedPaths)
-          .catch(() => {}); // Silent fail on cleanup
-      }
-      throw error;
-    }
-  };
-
   const uploadCatalogueImage = async (
     storeId: string,
     categoryId: string,
@@ -550,20 +399,6 @@ export default function StoreDetailPage() {
 
     const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
     return data.publicUrl;
-  };
-
-  /**
-   * Delete images from Supabase Storage
-   */
-  const deleteImagesFromStorage = async (urls: string[]): Promise<void> => {
-    const paths = urls.map(extractStoragePath).filter(Boolean) as string[];
-    if (paths.length === 0) return;
-
-    const { error } = await supabaseBrowser.storage
-      .from("stores")
-      .remove(paths);
-
-    if (error) throw error;
   };
 
   const handleCancel = () => {
@@ -601,80 +436,39 @@ export default function StoreDetailPage() {
     setSaving(true);
 
     try {
-      // ✅ Step 1: Delete removed images from storage
       const urlsToDelete: string[] = [];
       if (logoToDelete && store.logo_url) urlsToDelete.push(store.logo_url);
-      if (coverToDelete && (store.cover_image_url || store.cover_media_url)) {
-        urlsToDelete.push(store.cover_image_url || store.cover_media_url);
+      if (coverToDelete) {
+        const coverUrlToDelete =
+          store.cover_media_type === "video" ? store.cover_media_url : store.cover_image_url;
+        if (coverUrlToDelete) urlsToDelete.push(coverUrlToDelete);
       }
       if (galleryToDelete.length > 0) urlsToDelete.push(...galleryToDelete);
 
       if (urlsToDelete.length > 0) {
-        try {
-          await deleteImagesFromStorage(urlsToDelete);
-        } catch (error: unknown) {
-          showToast({
-            type: "error",
-            title: "Failed to delete images",
-            description: error instanceof Error ? error.message : "Unable to delete images.",
-          });
-          setSaving(false);
-          return;
-        }
+        await deleteStoreImages(urlsToDelete);
       }
 
-      // ✅ Step 2: Upload new images
-      let newLogoUrl: string | null = null;
-      let newCoverUrl: string | null = null;
-      let newGalleryUrls: string[] = [];
+      const [uploadedLogoUrls, uploadedCoverUrls, uploadedGalleryUrls] = await Promise.all([
+        logoToAdd ? uploadStoreImages(String(id), [logoToAdd], "logo") : Promise.resolve([]),
+        coverToAdd ? uploadStoreImages(String(id), [coverToAdd], "cover") : Promise.resolve([]),
+        galleryToAdd.length > 0
+          ? uploadStoreImages(String(id), galleryToAdd, "gallery")
+          : Promise.resolve([]),
+      ]);
 
-      try {
-        if (logoToAdd) {
-          newLogoUrl = await uploadSingleImage(id as string, logoToAdd, "logo");
-        }
-        if (coverToAdd) {
-          newCoverUrl = await uploadSingleImage(id as string, coverToAdd, "cover");
-        }
-        if (galleryToAdd.length > 0) {
-          newGalleryUrls = await uploadMultipleImages(id as string, galleryToAdd, "gallery");
-        }
-      } catch (error: unknown) {
-        showToast({
-          type: "error",
-          title: "Failed to upload images",
-          description: error instanceof Error ? error.message : "Unable to upload images.",
-        });
-        setSaving(false);
-        return;
-      }
-
-      // ✅ Step 3: Determine final image URLs
-      const finalLogoUrl = logoToDelete ? newLogoUrl : (newLogoUrl || store.logo_url);
-      const finalCoverUrl = coverToDelete ? newCoverUrl : (newCoverUrl || store.cover_image_url);
+      const newLogoUrl = uploadedLogoUrls[0] ?? null;
+      const newCoverUrl = uploadedCoverUrls[0] ?? null;
+      const finalLogoUrl = logoToDelete ? newLogoUrl : newLogoUrl || store.logo_url;
+      const finalCoverUrl = coverToDelete ? newCoverUrl : newCoverUrl || store.cover_image_url;
       const finalGalleryUrls = [
         ...(store.gallery_urls || []).filter((url: string) => !galleryToDelete.includes(url)),
-        ...newGalleryUrls,
+        ...uploadedGalleryUrls,
       ];
 
-      const tagsArray =
-        typeof store.tags === "string"
-          ? store.tags
-              .split(",")
-              .map((v: string) => v.trim())
-              .filter(Boolean)
-          : Array.isArray(store.tags)
-          ? store.tags
-          : [];
-
-      const lat =
-        store.lat !== "" && store.lat !== null && !Number.isNaN(Number(store.lat))
-          ? Number(store.lat)
-          : null;
-
-      const lng =
-        store.lng !== "" && store.lng !== null && !Number.isNaN(Number(store.lng))
-          ? Number(store.lng)
-          : null;
+      const tagsArray = Array.isArray(store.tags) ? store.tags : [];
+      const lat = typeof store.lat === "number" && !Number.isNaN(store.lat) ? store.lat : null;
+      const lng = typeof store.lng === "number" && !Number.isNaN(store.lng) ? store.lng : null;
 
       const social_links = cleanObject({
         instagram: store.instagram,
@@ -683,13 +477,11 @@ export default function StoreDetailPage() {
         maps: store.maps,
         website: store.website,
         ...(store.social_links || {}),
-      });
+      }) as Record<string, string | null | undefined>;
 
       const normalizedOpeningHours = DAYS.reduce((acc, day) => {
         const value = openingHours[day] || { open: "", close: "", closed: false };
-        acc[day] = weekEnabled
-          ? value
-          : { open: "", close: "", closed: true };
+        acc[day] = weekEnabled ? value : { open: "", close: "", closed: true };
         return acc;
       }, {} as Record<string, DayHours>);
 
@@ -724,59 +516,20 @@ export default function StoreDetailPage() {
         .filter((offer) => Boolean(offer?.title))
         .map((offer) => ({
           title: typeof offer.title === "string" ? offer.title : null,
-          description:
-            typeof offer.description === "string" ? offer.description : null,
-          badge_text:
-            typeof offer.badge_text === "string" ? offer.badge_text : null,
-          offer_type:
-            typeof offer.offer_type === "string" ? offer.offer_type : null,
+          description: typeof offer.description === "string" ? offer.description : null,
+          badge_text: typeof offer.badge_text === "string" ? offer.badge_text : null,
+          offer_type: typeof offer.offer_type === "string" ? offer.offer_type : null,
           discount_value:
             typeof offer.discount_value === "number" ? offer.discount_value : null,
           min_spend: typeof offer.min_spend === "number" ? offer.min_spend : null,
           start_at: typeof offer.start_at === "string" ? offer.start_at : null,
           end_at: typeof offer.end_at === "string" ? offer.end_at : null,
-          is_active:
-            typeof offer.is_active === "boolean" ? offer.is_active : true,
+          is_active: typeof offer.is_active === "boolean" ? offer.is_active : true,
           metadata:
             offer.metadata && typeof offer.metadata === "object"
               ? (offer.metadata as Record<string, unknown>)
               : null,
         }));
-
-      const payload = {
-        ...basePayload,
-        tags: tagsArray,
-        social_links,
-        opening_hours: normalizedOpeningHours,
-        hours: weekEnabled ? serializeHours(normalizedOpeningHours) : [],
-        offers: normalizedOffers,
-        subscription: store.subscription || null,
-        gallery_urls: finalGalleryUrls,
-        cover_video_url:
-          store.cover_media_type === "video" && !coverToDelete
-            ? store.cover_media_url
-            : null,
-      };
-
-      const token = await getAccessToken();
-      const updateResponse = await fetch(`${API_BASE}/api/stores/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!updateResponse.ok) {
-        showToast({
-          type: "error",
-          title: "Update failed",
-          description: await getApiError(updateResponse, "Unable to update store."),
-        });
-        setSaving(false);
-        return;
-      }
 
       const categoriesPayload = await Promise.all(
         catalogueApi.catalogueCategories
@@ -828,20 +581,43 @@ export default function StoreDetailPage() {
                   };
                 })
               )
-            ).filter(
-              (item): item is Exclude<typeof item, null> => item !== null
-            ),
+            ).filter((item): item is Exclude<typeof item, null> => item !== null),
           }))
       );
 
-      await syncStoreCatalogueAdmin({
-        storeId: String(id),
-        categories: categoriesPayload,
-        deletedCategoryIds: catalogueApi.deletedCategoryIds,
-        deletedItemIds: catalogueApi.deletedItemIds,
-      });
+      const { error: updateError } = await supabaseBrowser
+        .from("stores")
+        .update(basePayload)
+        .eq("id", String(id));
 
-      const refreshedCatalogue = await fetchStoreCatalogueAdmin(String(id));
+      if (updateError) throw updateError;
+
+      await Promise.all([
+        replaceStoreRelations(String(id), {
+          tags: tagsArray,
+          social_links,
+          opening_hours: normalizedOpeningHours,
+          offers: normalizedOffers,
+          subscription: store.subscription || null,
+          gallery_urls: finalGalleryUrls,
+          cover_video_url:
+            store.cover_media_type === "video" && !coverToDelete
+              ? store.cover_media_url
+              : null,
+        }),
+        syncStoreCatalogueAdmin({
+          storeId: String(id),
+          categories: categoriesPayload,
+          deletedCategoryIds: catalogueApi.deletedCategoryIds,
+          deletedItemIds: catalogueApi.deletedItemIds,
+        }),
+      ]);
+
+      const [refreshedStore, refreshedCatalogue] = await Promise.all([
+        fetchStoreDetail(String(id)),
+        fetchStoreCatalogueAdmin(String(id)),
+      ]);
+
       const mappedCatalogue: CatalogueCategoryDraft[] = refreshedCatalogue.map((category) => ({
         id: category.id || `cat_${Date.now()}`,
         persistedId: category.id,
@@ -876,60 +652,23 @@ export default function StoreDetailPage() {
 
       showToast({ type: "success", title: "Store updated" });
       setEditMode(false);
-
-      // ✅ Refresh originals and reset image state
-      const merged = {
-        ...store,
-        ...basePayload,
-        tags: tagsArray,
-        hours: weekEnabled ? serializeHours(normalizedOpeningHours) : [],
-        opening_hours: normalizedOpeningHours,
-        social_links,
-        offers: normalizedOffers,
-        subscription: store.subscription || null,
-        lat: basePayload.lat,
-        lng: basePayload.lng,
-        logo_url: finalLogoUrl,
-        cover_image_url: finalCoverUrl,
-        cover_image: finalCoverUrl,
-        cover_media_url:
-          store.cover_media_type === "video" && !coverToDelete
-            ? store.cover_media_url
-            : finalCoverUrl,
-        cover_media_type:
-          store.cover_media_type === "video" && !coverToDelete ? "video" : finalCoverUrl ? "image" : null,
-        gallery_urls: finalGalleryUrls,
-      };
-      setStore(merged);
-      setStoreOriginal(merged);
-      
-      // Log the saved cover image URL for debugging
-      console.log("✅ Store saved successfully. Cover Image URL:", finalCoverUrl);
-      console.log("✅ Cover Media URL:", finalCoverUrl);
-      
+      applyStoreState(refreshedStore);
       catalogueApi.replaceCatalogue(mappedCatalogue);
       catalogueApi.clearDeletedTracking();
       setCatalogueOriginal(mappedCatalogue);
-      setOpeningHoursOriginal(openingHours);
       setLogoToAdd(null);
       setCoverToAdd(null);
       setGalleryToAdd([]);
       setLogoToDelete(false);
       setCoverToDelete(false);
-      
-      // Verify data was persisted by fetching fresh from Supabase
-      setTimeout(() => {
-        refreshStoreData();
-      }, 500);
       setGalleryToDelete([]);
-
-      setSaving(false);
     } catch (err: unknown) {
       showToast({
         type: "error",
         title: "Failed to update store",
         description: err instanceof Error ? err.message : "Unable to update store.",
       });
+    } finally {
       setSaving(false);
     }
   };
@@ -1102,7 +841,15 @@ export default function StoreDetailPage() {
                   ? store.tags.join(", ")
                   : (store.tags ?? "")
               }
-              onChange={(e) => setStore({ ...store, tags: e.target.value })}
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  tags: e.target.value
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean),
+                })
+              }
             />
           </Field>
         </Grid>
@@ -1260,7 +1007,12 @@ export default function StoreDetailPage() {
               className={inputClass}
               disabled={!editMode}
               value={store.lat ?? ""}
-              onChange={(e) => setStore({ ...store, lat: e.target.value })}
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  lat: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
             />
           </Field>
 
@@ -1269,7 +1021,12 @@ export default function StoreDetailPage() {
               className={inputClass}
               disabled={!editMode}
               value={store.lng ?? ""}
-              onChange={(e) => setStore({ ...store, lng: e.target.value })}
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  lng: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
             />
           </Field>
 
