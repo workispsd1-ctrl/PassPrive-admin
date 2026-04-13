@@ -84,7 +84,7 @@ export const StoreTable = ({
     setLoading(true);
     try {
       const token = await getAccessToken();
-      const response = await fetch(`${API_BASE}/api/stores/${confirmDelete.id}`, {
+      const response = await fetch(`${API_BASE}/api/stores/${confirmDelete.id}?hard=true`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

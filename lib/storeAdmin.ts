@@ -143,10 +143,95 @@ type StoreRelationsInput = {
   cover_video_url?: string | null;
 };
 
+type StoreAssetType = "logo" | "cover" | "gallery";
+
 function asString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+export function extractStoreStoragePath(publicUrl: string): string | null {
+  if (!publicUrl) return null;
+
+  const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
+  if (objectPublicMatch?.[1]) return objectPublicMatch[1];
+
+  const bucketMatch = publicUrl.match(/\/stores\/(.+)$/);
+  return bucketMatch?.[1] ?? null;
+}
+
+export function buildStoreStoragePath(
+  storeId: string,
+  assetType: StoreAssetType,
+  fileName: string
+) {
+  const extension = fileName.split(".").pop() || "jpg";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `${assetType}/${storeId}/${Date.now()}-${random}.${extension}`;
+}
+
+export async function uploadStoreImages(
+  storeId: string,
+  files: File[],
+  assetType: StoreAssetType
+) {
+  const urls: string[] = new Array(files.length).fill("");
+  const uploadedPaths: string[] = [];
+
+  try {
+    const batchSize = 3;
+    for (let index = 0; index < files.length; index += batchSize) {
+      const batch = files.slice(index, index + batchSize);
+      await Promise.all(
+        batch.map(async (file, batchIndex) => {
+          const fileIndex = index + batchIndex;
+          const path = buildStoreStoragePath(storeId, assetType, file.name);
+
+          const { error } = await supabaseBrowser.storage
+            .from(STORE_STORAGE_BUCKET)
+            .upload(path, file);
+
+          if (error) throw error;
+          uploadedPaths.push(path);
+
+          const { data } = supabaseBrowser.storage
+            .from(STORE_STORAGE_BUCKET)
+            .getPublicUrl(path);
+
+          urls[fileIndex] = data.publicUrl;
+        })
+      );
+    }
+
+    return urls.filter(Boolean);
+  } catch (error) {
+    if (uploadedPaths.length > 0) {
+      const { error: cleanupError } = await supabaseBrowser.storage
+        .from(STORE_STORAGE_BUCKET)
+        .remove(uploadedPaths);
+
+      if (cleanupError) {
+        console.error("[storeAdmin] cleanup upload error", cleanupError);
+      }
+    }
+
+    throw error;
+  }
+}
+
+export async function deleteStoreImages(publicUrls: string[]) {
+  const paths = publicUrls
+    .map((url) => extractStoreStoragePath(url))
+    .filter((value): value is string => Boolean(value));
+
+  if (!paths.length) return;
+
+  const { error } = await supabaseBrowser.storage
+    .from(STORE_STORAGE_BUCKET)
+    .remove(paths);
+
+  if (error) throw error;
 }
 
 function asNumber(value: unknown): number | null {
@@ -538,182 +623,149 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   return payload;
 }
 
-export async function replaceStoreRelations(storeId: string, input: StoreRelationsInput) {
-  const operations: PromiseLike<{ error: Error | null }>[] = [];
+function buildStoreTagRows(storeId: string, input: StoreRelationsInput) {
+  const groups = [
+    { type: "tag", values: input.tags || [] },
+    { type: "facility", values: input.facilities || [] },
+    { type: "highlight", values: input.highlights || [] },
+    { type: "worth_visit", values: input.worth_visit || [] },
+    { type: "mood", values: input.mood_tags || [] },
+  ];
 
-  if (input.tags || input.facilities || input.highlights || input.worth_visit || input.mood_tags) {
-    operations.push(
-      supabaseBrowser.from("store_tags").delete().eq("store_id", storeId).then(async ({ error }) => {
-        if (error) return { error };
+  return groups.flatMap((group) =>
+    group.values
+      .map((value) => asString(value))
+      .filter((value): value is string => Boolean(value))
+      .map((value, index) => ({
+        store_id: storeId,
+        tag_type: group.type,
+        tag_value: value,
+        sort_order: index,
+      }))
+  );
+}
 
-        const rows = [
-          ...(input.tags ?? []).map((tag, index) => ({
+function buildStoreSocialRows(storeId: string, socialLinks: StoreRelationsInput["social_links"]) {
+  return Object.entries(socialLinks || {})
+    .map(([platform, url]) => ({ platform: asString(platform), url: asString(url) }))
+    .filter((entry): entry is { platform: string; url: string } => Boolean(entry.platform && entry.url))
+    .map((entry, index) => ({
+      store_id: storeId,
+      platform: entry.platform,
+      url: entry.url,
+      sort_order: index,
+    }));
+}
+
+function buildStoreOpeningHoursRows(
+  storeId: string,
+  openingHours: StoreRelationsInput["opening_hours"]
+) {
+  return STORE_DAY_NAMES.map((day) => {
+    const value = openingHours?.[day] || openingHours?.[day.toLowerCase()] || {
+      open: "",
+      close: "",
+      closed: false,
+    };
+
+    return {
+      store_id: storeId,
+      day_of_week: dayValueFromName(day),
+      open_time: value.closed ? null : asString(value.open),
+      close_time: value.closed ? null : asString(value.close),
+      is_closed: Boolean(value.closed || (!value.open && !value.close)),
+    };
+  }).filter((row) => row.day_of_week !== null);
+}
+
+function buildStoreOfferRows(storeId: string, offers: StoreRelationsInput["offers"]) {
+  return (offers || [])
+    .filter((offer) => hasValue(offer?.title))
+    .map((offer) => ({
+      store_id: storeId,
+      title: asString(offer.title),
+      description: asString(offer.description),
+      badge_text: asString(offer.badge_text),
+      offer_type: asString(offer.offer_type),
+      discount_value: asNumber(offer.discount_value),
+      min_spend: asNumber(offer.min_spend),
+      start_at: asString(offer.start_at),
+      end_at: asString(offer.end_at),
+      is_active: offer.is_active !== false,
+      metadata: offer.metadata && typeof offer.metadata === "object" ? offer.metadata : null,
+    }));
+}
+
+function buildStoreSubscriptionRows(
+  storeId: string,
+  subscription: StoreRelationsInput["subscription"]
+) {
+  if (!subscription || !hasValue(subscription.plan_code)) return [];
+
+  return [
+    {
+      store_id: storeId,
+      plan_code: asString(subscription.plan_code),
+      status: asString(subscription.status),
+      pickup_premium_enabled: Boolean(subscription.pickup_premium_enabled),
+      starts_at: asString(subscription.starts_at),
+      expires_at: asString(subscription.expires_at),
+    },
+  ];
+}
+
+function buildStoreMediaRows(storeId: string, input: StoreRelationsInput) {
+  return [
+    ...(input.cover_video_url
+      ? [
+          {
             store_id: storeId,
-            tag_type: "tag",
-            tag_value: tag,
-            sort_order: index,
-          })),
-          ...(input.facilities ?? []).map((tag, index) => ({
-            store_id: storeId,
-            tag_type: "facility",
-            tag_value: tag,
-            sort_order: index,
-          })),
-          ...(input.highlights ?? []).map((tag, index) => ({
-            store_id: storeId,
-            tag_type: "highlight",
-            tag_value: tag,
-            sort_order: index,
-          })),
-          ...(input.worth_visit ?? []).map((tag, index) => ({
-            store_id: storeId,
-            tag_type: "worth_visit",
-            tag_value: tag,
-            sort_order: index,
-          })),
-          ...(input.mood_tags ?? []).map((tag, index) => ({
-            store_id: storeId,
-            tag_type: "mood",
-            tag_value: tag,
-            sort_order: index,
-          })),
-        ].filter((row) => hasValue(row.tag_value));
-
-        if (!rows.length) return { error: null };
-        const { error: insertError } = await supabaseBrowser.from("store_tags").insert(rows);
-        return { error: insertError };
-      })
-    );
-  }
-
-  if (input.social_links) {
-    operations.push(
-      supabaseBrowser.from("store_social_links").delete().eq("store_id", storeId).then(async ({ error }) => {
-        if (error) return { error };
-        const rows = Object.entries(input.social_links || {})
-          .filter(([, url]) => hasValue(url))
-          .map(([platform, url], index) => ({
-            store_id: storeId,
-            platform,
-            url,
-            sort_order: index,
-          }));
-        if (!rows.length) return { error: null };
-        const { error: insertError } = await supabaseBrowser.from("store_social_links").insert(rows);
-        return { error: insertError };
-      })
-    );
-  }
-
-  if (input.opening_hours) {
-    operations.push(
-      supabaseBrowser.from("store_opening_hours").delete().eq("store_id", storeId).then(async ({ error }) => {
-        if (error) return { error };
-
-        const rows = STORE_DAY_NAMES.map((day) => {
-          const value = input.opening_hours?.[day] || input.opening_hours?.[day.toLowerCase()] || {
-            open: "",
-            close: "",
-            closed: false,
-          };
-          return {
-            store_id: storeId,
-            day_of_week: dayValueFromName(day),
-            open_time: value.closed ? null : value.open || null,
-            close_time: value.closed ? null : value.close || null,
-            is_closed: !!value.closed || (!value.open && !value.close),
-          };
-        }).filter((row) => row.day_of_week !== null);
-
-        if (!rows.length) return { error: null };
-        const { error: insertError } = await supabaseBrowser.from("store_opening_hours").insert(rows);
-        return { error: insertError };
-      })
-    );
-  }
-
-  if (input.offers) {
-    operations.push(
-      supabaseBrowser.from("store_offers").delete().eq("store_id", storeId).then(async ({ error }) => {
-        if (error) return { error };
-
-        const rows = (input.offers || [])
-          .filter((offer) => hasValue(offer.title))
-          .map((offer) => ({
-            store_id: storeId,
-            title: asString(offer.title),
-            description: asString(offer.description),
-            badge_text: asString(offer.badge_text),
-            offer_type: asString(offer.offer_type),
-            discount_value: asNumber(offer.discount_value),
-            min_spend: asNumber(offer.min_spend),
-            start_at: asString(offer.start_at),
-            end_at: asString(offer.end_at),
-            is_active: typeof offer.is_active === "boolean" ? offer.is_active : true,
-            metadata: offer.metadata ?? null,
-          }));
-
-        if (!rows.length) return { error: null };
-        const { error: insertError } = await supabaseBrowser.from("store_offers").insert(rows);
-        return { error: insertError };
-      })
-    );
-  }
-
-  if (input.subscription !== undefined) {
-    operations.push(
-      supabaseBrowser.from("store_subscriptions").delete().eq("store_id", storeId).then(async ({ error }) => {
-        if (error) return { error };
-        if (!input.subscription || !hasValue(input.subscription.plan_code)) return { error: null };
-        const { error: insertError } = await supabaseBrowser.from("store_subscriptions").insert({
-          store_id: storeId,
-          plan_code: asString(input.subscription.plan_code),
-          status: asString(input.subscription.status),
-          pickup_premium_enabled: !!input.subscription.pickup_premium_enabled,
-          starts_at: asString(input.subscription.starts_at),
-          expires_at: asString(input.subscription.expires_at),
-        });
-        return { error: insertError };
-      })
-    );
-  }
-
-  if (input.gallery_urls !== undefined || input.cover_video_url !== undefined) {
-    operations.push(
-      supabaseBrowser.from("store_media_assets").delete().eq("store_id", storeId).then(async ({ error }) => {
-        if (error) return { error };
-
-        const rows = [
-          ...(input.cover_video_url
-            ? [
-                {
-                  store_id: storeId,
-                  asset_type: "cover_video",
-                  file_url: input.cover_video_url,
-                  file_path: null,
-                  sort_order: 0,
-                  is_active: true,
-                },
-              ]
-            : []),
-          ...((input.gallery_urls || []).map((url, index) => ({
-            store_id: storeId,
-            asset_type: "gallery",
-            file_url: url,
-            file_path: null,
-            sort_order: index,
+            asset_type: "cover_video",
+            file_url: input.cover_video_url,
+            file_path: extractStoreStoragePath(input.cover_video_url),
+            sort_order: 0,
             is_active: true,
-          })) || []),
-        ];
+          },
+        ]
+      : []),
+    ...(input.gallery_urls || [])
+      .map((url) => asString(url))
+      .filter((url): url is string => Boolean(url))
+      .map((url, index) => ({
+        store_id: storeId,
+        asset_type: "gallery",
+        file_url: url,
+        file_path: extractStoreStoragePath(url),
+        sort_order: index,
+        is_active: true,
+      })),
+  ];
+}
 
-        if (!rows.length) return { error: null };
-        const { error: insertError } = await supabaseBrowser.from("store_media_assets").insert(rows);
-        return { error: insertError };
-      })
-    );
-  }
+async function replaceStoreRows(table: string, storeId: string, rows: Record<string, unknown>[]) {
+  const { error: deleteError } = await supabaseBrowser.from(table).delete().eq("store_id", storeId);
+  if (deleteError) throw deleteError;
+  if (!rows.length) return;
 
-  const results = await Promise.all(operations);
-  const firstError = results.find((result) => result.error)?.error;
-  if (firstError) throw firstError;
+  const { error: insertError } = await supabaseBrowser.from(table).insert(rows);
+  if (insertError) throw insertError;
+}
+
+export async function replaceStoreRelations(storeId: string, input: StoreRelationsInput) {
+  await Promise.all([
+    replaceStoreRows("store_tags", storeId, buildStoreTagRows(storeId, input)),
+    replaceStoreRows("store_social_links", storeId, buildStoreSocialRows(storeId, input.social_links)),
+    replaceStoreRows(
+      "store_opening_hours",
+      storeId,
+      buildStoreOpeningHoursRows(storeId, input.opening_hours)
+    ),
+    replaceStoreRows("store_offers", storeId, buildStoreOfferRows(storeId, input.offers)),
+    replaceStoreRows(
+      "store_subscriptions",
+      storeId,
+      buildStoreSubscriptionRows(storeId, input.subscription)
+    ),
+    replaceStoreRows("store_media_assets", storeId, buildStoreMediaRows(storeId, input)),
+  ]);
 }
