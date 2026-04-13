@@ -30,11 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/hooks/useToast";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type CollectionContentType = "LIST" | "GUIDE" | "HOTLIST" | "ARTICLE";
 type CollectionEntityType = "STORE" | "RESTAURANT" | "BOTH";
@@ -115,40 +111,6 @@ type Props = {
   icon: LucideIcon;
 };
 
-function extractCollections(payload: unknown): EditorialCollection[] {
-  if (Array.isArray(payload)) return payload as EditorialCollection[];
-
-  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-  if (!record) return [];
-
-  for (const key of ["collections", "data", "items", "results"]) {
-    if (Array.isArray(record[key])) return record[key] as EditorialCollection[];
-  }
-
-  return [];
-}
-
-async function parseResponse(response: Response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return response.text();
-}
-
-async function getErrorFromResponse(response: Response, fallback: string) {
-  const payload = await parseResponse(response).catch(() => null);
-  if (typeof payload === "string" && payload.trim()) return payload;
-
-  if (payload && typeof payload === "object") {
-    const record = payload as Record<string, unknown>;
-    for (const key of ["message", "error", "detail"]) {
-      const value = record[key];
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-
-  return fallback;
-}
-
 function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Date(value).toLocaleString("en-IN", {
@@ -183,7 +145,6 @@ function toIsoOrNull(value: string) {
 }
 
 export default function EditorialCollectionManager({
-  apiPath,
   basePath,
   pageTitle,
   description,
@@ -191,7 +152,6 @@ export default function EditorialCollectionManager({
   emptyTitle,
   emptyDescription,
   detailLabel,
-  icon: _icon,
 }: Props) {
   const [collections, setCollections] = useState<EditorialCollection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,17 +182,37 @@ export default function EditorialCollectionManager({
   const loadCollections = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}${apiPath}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      const [{ data: collectionRows, error: collectionError }, { data: itemRows, error: itemError }] =
+        await Promise.all([
+          supabaseBrowser
+            .from("editorial_collections")
+            .select(
+              "id,slug,title,subtitle,description,cover_image_url,badge_text,source_name,source_url,content_type,entity_type,city,area,sort_order,is_featured,is_active,starts_at,ends_at,updated_at"
+            )
+            .order("sort_order", { ascending: true }),
+          supabaseBrowser.from("editorial_collection_items").select("collection_id"),
+        ]);
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to load collections."));
-      }
+      if (collectionError) throw collectionError;
+      if (itemError) throw itemError;
 
-      const payload = await parseResponse(response);
-      setCollections(extractCollections(payload));
+      const countsByCollection = (
+        ((itemRows as Array<{ collection_id: string }> | null) || [])
+      ).reduce((accumulator, row) => {
+        const collectionId = typeof row.collection_id === "string" ? row.collection_id : null;
+        if (!collectionId) return accumulator;
+        accumulator.set(collectionId, (accumulator.get(collectionId) || 0) + 1);
+        return accumulator;
+      }, new Map<string, number>());
+
+      const nextCollections = ((collectionRows as EditorialCollection[] | null) || []).map(
+        (collection) => ({
+          ...collection,
+          item_count: countsByCollection.get(collection.id) || 0,
+        })
+      );
+
+      setCollections(nextCollections);
     } catch (error: unknown) {
       showToast({
         type: "error",
@@ -243,7 +223,7 @@ export default function EditorialCollectionManager({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, pageTitle]);
+  }, [pageTitle]);
 
   useEffect(() => {
     void loadCollections();
@@ -330,24 +310,25 @@ export default function EditorialCollectionManager({
       sort_order: sortOrder,
       is_featured: form.is_featured,
       is_active: form.is_active,
-      starts_at: startsAtIso,
       ends_at: endsAtIso,
     };
 
     try {
       setSaving(true);
-      const endpoint = editingCollection ? `${API_BASE}${apiPath}/${editingCollection.id}` : `${API_BASE}${apiPath}`;
+      const record = {
+        ...payload,
+        ...(startsAtIso ? { starts_at: startsAtIso } : editingCollection?.starts_at ? { starts_at: editingCollection.starts_at } : {}),
+      };
 
-      const response = await fetch(endpoint, {
-        method: editingCollection ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save collection."));
+      if (editingCollection) {
+        const { error } = await supabaseBrowser
+          .from("editorial_collections")
+          .update(record)
+          .eq("id", editingCollection.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseBrowser.from("editorial_collections").insert(record);
+        if (error) throw error;
       }
 
       showToast({ title: editingCollection ? "Collection updated" : "Collection created" });
@@ -371,28 +352,13 @@ export default function EditorialCollectionManager({
 
     try {
       setSaving(true);
-      let deletionMode: "hard" | "soft" = "hard";
-      let response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
-        method: "DELETE",
-      });
+      const { error } = await supabaseBrowser
+        .from("editorial_collections")
+        .delete()
+        .eq("id", deletingCollection.id);
+      if (error) throw error;
 
-      // Fallback to soft-delete when backend does not expose hard delete.
-      if ([404, 405, 501].includes(response.status)) {
-        deletionMode = "soft";
-        response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ is_active: false }),
-        });
-      }
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete collection."));
-      }
-
-      showToast({ title: deletionMode === "hard" ? "Collection deleted" : "Collection deactivated" });
+      showToast({ title: "Collection deleted" });
       setDeletingCollection(null);
       await loadCollections();
     } catch (error: unknown) {

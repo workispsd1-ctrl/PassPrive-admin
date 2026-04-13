@@ -19,16 +19,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { showToast } from "@/hooks/useToast";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import {
-  API_BASE,
   StoreCampaign,
-  extractCampaigns,
   extractErrorMessage,
   formatDate,
-  getErrorFromResponse,
-  isForbiddenResponse,
   itemCount,
-  parseResponse,
 } from "./_lib";
 
 type CampaignFormState = {
@@ -53,6 +49,21 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function buildCampaignThumbnailPath(fileName: string) {
+  const extension = fileName.split(".").pop() || "jpg";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `campaigns/${Date.now()}-${random}.${extension}`;
+}
+
+async function uploadCampaignThumbnail(file: File) {
+  const path = buildCampaignThumbnailPath(file.name);
+  const { error } = await supabaseBrowser.storage.from("stores").upload(path, file);
+  if (error) throw error;
+
+  const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export default function StoreCampaignPage() {
@@ -84,23 +95,34 @@ export default function StoreCampaignPage() {
     try {
       setLoading(true);
       setPageError(null);
+      const [{ data: sectionRows, error: sectionError }, { data: itemRows, error: itemError }] =
+        await Promise.all([
+          supabaseBrowser
+            .from("stores_home_sections")
+            .select("id,slug,title,subtitle,is_active,max_items,starts_at,ends_at,thumbnail_url,created_at,updated_at")
+            .order("created_at", { ascending: false }),
+          supabaseBrowser.from("stores_home_section_items").select("section_id"),
+        ]);
 
-      const response = await fetch(`${API_BASE}/api/stores-home/sections`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      if (sectionError) throw sectionError;
+      if (itemError) throw itemError;
 
-      if (!response.ok) {
-        if (isForbiddenResponse(response)) {
-          setPageError("You do not have permission to view store campaigns.");
-          setCampaigns([]);
-          return;
-        }
-        throw new Error(await getErrorFromResponse(response, "Failed to load campaigns."));
-      }
+      const countsBySection = ((itemRows as Array<{ section_id: string }> | null) || []).reduce(
+        (accumulator, row) => {
+          const sectionId = typeof row.section_id === "string" ? row.section_id : null;
+          if (!sectionId) return accumulator;
+          accumulator.set(sectionId, (accumulator.get(sectionId) || 0) + 1);
+          return accumulator;
+        },
+        new Map<string, number>()
+      );
 
-      const payload = await parseResponse(response);
-      setCampaigns(extractCampaigns(payload));
+      const nextCampaigns = ((sectionRows as StoreCampaign[] | null) || []).map((campaign) => ({
+        ...campaign,
+        item_count: countsBySection.get(campaign.id) || 0,
+      }));
+
+      setCampaigns(nextCampaigns);
     } catch (error: unknown) {
       setPageError(extractErrorMessage(error, "Unable to fetch campaigns."));
       setCampaigns([]);
@@ -162,48 +184,28 @@ export default function StoreCampaignPage() {
       slug: slugify(form.slug),
       is_active: form.is_active,
       max_items: maxItems,
-      thumbnail_url: editingCampaign?.thumbnail_url || null,
     };
 
     try {
       setSaving(true);
-      const endpoint = editingCampaign
-        ? `${API_BASE}/api/stores-home/sections/${editingCampaign.id}`
-        : `${API_BASE}/api/stores-home/sections`;
+      const thumbnailUrl = imageFile
+        ? await uploadCampaignThumbnail(imageFile)
+        : editingCampaign?.thumbnail_url || null;
 
-      let response: Response;
+      const record = {
+        ...payload,
+        thumbnail_url: thumbnailUrl,
+      };
 
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("title", payload.title);
-        formData.append("subtitle", payload.subtitle ?? "");
-        formData.append("slug", payload.slug);
-        formData.append("is_active", String(payload.is_active));
-        formData.append("max_items", String(payload.max_items));
-        formData.append("thumbnail", imageFile);
-        if (payload.thumbnail_url) {
-          formData.append("thumbnail_url", payload.thumbnail_url);
-        }
-
-        response = await fetch(endpoint, {
-          method: editingCampaign ? "PUT" : "POST",
-          body: formData,
-        });
+      if (editingCampaign) {
+        const { error } = await supabaseBrowser
+          .from("stores_home_sections")
+          .update(record)
+          .eq("id", editingCampaign.id);
+        if (error) throw error;
       } else {
-        response = await fetch(endpoint, {
-          method: editingCampaign ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-      }
-
-      if (!response.ok) {
-        if (isForbiddenResponse(response)) {
-          throw new Error("You do not have permission to perform this action.");
-        }
-        throw new Error(await getErrorFromResponse(response, "Failed to save campaign."));
+        const { error } = await supabaseBrowser.from("stores_home_sections").insert(record);
+        if (error) throw error;
       }
 
       showToast({ title: editingCampaign ? "Campaign updated" : "Campaign created" });
@@ -224,27 +226,11 @@ export default function StoreCampaignPage() {
   async function toggleCampaignStatus(campaign: StoreCampaign) {
     try {
       setSaving(true);
-      const response = await fetch(`${API_BASE}/api/stores-home/sections/${campaign.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: campaign.title,
-          subtitle: campaign.subtitle ?? null,
-          slug: campaign.slug,
-          is_active: !campaign.is_active,
-          max_items: campaign.max_items ?? 12,
-          thumbnail_url: campaign.thumbnail_url ?? null,
-        }),
-      });
-
-      if (!response.ok) {
-        if (isForbiddenResponse(response)) {
-          throw new Error("You do not have permission to perform this action.");
-        }
-        throw new Error(await getErrorFromResponse(response, "Failed to update campaign."));
-      }
+      const { error } = await supabaseBrowser
+        .from("stores_home_sections")
+        .update({ is_active: !campaign.is_active })
+        .eq("id", campaign.id);
+      if (error) throw error;
 
       showToast({
         title: campaign.is_active ? "Campaign deactivated" : "Campaign activated",

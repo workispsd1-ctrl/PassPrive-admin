@@ -9,6 +9,8 @@ export default function InYourPassPriveDetailPage() {
     <PassPriveItemsManager
       apiPath="/api/inyourpassprive"
       basePath="/dashboard/in-your-passprive"
+      supabaseCardTable="dinein_in_your_passprive"
+      supabaseItemsTable="dinein_in_your_passprive_card_items"
       pageTitle="Restaurant In Your PassPrive"
       pageDescription="Manage the restaurants linked to this card."
       backLabel="Back to restaurant cards"

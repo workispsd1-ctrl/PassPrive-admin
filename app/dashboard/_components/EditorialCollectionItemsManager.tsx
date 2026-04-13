@@ -40,11 +40,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
-
 type CollectionEntityType = "STORE" | "RESTAURANT" | "BOTH";
 type ItemEntityType = "STORE" | "RESTAURANT";
 
@@ -129,59 +124,6 @@ function normalizeEntityOption(value: unknown, type: ItemEntityType): EntityOpti
   };
 }
 
-function extractCollectionPayload(payload: unknown) {
-  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-  if (!record) return { collection: null as EditorialCollection | null, items: [] as EditorialCollectionItem[] };
-
-  const collection =
-    (record.collection as EditorialCollection | undefined) ||
-    (record.data as EditorialCollection | undefined) ||
-    (("id" in record ? record : null) as EditorialCollection | null);
-
-  const items =
-    (Array.isArray(record.items) ? (record.items as EditorialCollectionItem[]) : undefined) ||
-    (collection && Array.isArray((collection as unknown as Record<string, unknown>).items)
-      ? ((collection as unknown as Record<string, unknown>).items as EditorialCollectionItem[])
-      : undefined) ||
-    [];
-
-  return { collection: collection || null, items };
-}
-
-function extractItems(payload: unknown): EditorialCollectionItem[] {
-  if (Array.isArray(payload)) return payload as EditorialCollectionItem[];
-
-  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-  if (!record) return [];
-
-  for (const key of ["items", "data", "results"]) {
-    if (Array.isArray(record[key])) return record[key] as EditorialCollectionItem[];
-  }
-
-  return [];
-}
-
-async function parseResponse(response: Response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return response.text();
-}
-
-async function getErrorFromResponse(response: Response, fallback: string) {
-  const payload = await parseResponse(response).catch(() => null);
-  if (typeof payload === "string" && payload.trim()) return payload;
-
-  if (payload && typeof payload === "object") {
-    const record = payload as Record<string, unknown>;
-    for (const key of ["message", "error", "detail"]) {
-      const value = record[key];
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-
-  return fallback;
-}
-
 function optionMeta(item: EntityOption) {
   return [item.area, item.city, item.category].filter(Boolean).join(" • ");
 }
@@ -206,7 +148,6 @@ function updateEntityTypeByCollection(entityType: CollectionEntityType, setForm:
 }
 
 export default function EditorialCollectionItemsManager({
-  apiPath,
   basePath,
   pageTitle,
   pageDescription,
@@ -215,7 +156,6 @@ export default function EditorialCollectionItemsManager({
   emptyDescription,
   searchPlaceholder,
   pickerPlaceholder,
-  icon: _icon,
 }: Props) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -284,34 +224,61 @@ export default function EditorialCollectionItemsManager({
   const loadCollection = useCallback(async () => {
     try {
       setLoading(true);
+      const [{ data: collectionRow, error: collectionError }, { data: itemRows, error: itemError }] =
+        await Promise.all([
+          supabaseBrowser
+            .from("editorial_collections")
+            .select("id,title,subtitle,entity_type,content_type")
+            .eq("id", collectionId)
+            .maybeSingle(),
+          supabaseBrowser
+            .from("editorial_collection_items")
+            .select("id,collection_id,store_id,restaurant_id,sort_order,note,is_active")
+            .eq("collection_id", collectionId)
+            .order("sort_order", { ascending: true }),
+        ]);
 
-      const collectionResponse = await fetch(`${API_BASE}${apiPath}/${collectionId}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      if (collectionError) throw collectionError;
+      if (itemError) throw itemError;
+      if (!collectionRow) throw new Error("Collection not found.");
 
-      if (!collectionResponse.ok) {
-        throw new Error(await getErrorFromResponse(collectionResponse, "Failed to load collection details."));
-      }
+      const baseItems = (itemRows as EditorialCollectionItem[] | null) || [];
+      const storeIds = Array.from(new Set(baseItems.map((item) => item.store_id).filter(Boolean)));
+      const restaurantIds = Array.from(new Set(baseItems.map((item) => item.restaurant_id).filter(Boolean)));
 
-      const payload = await parseResponse(collectionResponse);
-      const extracted = extractCollectionPayload(payload);
+      const [storeResponse, restaurantResponse] = await Promise.all([
+        storeIds.length > 0
+          ? supabaseBrowser.from("stores").select("id,name,city,location_name,category").in("id", storeIds)
+          : Promise.resolve({ data: [], error: null }),
+        restaurantIds.length > 0
+          ? supabaseBrowser.from("restaurants").select("id,name,city,area").in("id", restaurantIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      let nextItems = extracted.items;
-      if (!nextItems.length) {
-        const itemsResponse = await fetch(`${API_BASE}${apiPath}/${collectionId}/items`, {
-          method: "GET",
-          cache: "no-store",
-        });
+      if (storeResponse.error) throw storeResponse.error;
+      if (restaurantResponse.error) throw restaurantResponse.error;
 
-        if (itemsResponse.ok) {
-          const itemsPayload = await parseResponse(itemsResponse);
-          nextItems = extractItems(itemsPayload);
-        }
-      }
+      const storesMap = new Map(
+        (((storeResponse.data as unknown[]) || [])
+          .map((item) => normalizeEntityOption(item, "STORE"))
+          .filter(Boolean) as EntityOption[]).map((item) => [item.id, item])
+      );
+      const restaurantsMap = new Map(
+        (((restaurantResponse.data as unknown[]) || [])
+          .map((item) => normalizeEntityOption(item, "RESTAURANT"))
+          .filter(Boolean) as EntityOption[]).map((item) => [item.id, item])
+      );
 
-      setCollection(extracted.collection);
-      setItems([...nextItems].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+      setCollection(collectionRow as EditorialCollection);
+      setItems(
+        baseItems
+          .map((item) => ({
+            ...item,
+            store: item.store_id ? storesMap.get(item.store_id) || null : null,
+            restaurant: item.restaurant_id ? restaurantsMap.get(item.restaurant_id) || null : null,
+          }))
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      );
       setOrderDirty(false);
     } catch (error: unknown) {
       showToast({
@@ -323,7 +290,7 @@ export default function EditorialCollectionItemsManager({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, basePath, collectionId, router]);
+  }, [basePath, collectionId, router]);
 
   useEffect(() => {
     void loadCollection();
@@ -382,10 +349,10 @@ export default function EditorialCollectionItemsManager({
   function openCreateDialog() {
     setEditingItem(null);
     setPickerQuery("");
-    setForm((current) => ({
+    setForm({
       ...initialForm,
       entity_type: allowedEntityType === "BOTH" ? "STORE" : (allowedEntityType as ItemEntityType),
-    }));
+    });
     setDialogOpen(true);
   }
 
@@ -440,24 +407,21 @@ export default function EditorialCollectionItemsManager({
     });
 
     const targetItemId = editingItem?.id || duplicateItem?.id || null;
-    const requestMethod = targetItemId ? "PUT" : "POST";
 
     try {
       setSaving(true);
-      const endpoint = targetItemId
-        ? `${API_BASE}${apiPath}/${collectionId}/items/${targetItemId}`
-        : `${API_BASE}${apiPath}/${collectionId}/items`;
-
-      const response = await fetch(endpoint, {
-        method: requestMethod,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save editorial item."));
+      if (targetItemId) {
+        const { error } = await supabaseBrowser
+          .from("editorial_collection_items")
+          .update(payload)
+          .eq("id", targetItemId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseBrowser.from("editorial_collection_items").insert({
+          collection_id: collectionId,
+          ...payload,
+        });
+        if (error) throw error;
       }
 
       showToast({ title: targetItemId ? "Editorial item updated" : "Editorial item added" });
@@ -481,28 +445,13 @@ export default function EditorialCollectionItemsManager({
 
     try {
       setSaving(true);
-      let deletionMode: "hard" | "soft" = "hard";
-      let response = await fetch(`${API_BASE}${apiPath}/${collectionId}/items/${deletingItem.id}`, {
-        method: "DELETE",
-      });
+      const { error } = await supabaseBrowser
+        .from("editorial_collection_items")
+        .delete()
+        .eq("id", deletingItem.id);
+      if (error) throw error;
 
-      // Fallback to soft-delete when backend delete endpoint is not implemented yet.
-      if ([404, 405, 501].includes(response.status)) {
-        deletionMode = "soft";
-        response = await fetch(`${API_BASE}${apiPath}/${collectionId}/items/${deletingItem.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ is_active: false }),
-        });
-      }
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete editorial item."));
-      }
-
-      showToast({ title: deletionMode === "hard" ? "Editorial item deleted" : "Editorial item deactivated" });
+      showToast({ title: "Editorial item deleted" });
       setDeletingItem(null);
       await loadCollection();
     } catch (error: unknown) {
@@ -536,19 +485,15 @@ export default function EditorialCollectionItemsManager({
   async function saveReorder() {
     try {
       setReorderSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${collectionId}/items/reorder`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          item_ids: items.map((item) => item.id),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to reorder items."));
-      }
+      const updates = items.map((item, index) =>
+        supabaseBrowser
+          .from("editorial_collection_items")
+          .update({ sort_order: index + 1 })
+          .eq("id", item.id)
+      );
+      const results = await Promise.all(updates);
+      const firstError = results.find((result) => result.error)?.error;
+      if (firstError) throw firstError;
 
       showToast({ title: "Item order saved" });
       setOrderDirty(false);
