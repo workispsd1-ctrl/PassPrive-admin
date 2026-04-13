@@ -90,6 +90,59 @@ function isVideo(file?: File | null): boolean {
   return !!file?.type?.startsWith("video/");
 }
 
+function getMissingStoresColumn(errorMessage?: string): string | null {
+  if (!errorMessage) return null;
+  const match = errorMessage.match(/Could not find the '([^']+)' column of 'stores'/i);
+  return match?.[1] || null;
+}
+
+async function upsertStoreWithFallback(payload: Record<string, any>) {
+  const nextPayload = { ...payload };
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const { error } = await supabaseBrowser
+      .from("stores")
+      .upsert(nextPayload, { onConflict: "id" });
+
+    if (!error) return { error: null, payload: nextPayload };
+
+    lastError = error;
+    const missingColumn = getMissingStoresColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      return { error, payload: nextPayload };
+    }
+
+    delete nextPayload[missingColumn];
+  }
+
+  return { error: lastError, payload: nextPayload };
+}
+
+async function updateStoreWithFallback(storeId: string, payload: Record<string, any>) {
+  const nextPayload = { ...payload };
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const { error } = await supabaseBrowser
+      .from("stores")
+      .update(nextPayload)
+      .eq("id", storeId);
+
+    if (!error) return { error: null, payload: nextPayload };
+
+    lastError = error;
+    const missingColumn = getMissingStoresColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      return { error, payload: nextPayload };
+    }
+
+    delete nextPayload[missingColumn];
+  }
+
+  return { error: lastError, payload: nextPayload };
+}
+
 function validateCatalogueForStoreType(
   categories: CatalogueCategoryDraft[],
   storeType: "PRODUCT" | "SERVICE"
@@ -564,47 +617,46 @@ function AddStorePageInner() {
       let finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
 
       // 1) Insert store row
-      const { error: upsertStoreErr } = await supabaseBrowser.from("stores").upsert(
-        {
-          id: storeId,
-          owner_user_id: ownerUserId,
-          name: form.name.trim(),
-          slug: finalSlug,
-          store_type: form.store_type,
-          description: form.description?.trim() || null,
+      const baseStorePayload = {
+        id: storeId,
+        owner_user_id: ownerUserId,
+        name: form.name.trim(),
+        slug: finalSlug,
+        store_type: form.store_type,
+        description: form.description?.trim() || null,
 
-          category: form.category?.trim() || null,
-          subcategory: form.subcategory?.trim() || null,
-          tags: tagsArray,
+        category: form.category?.trim() || null,
+        subcategory: form.subcategory?.trim() || null,
+        tags: tagsArray,
 
-          phone: form.phone?.trim() || null,
-          whatsapp: form.whatsapp?.trim() || null,
-          email: form.email?.trim() || null,
-          website: form.website?.trim() || null,
+        phone: form.phone?.trim() || null,
+        whatsapp: form.whatsapp?.trim() || null,
+        email: form.email?.trim() || null,
+        website: form.website?.trim() || null,
 
-          social_links,
+        social_links,
 
-          location_name: form.location_name?.trim() || null,
-          address_line1: form.address_line1?.trim() || null,
-          address_line2: form.address_line2?.trim() || null,
-          city: form.city?.trim() || null,
-          region: form.region?.trim() || null,
-          postal_code: form.postal_code?.trim() || null,
-          country: "Mauritius",
+        location_name: form.location_name?.trim() || null,
+        address_line1: form.address_line1?.trim() || null,
+        address_line2: form.address_line2?.trim() || null,
+        city: form.city?.trim() || null,
+        region: form.region?.trim() || null,
+        postal_code: form.postal_code?.trim() || null,
+        country: "Mauritius",
 
-          lat,
-          lng,
-          google_place_id: form.google_place_id?.trim() || null,
+        lat,
+        lng,
+        google_place_id: form.google_place_id?.trim() || null,
 
-          hours,
-          offers: offersFinal,
+        hours,
+        offers: offersFinal,
 
-          is_active: !!form.is_active,
-          is_featured: !!form.is_featured,
-          cover_media_type: coverType,
-        },
-        { onConflict: "id" }
-      );
+        is_active: !!form.is_active,
+        is_featured: !!form.is_featured,
+      };
+
+      const firstUpsert = await upsertStoreWithFallback(baseStorePayload);
+      const upsertStoreErr = firstUpsert.error;
 
       if (upsertStoreErr) {
         // If slug unique error, regenerate once and retry
@@ -613,40 +665,10 @@ function AddStorePageInner() {
           upsertStoreErr.message.toLowerCase().includes("stores_slug_key")
         ) {
           finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 8)}`;
-          const retry = await supabaseBrowser.from("stores").upsert(
-            {
-              id: storeId,
-              owner_user_id: ownerUserId,
-              name: form.name.trim(),
-              slug: finalSlug,
-              store_type: form.store_type,
-              description: form.description?.trim() || null,
-              category: form.category?.trim() || null,
-              subcategory: form.subcategory?.trim() || null,
-              tags: tagsArray,
-              phone: form.phone?.trim() || null,
-              whatsapp: form.whatsapp?.trim() || null,
-              email: form.email?.trim() || null,
-              website: form.website?.trim() || null,
-              social_links,
-              location_name: form.location_name?.trim() || null,
-              address_line1: form.address_line1?.trim() || null,
-              address_line2: form.address_line2?.trim() || null,
-              city: form.city?.trim() || null,
-              region: form.region?.trim() || null,
-              postal_code: form.postal_code?.trim() || null,
-              country: "Mauritius",
-              lat,
-              lng,
-              google_place_id: form.google_place_id?.trim() || null,
-              hours,
-              offers: offersFinal,
-              is_active: !!form.is_active,
-              is_featured: !!form.is_featured,
-              cover_media_type: coverType,
-            },
-            { onConflict: "id" }
-          );
+          const retry = await upsertStoreWithFallback({
+            ...baseStorePayload,
+            slug: finalSlug,
+          });
           if (retry.error) throw retry.error;
         } else {
           throw upsertStoreErr;
@@ -674,15 +696,12 @@ function AddStorePageInner() {
 
       const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
 
-      const { error: mediaErr } = await supabaseBrowser
-        .from("stores")
-        .update({
-          logo_url: logoUrl,
-          cover_image_url: coverImageUrl,
-          cover_media_url: coverMediaUrl,
-          gallery_urls: galleryUrls,
-        })
-        .eq("id", storeId);
+      const { error: mediaErr } = await updateStoreWithFallback(storeId, {
+        logo_url: logoUrl,
+        cover_image_url: coverImageUrl,
+        cover_media_url: coverMediaUrl,
+        gallery_urls: galleryUrls,
+      });
 
       if (mediaErr) throw mediaErr;
 

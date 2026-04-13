@@ -159,6 +159,36 @@ const cleanObject = (obj: Record<string, any>) => {
   return out;
 };
 
+const getMissingStoresColumn = (errorMessage?: string) => {
+  if (!errorMessage) return null;
+  const match = errorMessage.match(/Could not find the '([^']+)' column of 'stores'/i);
+  return match?.[1] || null;
+};
+
+const updateStoreWithFallback = async (storeId: string, payload: Record<string, any>) => {
+  const nextPayload = { ...payload };
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const { error } = await supabaseBrowser
+      .from("stores")
+      .update(nextPayload)
+      .eq("id", storeId);
+
+    if (!error) return { error: null, payload: nextPayload };
+
+    lastError = error;
+    const missingColumn = getMissingStoresColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      return { error, payload: nextPayload };
+    }
+
+    delete nextPayload[missingColumn];
+  }
+
+  return { error: lastError, payload: nextPayload };
+};
+
 const validateCatalogueForStoreType = (
   categories: CatalogueCategoryDraft[],
   storeType: "PRODUCT" | "SERVICE"
@@ -624,9 +654,6 @@ export default function StoreDetailPage() {
         ...newGalleryUrls,
       ];
 
-      // ✅ Determine cover media type (for consistency with add page)
-      const coverMediaType: "image" | "video" | null = finalCoverUrl ? "image" : null;
-
       const tagsArray =
         typeof store.tags === "string"
           ? store.tags
@@ -694,14 +721,10 @@ export default function StoreDetailPage() {
         logo_url: finalLogoUrl || null,
         cover_image_url: finalCoverUrl || null,
         cover_media_url: finalCoverUrl || null, // Also set cover_media_url for consistency
-        cover_media_type: coverMediaType,
         gallery_urls: finalGalleryUrls,
       };
 
-      const { error } = await supabaseBrowser
-        .from("stores")
-        .update(payload)
-        .eq("id", id);
+      const { error } = await updateStoreWithFallback(String(id), payload);
 
       if (error) {
         showToast({
@@ -824,7 +847,6 @@ export default function StoreDetailPage() {
         logo_url: finalLogoUrl,
         cover_image_url: finalCoverUrl,
         cover_media_url: finalCoverUrl,
-        cover_media_type: coverMediaType,
         gallery_urls: finalGalleryUrls,
       };
       setStore(merged);
@@ -833,7 +855,6 @@ export default function StoreDetailPage() {
       // Log the saved cover image URL for debugging
       console.log("✅ Store saved successfully. Cover Image URL:", finalCoverUrl);
       console.log("✅ Cover Media URL:", finalCoverUrl);
-      console.log("✅ Cover Media Type:", coverMediaType);
       
       catalogueApi.replaceCatalogue(mappedCatalogue);
       catalogueApi.clearDeletedTracking();
