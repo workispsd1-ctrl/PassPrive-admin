@@ -9,6 +9,8 @@ export default function StoreInYourPassPriveDetailPage() {
     <PassPriveItemsManager
       apiPath="/api/storesinyourpassprive"
       basePath="/dashboard/store-in-your-passprive"
+      supabaseCardTable="store_in_your_passprive_cards"
+      supabaseItemsTable="store_in_your_passprive_card_items"
       pageTitle="Store In Your PassPrive"
       pageDescription="Manage the stores linked to this card."
       backLabel="Back to store cards"

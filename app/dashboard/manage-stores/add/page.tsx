@@ -8,7 +8,6 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import {
   buildStorePayload,
-  replaceStoreRelations,
   type StoreOfferInput,
 } from "@/lib/storeAdmin";
 
@@ -92,6 +91,41 @@ function isImage(file?: File | null): boolean {
 
 function isVideo(file?: File | null): boolean {
   return !!file?.type?.startsWith("video/");
+}
+
+async function parseApiResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) return response.json();
+  return response.text();
+}
+
+async function getApiError(response: Response, fallback: string) {
+  const payload = await parseApiResponse(response).catch(() => null);
+  if (typeof payload === "string" && payload.trim()) return payload;
+
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    for (const key of ["message", "error", "detail"]) {
+      const value = record[key];
+      if (typeof value === "string" && value.trim()) return value;
+    }
+  }
+
+  return fallback;
+}
+
+function extractCreatedStoreId(payload: unknown) {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  const item = (record.item && typeof record.item === "object" ? record.item : null) as
+    | Record<string, unknown>
+    | null;
+  const data = (record.data && typeof record.data === "object" ? record.data : null) as
+    | Record<string, unknown>
+    | null;
+
+  const idValue = item?.id ?? data?.id ?? record.id;
+  return typeof idValue === "string" ? idValue : null;
 }
 
 async function getAccessToken() {
@@ -553,7 +587,7 @@ function AddStorePageInner() {
 
       // ✅ PATCH 1: slug generation should not query by new storeId
       // Generate and retry if unique constraint fails.
-      let finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
+      const finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 6)}`;
 
       const baseStorePayload = buildStorePayload({
         id: storeId,
@@ -582,101 +616,72 @@ function AddStorePageInner() {
         is_featured: !!form.is_featured,
       });
 
-      // 1) Insert store row
-      const { error: upsertStoreErr } = await supabaseBrowser
-        .from("stores")
-        .upsert(baseStorePayload, { onConflict: "id" });
-
-      if (upsertStoreErr) {
-        // If slug unique error, regenerate once and retry
-        if (
-          typeof upsertStoreErr.message === "string" &&
-          upsertStoreErr.message.toLowerCase().includes("stores_slug_key")
-        ) {
-          finalSlug = `${slugify(form.name)}-${Math.random().toString(16).slice(2, 8)}`;
-          const retryPayload = buildStorePayload({
-            ...baseStorePayload,
-            slug: finalSlug,
-          });
-          const retry = await supabaseBrowser.from("stores").upsert(
-            retryPayload,
-            { onConflict: "id" }
-          );
-          if (retry.error) throw retry.error;
-        } else {
-          throw upsertStoreErr;
-        }
-      }
-
-      // ✅ PATCH 2 (IMPORTANT): create membership row so partner can access their store
-      // Requires a table: store_members(store_id uuid, user_id uuid, role text, created_at...)
-      const [{ error: memberErr }, logoUrl, coverMediaUrl, galleryUrls] = await Promise.all([
-        supabaseBrowser.from("store_members").insert({
-          store_id: storeId,
-          user_id: ownerUserId,
-          role: "owner",
-        }),
+      const [logoUrl, coverMediaUrl, galleryUrls] = await Promise.all([
         uploadSingle(storeId, logoFile, "logo"),
         uploadSingle(storeId, coverMediaFile, "cover"),
         uploadGallery(storeId, galleryFiles),
       ]);
-      if (memberErr) throw memberErr;
 
       const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
-
-      const [mediaResult, paymentResult] = await Promise.all([
-        supabaseBrowser
-          .from("stores")
-          .update({
-            logo_url: logoUrl,
-            cover_image: coverImageUrl,
-          })
-          .eq("id", storeId),
-        supabaseBrowser.from("store_payment_details").upsert(
-          {
-            store_id: storeId,
-            legal_business_name: payment.legal_business_name.trim(),
-            display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
-
-            payout_method: payment.payout_method,
-            beneficiary_name: payment.beneficiary_name?.trim() || null,
-            bank_name: payment.bank_name?.trim() || null,
-            account_number: payment.account_number?.trim() || null,
-            ifsc: payment.ifsc?.trim() || null,
-            iban: payment.iban?.trim() || null,
-            swift: payment.swift?.trim() || null,
-            payout_upi_id: payment.payout_upi_id?.trim() || null,
-
-            settlement_cycle: payment.settlement_cycle,
-            commission_percent: payment.commission_percent
-              ? Number(payment.commission_percent)
-              : null,
-            currency: payment.currency || "MUR",
-
-            tax_id_label: payment.tax_id_label || null,
-            tax_id_value: payment.tax_id_value?.trim() || null,
-
-            billing_email: payment.billing_email?.trim() || null,
-            billing_phone: payment.billing_phone?.trim() || null,
-
-            kyc_status: payment.kyc_status,
-            notes: payment.notes?.trim() || null,
-          },
-          { onConflict: "store_id" }
-        ),
-      ]);
-
-      if (mediaResult.error) throw mediaResult.error;
-      if (paymentResult.error) throw paymentResult.error;
-
-      await replaceStoreRelations(storeId, {
+      const storePayload = {
+        ...baseStorePayload,
         tags: tagsArray,
         social_links: socialLinks,
         opening_hours: normalizedOpeningHours,
+        hours: weekEnabled ? DAYS.map((day) => ({
+          day,
+          closed: !!normalizedOpeningHours[day]?.closed || (!normalizedOpeningHours[day]?.open && !normalizedOpeningHours[day]?.close),
+          slots:
+            !!normalizedOpeningHours[day]?.closed || (!normalizedOpeningHours[day]?.open && !normalizedOpeningHours[day]?.close)
+              ? []
+              : [{ open: normalizedOpeningHours[day].open, close: normalizedOpeningHours[day].close }],
+        })) : [],
         offers: offersFinal,
+        payment_details: {
+          legal_business_name: payment.legal_business_name.trim(),
+          display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
+          payout_method: payment.payout_method,
+          beneficiary_name: payment.beneficiary_name?.trim() || null,
+          bank_name: payment.bank_name?.trim() || null,
+          account_number: payment.account_number?.trim() || null,
+          ifsc: payment.ifsc?.trim() || null,
+          iban: payment.iban?.trim() || null,
+          swift: payment.swift?.trim() || null,
+          payout_upi_id: payment.payout_upi_id?.trim() || null,
+          settlement_cycle: payment.settlement_cycle,
+          commission_percent: payment.commission_percent
+            ? Number(payment.commission_percent)
+            : null,
+          currency: payment.currency || "MUR",
+          tax_id_label: payment.tax_id_label || null,
+          tax_id_value: payment.tax_id_value?.trim() || null,
+          billing_email: payment.billing_email?.trim() || null,
+          billing_phone: payment.billing_phone?.trim() || null,
+          kyc_status: payment.kyc_status,
+          notes: payment.notes?.trim() || null,
+        },
+        logo_url: logoUrl,
+        cover_image: coverImageUrl,
         gallery_urls: galleryUrls,
         cover_video_url: coverType === "video" ? coverMediaUrl : null,
+      };
+
+      const token = await getAccessToken();
+      const createResponse = await fetch(`${API_BASE}/api/stores`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(storePayload),
       });
+
+      if (!createResponse.ok) {
+        throw new Error(await getApiError(createResponse, "Failed to save store"));
+      }
+
+      const createPayload = await parseApiResponse(createResponse);
+      const createdStoreId = extractCreatedStoreId(createPayload) || storeId;
 
       // 4) Catalogue / Services via admin CRUD APIs
       const enabledCats = catalogueApi.catalogueCategories
@@ -701,7 +706,7 @@ function AddStorePageInner() {
 
               let imageUrl = item.imageUrl?.trim() || null;
               if (item.imageFile) {
-                imageUrl = await uploadCatalogueImage(storeId, category.id, item.id, item.imageFile);
+                imageUrl = await uploadCatalogueImage(createdStoreId, category.id, item.id, item.imageFile);
               }
 
               return {
@@ -730,7 +735,7 @@ function AddStorePageInner() {
       }));
 
       await syncStoreCatalogueAdmin({
-        storeId,
+        storeId: createdStoreId,
         categories: categoriesPayload,
         deletedCategoryIds: [],
         deletedItemIds: [],

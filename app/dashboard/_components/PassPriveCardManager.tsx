@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/hooks/useToast";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -61,6 +62,9 @@ const initialForm: CardFormState = {
   sort_order: "100",
 };
 
+const CARD_CACHE_TTL_MS = 30_000;
+const cardCache = new Map<string, { data: PassPriveCard[]; expiresAt: number }>();
+
 type PassPriveCardManagerProps = {
   apiPath: string;
   basePath: string;
@@ -73,6 +77,8 @@ type PassPriveCardManagerProps = {
   icon: LucideIcon;
   editIconSrc?: string;
   manageIconSrc?: string;
+  supabaseTable?: string;
+  supabaseItemsTable?: string;
 };
 
 function extractCards(payload: unknown): PassPriveCard[] {
@@ -127,14 +133,14 @@ export default function PassPriveCardManager({
   apiPath,
   basePath,
   pageTitle,
-  description,
   searchPlaceholder,
   emptyTitle,
   emptyDescription,
   detailLabel,
-  icon: Icon,
   editIconSrc,
   manageIconSrc,
+  supabaseTable,
+  supabaseItemsTable,
 }: PassPriveCardManagerProps) {
   const [cards, setCards] = useState<PassPriveCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -154,6 +160,52 @@ export default function PassPriveCardManager({
   const loadCards = useCallback(async () => {
     try {
       setLoading(true);
+      const cacheKey = supabaseTable ? `sb:${supabaseTable}:${supabaseItemsTable || ""}` : `api:${apiPath}`;
+      const cached = cardCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        setCards(cached.data);
+        setLoading(false);
+        return;
+      }
+
+      if (supabaseTable) {
+        const { data, error } = await supabaseBrowser
+          .from(supabaseTable)
+          .select("id,title,subtitle,city,is_active,sort_order,updated_at")
+          .order("sort_order", { ascending: true });
+
+        if (error) throw error;
+
+        let countsByCardId = new Map<string, number>();
+        if (supabaseItemsTable) {
+          const cardIds = (data || []).map((card) => String(card.id));
+          if (cardIds.length > 0) {
+            const { data: itemRows, error: itemsError } = await supabaseBrowser
+              .from(supabaseItemsTable)
+              .select("card_id")
+              .in("card_id", cardIds);
+
+            if (itemsError) throw itemsError;
+
+            countsByCardId = (itemRows || []).reduce((accumulator, row) => {
+              const cardId = typeof row.card_id === "string" ? row.card_id : null;
+              if (!cardId) return accumulator;
+              accumulator.set(cardId, (accumulator.get(cardId) || 0) + 1);
+              return accumulator;
+            }, new Map<string, number>());
+          }
+        }
+
+        const nextCards = ((data as PassPriveCard[] | null) || []).map((card) => ({
+            ...card,
+            item_count: countsByCardId.get(card.id) || 0,
+          }));
+
+        setCards(nextCards);
+        cardCache.set(cacheKey, { data: nextCards, expiresAt: Date.now() + CARD_CACHE_TTL_MS });
+        return;
+      }
+
       const response = await fetch(`${API_BASE}${apiPath}`, {
         method: "GET",
         cache: "no-store",
@@ -164,7 +216,9 @@ export default function PassPriveCardManager({
       }
 
       const payload = await parseResponse(response);
-      setCards(extractCards(payload));
+      const nextCards = extractCards(payload);
+      setCards(nextCards);
+      cardCache.set(cacheKey, { data: nextCards, expiresAt: Date.now() + CARD_CACHE_TTL_MS });
     } catch (error: unknown) {
       showToast({
         type: "error",
@@ -175,7 +229,7 @@ export default function PassPriveCardManager({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, pageTitle]);
+  }, [apiPath, pageTitle, supabaseItemsTable, supabaseTable]);
 
   useEffect(() => {
     void loadCards();
@@ -225,21 +279,32 @@ export default function PassPriveCardManager({
 
     try {
       setSaving(true);
-      const endpoint = editingCard ? `${API_BASE}${apiPath}/${editingCard.id}` : `${API_BASE}${apiPath}`;
+      if (supabaseTable) {
+        const query = editingCard
+          ? supabaseBrowser.from(supabaseTable).update(payload).eq("id", editingCard.id)
+          : supabaseBrowser.from(supabaseTable).insert(payload);
 
-      const response = await fetch(endpoint, {
-        method: editingCard ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+        const { error } = await query;
+        if (error) throw error;
+      } else {
+        const endpoint = editingCard ? `${API_BASE}${apiPath}/${editingCard.id}` : `${API_BASE}${apiPath}`;
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save card."));
+        const response = await fetch(endpoint, {
+          method: editingCard ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to save card."));
+        }
       }
 
       showToast({ title: editingCard ? "Card updated" : "Card created" });
+      const cacheKey = supabaseTable ? `sb:${supabaseTable}:${supabaseItemsTable || ""}` : `api:${apiPath}`;
+      cardCache.delete(cacheKey);
       setDialogOpen(false);
       setEditingCard(null);
       setForm(initialForm);
@@ -260,15 +325,27 @@ export default function PassPriveCardManager({
 
     try {
       setSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${deletingCard.id}`, {
-        method: "DELETE",
-      });
+      if (supabaseTable) {
+        if (supabaseItemsTable) {
+          const { error: itemsError } = await supabaseBrowser.from(supabaseItemsTable).delete().eq("card_id", deletingCard.id);
+          if (itemsError) throw itemsError;
+        }
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete card."));
+        const { error } = await supabaseBrowser.from(supabaseTable).delete().eq("id", deletingCard.id);
+        if (error) throw error;
+      } else {
+        const response = await fetch(`${API_BASE}${apiPath}/${deletingCard.id}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to delete card."));
+        }
       }
 
       showToast({ title: "Card deleted" });
+      const cacheKey = supabaseTable ? `sb:${supabaseTable}:${supabaseItemsTable || ""}` : `api:${apiPath}`;
+      cardCache.delete(cacheKey);
       setDeletingCard(null);
       await loadCards();
     } catch (error: unknown) {
