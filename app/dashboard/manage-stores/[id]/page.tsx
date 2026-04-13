@@ -12,8 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   buildStorePayload,
-  fetchStoreDetail,
-  replaceStoreRelations,
   type StoreFlatRecord,
   type StoreOfferInput,
 } from "@/lib/storeAdmin";
@@ -166,35 +164,41 @@ const cleanObject = (obj: Record<string, unknown>) => {
   return out;
 };
 
-const getMissingStoresColumn = (errorMessage?: string) => {
-  if (!errorMessage) return null;
-  const match = errorMessage.match(/Could not find the '([^']+)' column of 'stores'/i);
-  return match?.[1] || null;
-};
+function extractStoreItem(payload: unknown): StoreFlatRecord | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  const candidate = record.item ?? record.data ?? record.store ?? payload;
+  return candidate && typeof candidate === "object" ? (candidate as StoreFlatRecord) : null;
+}
 
-const updateStoreWithFallback = async (storeId: string, payload: Record<string, any>) => {
-  const nextPayload = { ...payload };
-  let lastError: any = null;
+async function parseApiResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) return response.json();
+  return response.text();
+}
 
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const { error } = await supabaseBrowser
-      .from("stores")
-      .update(nextPayload)
-      .eq("id", storeId);
+async function getApiError(response: Response, fallback: string) {
+  const payload = await parseApiResponse(response).catch(() => null);
 
-    if (!error) return { error: null, payload: nextPayload };
-
-    lastError = error;
-    const missingColumn = getMissingStoresColumn(error.message);
-    if (!missingColumn || !(missingColumn in nextPayload)) {
-      return { error, payload: nextPayload };
+  if (typeof payload === "string" && payload.trim()) return payload;
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    for (const key of ["message", "error", "detail"]) {
+      const value = record[key];
+      if (typeof value === "string" && value.trim()) return value;
     }
-
-    delete nextPayload[missingColumn];
   }
 
-  return { error: lastError, payload: nextPayload };
-};
+  return fallback;
+}
+
+async function getAccessToken() {
+  const { data, error } = await supabaseBrowser.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+  return token;
+}
 
 const validateCatalogueForStoreType = (
   categories: CatalogueCategoryDraft[],
@@ -300,7 +304,23 @@ export default function StoreDetailPage() {
   // Function to refresh store data (can be called manually)
   const refreshStoreData = async () => {
     try {
-      const data = await fetchStoreDetail(String(id));
+      const token = await getAccessToken();
+      const response = await fetch(`${API_BASE}/api/stores/${id}`, {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiError(response, "Unable to load store details."));
+      }
+
+      const payload = await parseApiResponse(response);
+      const data = extractStoreItem(payload);
+      if (!data) throw new Error("Store payload missing item data.");
+
       setStore(data);
       setStoreOriginal(data);
 
@@ -673,7 +693,7 @@ export default function StoreDetailPage() {
         return acc;
       }, {} as Record<string, DayHours>);
 
-      const payload = buildStorePayload({
+      const basePayload = buildStorePayload({
         id: String(id),
         name: store.name,
         store_type: store.store_type || "PRODUCT",
@@ -700,18 +720,6 @@ export default function StoreDetailPage() {
         cover_image: finalCoverUrl || null,
       });
 
-      const { error } = await updateStoreWithFallback(String(id), payload);
-
-      if (error) {
-        showToast({
-          type: "error",
-          title: "Update failed",
-          description: error.message,
-        });
-        setSaving(false);
-        return;
-      }
-
       const normalizedOffers: StoreOfferInput[] = (store.offers || [])
         .filter((offer) => Boolean(offer?.title))
         .map((offer) => ({
@@ -735,17 +743,40 @@ export default function StoreDetailPage() {
               : null,
         }));
 
-      await replaceStoreRelations(String(id), {
+      const payload = {
+        ...basePayload,
         tags: tagsArray,
-        social_links: social_links,
+        social_links,
         opening_hours: normalizedOpeningHours,
+        hours: weekEnabled ? serializeHours(normalizedOpeningHours) : [],
         offers: normalizedOffers,
+        subscription: store.subscription || null,
         gallery_urls: finalGalleryUrls,
         cover_video_url:
           store.cover_media_type === "video" && !coverToDelete
             ? store.cover_media_url
             : null,
+      };
+
+      const token = await getAccessToken();
+      const updateResponse = await fetch(`${API_BASE}/api/stores/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
       });
+
+      if (!updateResponse.ok) {
+        showToast({
+          type: "error",
+          title: "Update failed",
+          description: await getApiError(updateResponse, "Unable to update store."),
+        });
+        setSaving(false);
+        return;
+      }
 
       const categoriesPayload = await Promise.all(
         catalogueApi.catalogueCategories
@@ -849,12 +880,15 @@ export default function StoreDetailPage() {
       // ✅ Refresh originals and reset image state
       const merged = {
         ...store,
-        ...payload,
+        ...basePayload,
         tags: tagsArray,
-        hours: weekEnabled ? serializeHours(openingHours) : [],
+        hours: weekEnabled ? serializeHours(normalizedOpeningHours) : [],
+        opening_hours: normalizedOpeningHours,
         social_links,
-        lat: payload.lat,
-        lng: payload.lng,
+        offers: normalizedOffers,
+        subscription: store.subscription || null,
+        lat: basePayload.lat,
+        lng: basePayload.lng,
         logo_url: finalLogoUrl,
         cover_image_url: finalCoverUrl,
         cover_image: finalCoverUrl,
@@ -863,7 +897,7 @@ export default function StoreDetailPage() {
             ? store.cover_media_url
             : finalCoverUrl,
         cover_media_type:
-          store.cover_media_type === "video" && !coverToDelete ? "video" : coverMediaType,
+          store.cover_media_type === "video" && !coverToDelete ? "video" : finalCoverUrl ? "image" : null,
         gallery_urls: finalGalleryUrls,
       };
       setStore(merged);

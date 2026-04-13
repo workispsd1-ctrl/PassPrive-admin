@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   ArrowUp,
   Loader2,
-  Pencil,
   Plus,
   Search,
   Store,
@@ -103,6 +102,9 @@ const initialItemForm: ItemFormState = {
   is_active: true,
 };
 
+const OPTIONS_CACHE_TTL_MS = 60_000;
+const optionsCache = new Map<string, { data: EntityOption[]; expiresAt: number }>();
+
 type PassPriveItemsManagerProps = {
   apiPath: string;
   basePath: string;
@@ -120,6 +122,9 @@ type PassPriveItemsManagerProps = {
   searchPlaceholder: string;
   pickerPlaceholder: string;
   icon: LucideIcon;
+  supabaseCardTable?: string;
+  supabaseItemsTable?: string;
+  supabaseCardForeignKey?: string;
 };
 
 function normalizeEntityOption(value: unknown): EntityOption | null {
@@ -209,7 +214,9 @@ export default function PassPriveItemsManager({
   entityNestedKey,
   searchPlaceholder,
   pickerPlaceholder,
-  icon: _icon,
+  supabaseCardTable,
+  supabaseItemsTable,
+  supabaseCardForeignKey = "card_id",
 }: PassPriveItemsManagerProps) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -264,6 +271,29 @@ export default function PassPriveItemsManager({
   const loadCard = useCallback(async () => {
     try {
       setLoading(true);
+      if (supabaseCardTable && supabaseItemsTable) {
+        const [{ data: cardRow, error: cardError }, { data: itemRows, error: itemsError }] = await Promise.all([
+          supabaseBrowser
+            .from(supabaseCardTable)
+            .select("id,title,subtitle,city,is_active,sort_order,updated_at")
+            .eq("id", cardId)
+            .maybeSingle(),
+          supabaseBrowser
+            .from(supabaseItemsTable)
+            .select(`id,${entityIdKey},custom_title,custom_venue,custom_offer,custom_image_url,sort_order,is_active`)
+            .eq(supabaseCardForeignKey, cardId)
+            .order("sort_order", { ascending: true }),
+        ]);
+
+        if (cardError) throw cardError;
+        if (itemsError) throw itemsError;
+
+        setCard((cardRow as PassPriveCard | null) || null);
+        setItems(((itemRows as CardItem[] | null) || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+        setOrderDirty(false);
+        return;
+      }
+
       const response = await fetch(`${API_BASE}${apiPath}/${cardId}`, {
         method: "GET",
         cache: "no-store",
@@ -288,13 +318,20 @@ export default function PassPriveItemsManager({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, basePath, cardId, router]);
+  }, [apiPath, basePath, cardId, entityIdKey, router, supabaseCardForeignKey, supabaseCardTable, supabaseItemsTable]);
 
   useEffect(() => {
     void loadCard();
   }, [loadCard]);
 
   const loadOptions = useCallback(async () => {
+    const cacheKey = `${entityTable}:${entitySelect}`;
+    const cached = optionsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      setOptions(cached.data);
+      return;
+    }
+
     const { data, error } = await supabaseBrowser.from(entityTable).select(entitySelect).order("name", { ascending: true });
 
     if (error) {
@@ -311,6 +348,7 @@ export default function PassPriveItemsManager({
       .filter(Boolean) as EntityOption[];
 
     setOptions(normalized);
+    optionsCache.set(cacheKey, { data: normalized, expiresAt: Date.now() + OPTIONS_CACHE_TTL_MS });
   }, [entityPluralLabel, entitySelect, entityTable]);
 
   useEffect(() => {
@@ -359,21 +397,36 @@ export default function PassPriveItemsManager({
 
     try {
       setSaving(true);
-      const endpoint = editingItem ? `${API_BASE}${apiPath}/${cardId}/items/${editingItem.id}` : `${API_BASE}${apiPath}/${cardId}/items`;
+      if (supabaseItemsTable) {
+        const record = {
+          ...payload,
+          [supabaseCardForeignKey]: cardId,
+        };
 
-      const response = await fetch(endpoint, {
-        method: editingItem ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+        const query = editingItem
+          ? supabaseBrowser.from(supabaseItemsTable).update(record).eq("id", editingItem.id)
+          : supabaseBrowser.from(supabaseItemsTable).insert(record);
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save item."));
+        const { error } = await query;
+        if (error) throw error;
+      } else {
+        const endpoint = editingItem ? `${API_BASE}${apiPath}/${cardId}/items/${editingItem.id}` : `${API_BASE}${apiPath}/${cardId}/items`;
+
+        const response = await fetch(endpoint, {
+          method: editingItem ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to save item."));
+        }
       }
 
       showToast({ title: editingItem ? "Item updated" : "Item added" });
+      optionsCache.delete(`${entityTable}:${entitySelect}`);
       setDialogOpen(false);
       setEditingItem(null);
       setForm(initialItemForm);
@@ -394,15 +447,21 @@ export default function PassPriveItemsManager({
 
     try {
       setSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${cardId}/items/${deletingItem.id}`, {
-        method: "DELETE",
-      });
+      if (supabaseItemsTable) {
+        const { error } = await supabaseBrowser.from(supabaseItemsTable).delete().eq("id", deletingItem.id);
+        if (error) throw error;
+      } else {
+        const response = await fetch(`${API_BASE}${apiPath}/${cardId}/items/${deletingItem.id}`, {
+          method: "DELETE",
+        });
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete item."));
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to delete item."));
+        }
       }
 
       showToast({ title: "Item deleted" });
+      optionsCache.delete(`${entityTable}:${entitySelect}`);
       setDeletingItem(null);
       await loadCard();
     } catch (error: unknown) {
@@ -436,18 +495,31 @@ export default function PassPriveItemsManager({
   async function saveReorder() {
     try {
       setReorderSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${cardId}/items/reorder`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          item_ids: items.map((item) => item.id),
-        }),
-      });
+      if (supabaseItemsTable) {
+        const updates = items.map((item, index) =>
+          supabaseBrowser
+            .from(supabaseItemsTable)
+            .update({ sort_order: index + 1 })
+            .eq("id", item.id)
+        );
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to reorder items."));
+        const results = await Promise.all(updates);
+        const failed = results.find((result) => result.error);
+        if (failed?.error) throw failed.error;
+      } else {
+        const response = await fetch(`${API_BASE}${apiPath}/${cardId}/items/reorder`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            item_ids: items.map((item) => item.id),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to reorder items."));
+        }
       }
 
       showToast({ title: "Item order saved" });

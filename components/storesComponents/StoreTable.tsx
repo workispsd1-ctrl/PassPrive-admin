@@ -8,6 +8,18 @@ import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8000";
+
+async function getAccessToken() {
+  const { data, error } = await supabaseBrowser.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+  return token;
+}
 
 interface Store {
   id: string;
@@ -36,7 +48,7 @@ interface Props {
   limit: number;
   setPage: React.Dispatch<React.SetStateAction<number>>;
   setLimit: React.Dispatch<React.SetStateAction<number>>;
-  setRefresh: (v: any) => void;
+  setRefresh: (v: number) => void;
   onRowClick?: (id: string) => void;
 }
 
@@ -70,25 +82,32 @@ export const StoreTable = ({
     }
 
     setLoading(true);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch(`${API_BASE}/api/stores/${confirmDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    const { error } = await supabaseBrowser
-      .from("stores")
-      .delete()
-      .eq("id", confirmDelete.id);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || payload?.message || "Failed to delete store");
+      }
 
-    if (error) {
+      showToast({ type: "success", title: "Store deleted" });
+      setRefresh(Date.now());
+    } catch (error: unknown) {
       showToast({
         type: "error",
         title: "Delete failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to delete store",
       });
-    } else {
-      showToast({ type: "success", title: "Store deleted" });
-      setRefresh(Date.now());
+    } finally {
+      setLoading(false);
+      setConfirmDelete(null);
     }
-
-    setLoading(false);
-    setConfirmDelete(null);
   };
 
   const formatLocation = (s: Store) => {
