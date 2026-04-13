@@ -17,8 +17,6 @@ import {
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import {
-  DAY_NAMES,
-  DayHours,
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
   buildRestaurantInsertPayload,
@@ -98,13 +96,6 @@ function commaSeparatedToArray(value: string) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function emptyOpeningHours() {
-  return DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-    accumulator[day] = { open: "", close: "", closed: false };
-    return accumulator;
-  }, {});
 }
 
 function defaultOffer(): RestaurantOfferInput {
@@ -204,8 +195,6 @@ export default function AddRestaurantPage() {
     ad_starts_at: "",
     ad_ends_at: "",
   });
-
-  const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(emptyOpeningHours());
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -391,26 +380,26 @@ export default function AddRestaurantPage() {
 
       const coverImage = foodUrls[0] || ambienceUrls[0] || menuUrls[0] || null;
 
-      const { error: coverError } = await supabaseBrowser
-        .from("restaurants")
-        .update({ cover_image: coverImage })
-        .eq("id", restaurant.id);
+      const [coverResult] = await Promise.all([
+        supabaseBrowser
+          .from("restaurants")
+          .update({ cover_image: coverImage })
+          .eq("id", restaurant.id),
+        replaceRestaurantRelations(restaurant.id, {
+          cuisines: commaSeparatedToArray(form.cuisines),
+          facilities: commaSeparatedToArray(form.facilities),
+          highlights: commaSeparatedToArray(form.highlights),
+          worth_visit: commaSeparatedToArray(form.worth_visit),
+          mood_tags: selectedMoodTags,
+          food_images: foodUrls,
+          ambience_images: ambienceUrls,
+          menu: menuUrls,
+          offers,
+          subscription: subscriptionEnabled ? subscription : null,
+        }),
+      ]);
 
-      if (coverError) throw coverError;
-
-      await replaceRestaurantRelations(restaurant.id, {
-        cuisines: commaSeparatedToArray(form.cuisines),
-        facilities: commaSeparatedToArray(form.facilities),
-        highlights: commaSeparatedToArray(form.highlights),
-        worth_visit: commaSeparatedToArray(form.worth_visit),
-        mood_tags: selectedMoodTags,
-        food_images: foodUrls,
-        ambience_images: ambienceUrls,
-        menu: menuUrls,
-        opening_hours: openingHours,
-        offers,
-        subscription: subscriptionEnabled ? subscription : null,
-      });
+      if (coverResult.error) throw coverResult.error;
 
       showToast({
         type: "success",
@@ -607,47 +596,6 @@ export default function AddRestaurantPage() {
           <Input type="datetime-local" className={inputClass} name="ad_starts_at" value={form.ad_starts_at} onChange={handleChange} />
           <Input type="datetime-local" className={inputClass} name="ad_ends_at" value={form.ad_ends_at} onChange={handleChange} />
         </div>
-      </section>
-
-      <section className="space-y-4 py-8">
-        <h2 className="text-sm font-medium uppercase text-muted-foreground">Opening Hours</h2>
-        {DAY_NAMES.map((day) => (
-          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{day}</span>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={openingHours[day].closed}
-                  onChange={(e) =>
-                    setOpeningHours((previous) => ({
-                      ...previous,
-                      [day]: {
-                        ...previous[day],
-                        closed: e.target.checked,
-                        open: e.target.checked ? "" : previous[day].open,
-                        close: e.target.checked ? "" : previous[day].close,
-                      },
-                    }))
-                  }
-                />
-                Closed
-              </label>
-            </div>
-            {!openingHours[day].closed && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select className="border rounded-md px-3 py-2 text-sm bg-white" value={openingHours[day].open || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], open: e.target.value } }))}>
-                  <option value="">Open</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-open-${time}`} value={time}>{time}</option>)}
-                </select>
-                <select className="border rounded-md px-3 py-2 text-sm bg-white" value={openingHours[day].close || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], close: e.target.value } }))}>
-                  <option value="">Close</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-close-${time}`} value={time}>{time}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
       </section>
 
       <div className="flex justify-end gap-3 pt-6">

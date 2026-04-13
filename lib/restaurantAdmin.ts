@@ -604,28 +604,35 @@ export async function uploadRestaurantImages(
   files: File[],
   assetType: "food" | "ambience" | "menu"
 ) {
-  const urls: string[] = [];
+  const urls: string[] = new Array(files.length).fill("");
   const uploadedPaths: string[] = [];
 
   try {
-    for (const file of files) {
-      const path = buildRestaurantStoragePath(restaurantId, assetType, file.name);
+    const batchSize = 3;
+    for (let index = 0; index < files.length; index += batchSize) {
+      const batch = files.slice(index, index + batchSize);
+      await Promise.all(
+        batch.map(async (file, batchIndex) => {
+          const fileIndex = index + batchIndex;
+          const path = buildRestaurantStoragePath(restaurantId, assetType, file.name);
 
-      const { error } = await supabaseBrowser.storage
-        .from(RESTAURANT_STORAGE_BUCKET)
-        .upload(path, file);
+          const { error } = await supabaseBrowser.storage
+            .from(RESTAURANT_STORAGE_BUCKET)
+            .upload(path, file);
 
-      if (error) throw error;
-      uploadedPaths.push(path);
+          if (error) throw error;
+          uploadedPaths.push(path);
 
-      const { data } = supabaseBrowser.storage
-        .from(RESTAURANT_STORAGE_BUCKET)
-        .getPublicUrl(path);
+          const { data } = supabaseBrowser.storage
+            .from(RESTAURANT_STORAGE_BUCKET)
+            .getPublicUrl(path);
 
-      urls.push(data.publicUrl);
+          urls[fileIndex] = data.publicUrl;
+        })
+      );
     }
 
-    return urls;
+    return urls.filter(Boolean);
   } catch (error) {
     if (uploadedPaths.length > 0) {
       const { error: cleanupError } = await supabaseBrowser.storage

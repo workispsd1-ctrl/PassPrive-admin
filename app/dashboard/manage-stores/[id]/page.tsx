@@ -11,6 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
+  buildStorePayload,
+  fetchStoreDetail,
+  replaceStoreRelations,
+  type StoreFlatRecord,
+  type StoreOfferInput,
+} from "@/lib/storeAdmin";
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -89,7 +96,7 @@ const normalizeDayLabel = (day: string) => {
 
 /* ---------------- HOURS UTILS ---------------- */
 
-const parseHours = (raw: any) => {
+const parseHours = (raw: unknown) => {
   const week = emptyWeek();
 
   if (Array.isArray(raw)) {
@@ -149,8 +156,8 @@ const serializeHours = (week: Record<string, DayHours>) => {
   });
 };
 
-const cleanObject = (obj: Record<string, any>) => {
-  const out: Record<string, any> = {};
+const cleanObject = (obj: Record<string, unknown>) => {
+  const out: Record<string, unknown> = {};
   Object.entries(obj).forEach(([k, v]) => {
     if (v === undefined || v === null) return;
     if (typeof v === "string" && v.trim() === "") return;
@@ -233,8 +240,8 @@ export default function StoreDetailPage() {
   const { id } = useParams();
   const router = useRouter();
 
-  const [store, setStore] = useState<any>(null);
-  const [storeOriginal, setStoreOriginal] = useState<any>(null);
+  const [store, setStore] = useState<StoreFlatRecord | null>(null);
+  const [storeOriginal, setStoreOriginal] = useState<StoreFlatRecord | null>(null);
   const [catalogueOriginal, setCatalogueOriginal] = useState<CatalogueCategoryDraft[]>([]);
   const [catalogueOpenSection, setCatalogueOpenSection] = useState<OpenSection>("catalogue");
 
@@ -293,32 +300,7 @@ export default function StoreDetailPage() {
   // Function to refresh store data (can be called manually)
   const refreshStoreData = async () => {
     try {
-      const { data, error } = await supabaseBrowser
-        .from("stores")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) {
-        showToast({
-          type: "error",
-          title: "Failed to load store",
-          description: error.message,
-        });
-        console.error("❌ Fetch error:", error);
-        return;
-      }
-
-      console.log("✅ Store data fetched from Supabase:", {
-        id: data.id,
-        name: data.name,
-        cover_image_url: data.cover_image_url,
-        cover_media_url: data.cover_media_url,
-        cover_media_type: data.cover_media_type,
-        logo_url: data.logo_url,
-        gallery_urls: data.gallery_urls,
-      });
-
+      const data = await fetchStoreDetail(String(id));
       setStore(data);
       setStoreOriginal(data);
 
@@ -333,14 +315,21 @@ export default function StoreDetailPage() {
         !Array.isArray(data.hours) &&
         Object.keys(data.hours).length > 0;
       setWeekEnabled(hasArrayHours || hasObjectHours);
-    } catch (err) {
-      console.error("❌ Failed to refresh store:", err);
+    } catch (err: unknown) {
+      showToast({
+        type: "error",
+        title: "Failed to load store",
+        description: err instanceof Error ? err.message : "Unable to load store details.",
+      });
     }
   };
 
   useEffect(() => {
     if (id) {
-      refreshStoreData();
+      const timer = window.setTimeout(() => {
+        void refreshStoreData();
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [id]);
 
@@ -417,18 +406,11 @@ export default function StoreDetailPage() {
 
         catalogueApi.replaceCatalogue(mapped);
         setCatalogueOriginal(mapped);
-      } catch (error: any) {
-        if (error?.response?.status === 404) {
-          // Keep edit page usable when catalogue API is unavailable in this environment.
-          catalogueApi.replaceCatalogue([]);
-          setCatalogueOriginal([]);
-          return;
-        }
-
+      } catch (error: unknown) {
         showToast({
           type: "error",
           title: "Failed to load catalogue",
-          description: error.message,
+          description: error instanceof Error ? error.message : "Unable to load catalogue.",
         });
       }
     };
@@ -610,11 +592,11 @@ export default function StoreDetailPage() {
       if (urlsToDelete.length > 0) {
         try {
           await deleteImagesFromStorage(urlsToDelete);
-        } catch (error: any) {
+        } catch (error: unknown) {
           showToast({
             type: "error",
             title: "Failed to delete images",
-            description: error.message,
+            description: error instanceof Error ? error.message : "Unable to delete images.",
           });
           setSaving(false);
           return;
@@ -636,11 +618,11 @@ export default function StoreDetailPage() {
         if (galleryToAdd.length > 0) {
           newGalleryUrls = await uploadMultipleImages(id as string, galleryToAdd, "gallery");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: "error",
           title: "Failed to upload images",
-          description: error.message,
+          description: error instanceof Error ? error.message : "Unable to upload images.",
         });
         setSaving(false);
         return;
@@ -683,22 +665,25 @@ export default function StoreDetailPage() {
         ...(store.social_links || {}),
       });
 
-      const payload: any = {
+      const normalizedOpeningHours = DAYS.reduce((acc, day) => {
+        const value = openingHours[day] || { open: "", close: "", closed: false };
+        acc[day] = weekEnabled
+          ? value
+          : { open: "", close: "", closed: true };
+        return acc;
+      }, {} as Record<string, DayHours>);
+
+      const payload = buildStorePayload({
+        id: String(id),
         name: store.name,
         store_type: store.store_type || "PRODUCT",
         description: store.description || null,
-
         category: categoryForSave,
         subcategory: store.subcategory || null,
-        tags: tagsArray,
-
         phone: store.phone || null,
         whatsapp: store.whatsapp || null,
         email: store.email || null,
         website: store.website || null,
-
-        social_links,
-
         location_name: store.location_name || null,
         address_line1: store.address_line1 || null,
         address_line2: store.address_line2 || null,
@@ -706,23 +691,14 @@ export default function StoreDetailPage() {
         region: store.region || null,
         country: store.country || "Mauritius",
         postal_code: store.postal_code || null,
-
         lat,
         lng,
         google_place_id: store.google_place_id || null,
-
-        // ✅ week enable/disable
-        hours: weekEnabled ? serializeHours(openingHours) : [],
-
         is_active: !!store.is_active,
         is_featured: !!store.is_featured,
-
-        // ✅ Updated images (matching add page structure)
         logo_url: finalLogoUrl || null,
-        cover_image_url: finalCoverUrl || null,
-        cover_media_url: finalCoverUrl || null, // Also set cover_media_url for consistency
-        gallery_urls: finalGalleryUrls,
-      };
+        cover_image: finalCoverUrl || null,
+      });
 
       const { error } = await updateStoreWithFallback(String(id), payload);
 
@@ -735,6 +711,41 @@ export default function StoreDetailPage() {
         setSaving(false);
         return;
       }
+
+      const normalizedOffers: StoreOfferInput[] = (store.offers || [])
+        .filter((offer) => Boolean(offer?.title))
+        .map((offer) => ({
+          title: typeof offer.title === "string" ? offer.title : null,
+          description:
+            typeof offer.description === "string" ? offer.description : null,
+          badge_text:
+            typeof offer.badge_text === "string" ? offer.badge_text : null,
+          offer_type:
+            typeof offer.offer_type === "string" ? offer.offer_type : null,
+          discount_value:
+            typeof offer.discount_value === "number" ? offer.discount_value : null,
+          min_spend: typeof offer.min_spend === "number" ? offer.min_spend : null,
+          start_at: typeof offer.start_at === "string" ? offer.start_at : null,
+          end_at: typeof offer.end_at === "string" ? offer.end_at : null,
+          is_active:
+            typeof offer.is_active === "boolean" ? offer.is_active : true,
+          metadata:
+            offer.metadata && typeof offer.metadata === "object"
+              ? (offer.metadata as Record<string, unknown>)
+              : null,
+        }));
+
+      await replaceStoreRelations(String(id), {
+        tags: tagsArray,
+        social_links: social_links,
+        opening_hours: normalizedOpeningHours,
+        offers: normalizedOffers,
+        gallery_urls: finalGalleryUrls,
+        cover_video_url:
+          store.cover_media_type === "video" && !coverToDelete
+            ? store.cover_media_url
+            : null,
+      });
 
       const categoriesPayload = await Promise.all(
         catalogueApi.catalogueCategories
@@ -839,14 +850,20 @@ export default function StoreDetailPage() {
       const merged = {
         ...store,
         ...payload,
-        tags: payload.tags,
-        hours: payload.hours,
-        social_links: payload.social_links,
+        tags: tagsArray,
+        hours: weekEnabled ? serializeHours(openingHours) : [],
+        social_links,
         lat: payload.lat,
         lng: payload.lng,
         logo_url: finalLogoUrl,
         cover_image_url: finalCoverUrl,
-        cover_media_url: finalCoverUrl,
+        cover_image: finalCoverUrl,
+        cover_media_url:
+          store.cover_media_type === "video" && !coverToDelete
+            ? store.cover_media_url
+            : finalCoverUrl,
+        cover_media_type:
+          store.cover_media_type === "video" && !coverToDelete ? "video" : coverMediaType,
         gallery_urls: finalGalleryUrls,
       };
       setStore(merged);
@@ -873,11 +890,11 @@ export default function StoreDetailPage() {
       setGalleryToDelete([]);
 
       setSaving(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       showToast({
         type: "error",
         title: "Failed to update store",
-        description: err.message,
+        description: err instanceof Error ? err.message : "Unable to update store.",
       });
       setSaving(false);
     }
@@ -1518,25 +1535,25 @@ export default function StoreDetailPage() {
 
 /* ---------------- HELPERS ---------------- */
 
-const Section = ({ title, children }: any) => (
+const Section = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="space-y-4">
     <h2 className="text-lg font-semibold">{title}</h2>
     {children}
   </section>
 );
 
-const Field = ({ label, children }: any) => (
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1">
     <label className="text-xs text-gray-500 uppercase">{label}</label>
     {children}
   </div>
 );
 
-const Grid = ({ children }: any) => (
+const Grid = ({ children }: { children: ReactNode }) => (
   <div className="grid grid-cols-2 gap-6">{children}</div>
 );
 
-const ReadOnly = ({ label, value }: any) => (
+const ReadOnly = ({ label, value }: { label: string; value: ReactNode }) => (
   <div>
     <label className="text-xs text-gray-500 uppercase">{label}</label>
     <div className="text-sm font-medium">{value ?? "-"}</div>

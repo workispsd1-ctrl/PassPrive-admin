@@ -26,8 +26,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  DAY_NAMES,
-  DayHours,
   RestaurantFlatRecord,
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
@@ -64,13 +62,6 @@ const FACILITY_OPTIONS = [
 ];
 
 type MoodCategoryRecord = { title?: string };
-
-function emptyOpeningHours() {
-  return DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-    accumulator[day] = { open: "", close: "", closed: false };
-    return accumulator;
-  }, {});
-}
 
 function extractCategoryList(payload: unknown): MoodCategoryRecord[] {
   if (Array.isArray(payload)) return payload as MoodCategoryRecord[];
@@ -148,7 +139,6 @@ function cloneRestaurant(record: RestaurantFlatRecord): RestaurantFlatRecord {
     food_images: [...record.food_images],
     ambience_images: [...record.ambience_images],
     menu: [...record.menu],
-    opening_hours: JSON.parse(JSON.stringify(record.opening_hours || emptyOpeningHours())),
     offers: record.offers.map((offer) => ({ ...offer })),
     offer: record.offer ? { ...record.offer } : null,
     subscription: record.subscription ? { ...record.subscription } : null,
@@ -163,7 +153,6 @@ export default function RestaurantDetailPage() {
 
   const [restaurant, setRestaurant] = useState<RestaurantFlatRecord | null>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<RestaurantFlatRecord | null>(null);
-  const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(emptyOpeningHours());
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -181,12 +170,6 @@ export default function RestaurantDetailPage() {
         const data = await fetchRestaurantDetail(id);
         setRestaurant(cloneRestaurant(data));
         setRestaurantOriginal(cloneRestaurant(data));
-        setOpeningHours(
-          DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-            accumulator[day] = data.opening_hours?.[day] || { open: "", close: "", closed: false };
-            return accumulator;
-          }, {})
-        );
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Failed to load restaurant";
         showToast({
@@ -235,16 +218,6 @@ export default function RestaurantDetailPage() {
   const handleCancel = () => {
     if (!restaurantOriginal) return;
     setRestaurant(cloneRestaurant(restaurantOriginal));
-    setOpeningHours(
-      DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-        accumulator[day] = restaurantOriginal.opening_hours?.[day] || {
-          open: "",
-          close: "",
-          closed: false,
-        };
-        return accumulator;
-      }, {})
-    );
     setFoodImagesToAdd([]);
     setAmbienceImagesToAdd([]);
     setMenuImagesToAdd([]);
@@ -323,7 +296,6 @@ export default function RestaurantDetailPage() {
         food_images: finalFoodImages,
         ambience_images: finalAmbienceImages,
         menu: finalMenuImages,
-        opening_hours: openingHours,
         offers: restaurant.offers,
         subscription: restaurant.subscription,
       });
@@ -331,12 +303,6 @@ export default function RestaurantDetailPage() {
       const refreshed = await fetchRestaurantDetail(restaurant.id);
       setRestaurant(cloneRestaurant(refreshed));
       setRestaurantOriginal(cloneRestaurant(refreshed));
-      setOpeningHours(
-        DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-          accumulator[day] = refreshed.opening_hours?.[day] || { open: "", close: "", closed: false };
-          return accumulator;
-        }, {})
-      );
       setFoodImagesToAdd([]);
       setAmbienceImagesToAdd([]);
       setMenuImagesToAdd([]);
@@ -538,32 +504,6 @@ export default function RestaurantDetailPage() {
         <Field label="Booking Terms">
           <Textarea className={inputClass} disabled={!editMode} value={bookingTermsToTextarea(restaurant.booking_terms)} onChange={(e) => setRestaurant({ ...restaurant, booking_terms: bookingTermsToPayload(e.target.value) || [] })} />
         </Field>
-      </Section>
-
-      <Section title="Opening Hours">
-        {DAY_NAMES.map((day) => (
-          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{day}</span>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input type="checkbox" disabled={!editMode} checked={!!openingHours[day]?.closed} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], closed: e.target.checked, open: e.target.checked ? "" : previous[day].open, close: e.target.checked ? "" : previous[day].close } }))} />
-                Closed
-              </label>
-            </div>
-            {!openingHours[day]?.closed && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select disabled={!editMode} className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100" value={openingHours[day]?.open || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], open: e.target.value } }))}>
-                  <option value="">Open</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-open-${time}`} value={time}>{time}</option>)}
-                </select>
-                <select disabled={!editMode} className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100" value={openingHours[day]?.close || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], close: e.target.value } }))}>
-                  <option value="">Close</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-close-${time}`} value={time}>{time}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
       </Section>
 
       <Section title="Media">
