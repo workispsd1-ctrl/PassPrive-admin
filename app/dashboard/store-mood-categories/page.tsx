@@ -8,6 +8,9 @@ export default function StoreMoodCategoriesPage() {
       title="Store Mood Categories"
       description="Create, edit, and organize store category cards shown in the app."
       apiPath="/api/storemoodcategories"
+      supabaseTable="store_mood_categories"
+      storageBucket="stores"
+      storageFolder="mood-categories"
     />
   );
 }

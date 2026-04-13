@@ -8,7 +8,10 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import {
   buildStorePayload,
+  replaceStoreRelations,
   type StoreOfferInput,
+  upsertStoreMember,
+  upsertStorePaymentDetails,
 } from "@/lib/storeAdmin";
 
 import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
@@ -91,41 +94,6 @@ function isImage(file?: File | null): boolean {
 
 function isVideo(file?: File | null): boolean {
   return !!file?.type?.startsWith("video/");
-}
-
-async function parseApiResponse(response: Response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return response.text();
-}
-
-async function getApiError(response: Response, fallback: string) {
-  const payload = await parseApiResponse(response).catch(() => null);
-  if (typeof payload === "string" && payload.trim()) return payload;
-
-  if (payload && typeof payload === "object") {
-    const record = payload as Record<string, unknown>;
-    for (const key of ["message", "error", "detail"]) {
-      const value = record[key];
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-
-  return fallback;
-}
-
-function extractCreatedStoreId(payload: unknown) {
-  if (!payload || typeof payload !== "object") return null;
-  const record = payload as Record<string, unknown>;
-  const item = (record.item && typeof record.item === "object" ? record.item : null) as
-    | Record<string, unknown>
-    | null;
-  const data = (record.data && typeof record.data === "object" ? record.data : null) as
-    | Record<string, unknown>
-    | null;
-
-  const idValue = item?.id ?? data?.id ?? record.id;
-  return typeof idValue === "string" ? idValue : null;
 }
 
 async function getAccessToken() {
@@ -298,27 +266,27 @@ function AddStorePageInner() {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const moodResult = await fetch(`${API_BASE}/api/storemoodcategories`, {
-          method: "GET",
-          cache: "no-store",
-        });
+        const { data, error } = await supabaseBrowser
+          .from("store_mood_categories")
+          .select("title")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("title", { ascending: true });
 
-        if (moodResult.ok) {
-          const payload = await moodResult.json().catch(() => null);
-          const categories = Array.from(
-            new Set(
-              extractCategoryList(payload)
-                .map((item) => item?.title)
-                .filter(
-                  (value): value is string =>
-                    typeof value === "string" && value.trim().length > 0
-                )
-                .map((value) => value.trim())
-            )
-          ).sort((a, b) => a.localeCompare(b));
+        if (error) throw error;
 
-          setCategoryOptions(categories);
-        }
+        const categories = Array.from(
+          new Set(
+            extractCategoryList(data)
+              .map((item) => item?.title)
+              .filter(
+                (value): value is string => typeof value === "string" && value.trim().length > 0
+              )
+              .map((value) => value.trim())
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        setCategoryOptions(categories);
       } catch {
         // Keep form usable even if dropdown options fail to load.
       }
@@ -623,65 +591,36 @@ function AddStorePageInner() {
       ]);
 
       const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
+      const paymentDetails = {
+        legal_business_name: payment.legal_business_name.trim(),
+        display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
+        payout_method: payment.payout_method,
+        beneficiary_name: payment.beneficiary_name?.trim() || null,
+        bank_name: payment.bank_name?.trim() || null,
+        account_number: payment.account_number?.trim() || null,
+        ifsc: payment.ifsc?.trim() || null,
+        iban: payment.iban?.trim() || null,
+        swift: payment.swift?.trim() || null,
+        payout_upi_id: payment.payout_upi_id?.trim() || null,
+        settlement_cycle: payment.settlement_cycle,
+        commission_percent: payment.commission_percent
+          ? Number(payment.commission_percent)
+          : null,
+        currency: payment.currency || "MUR",
+        tax_id_label: payment.tax_id_label || null,
+        tax_id_value: payment.tax_id_value?.trim() || null,
+        billing_email: payment.billing_email?.trim() || null,
+        billing_phone: payment.billing_phone?.trim() || null,
+        kyc_status: payment.kyc_status,
+        notes: payment.notes?.trim() || null,
+      };
       const storePayload = {
         ...baseStorePayload,
-        tags: tagsArray,
-        social_links: socialLinks,
-        opening_hours: normalizedOpeningHours,
-        hours: weekEnabled ? DAYS.map((day) => ({
-          day,
-          closed: !!normalizedOpeningHours[day]?.closed || (!normalizedOpeningHours[day]?.open && !normalizedOpeningHours[day]?.close),
-          slots:
-            !!normalizedOpeningHours[day]?.closed || (!normalizedOpeningHours[day]?.open && !normalizedOpeningHours[day]?.close)
-              ? []
-              : [{ open: normalizedOpeningHours[day].open, close: normalizedOpeningHours[day].close }],
-        })) : [],
-        offers: offersFinal,
-        payment_details: {
-          legal_business_name: payment.legal_business_name.trim(),
-          display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
-          payout_method: payment.payout_method,
-          beneficiary_name: payment.beneficiary_name?.trim() || null,
-          bank_name: payment.bank_name?.trim() || null,
-          account_number: payment.account_number?.trim() || null,
-          ifsc: payment.ifsc?.trim() || null,
-          iban: payment.iban?.trim() || null,
-          swift: payment.swift?.trim() || null,
-          payout_upi_id: payment.payout_upi_id?.trim() || null,
-          settlement_cycle: payment.settlement_cycle,
-          commission_percent: payment.commission_percent
-            ? Number(payment.commission_percent)
-            : null,
-          currency: payment.currency || "MUR",
-          tax_id_label: payment.tax_id_label || null,
-          tax_id_value: payment.tax_id_value?.trim() || null,
-          billing_email: payment.billing_email?.trim() || null,
-          billing_phone: payment.billing_phone?.trim() || null,
-          kyc_status: payment.kyc_status,
-          notes: payment.notes?.trim() || null,
-        },
         logo_url: logoUrl,
         cover_image: coverImageUrl,
-        gallery_urls: galleryUrls,
-        cover_video_url: coverType === "video" ? coverMediaUrl : null,
       };
-
-      const token = await getAccessToken();
-      const createResponse = await fetch(`${API_BASE}/api/stores`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(storePayload),
-      });
-
-      if (!createResponse.ok) {
-        throw new Error(await getApiError(createResponse, "Failed to save store"));
-      }
-
-      const createPayload = await parseApiResponse(createResponse);
-      const createdStoreId = extractCreatedStoreId(createPayload) || storeId;
+      const { error: createError } = await supabaseBrowser.from("stores").insert(storePayload);
+      if (createError) throw createError;
 
       // 4) Catalogue / Services via admin CRUD APIs
       const enabledCats = catalogueApi.catalogueCategories
@@ -706,7 +645,7 @@ function AddStorePageInner() {
 
               let imageUrl = item.imageUrl?.trim() || null;
               if (item.imageFile) {
-                imageUrl = await uploadCatalogueImage(createdStoreId, category.id, item.id, item.imageFile);
+                imageUrl = await uploadCatalogueImage(storeId, category.id, item.id, item.imageFile);
               }
 
               return {
@@ -734,12 +673,27 @@ function AddStorePageInner() {
         ),
       }));
 
-      await syncStoreCatalogueAdmin({
-        storeId: createdStoreId,
-        categories: categoriesPayload,
-        deletedCategoryIds: [],
-        deletedItemIds: [],
-      });
+      await Promise.all([
+        replaceStoreRelations(storeId, {
+          tags: tagsArray,
+          social_links: socialLinks,
+          opening_hours: normalizedOpeningHours,
+          offers: offersFinal,
+          payment_details: paymentDetails,
+          gallery_urls: galleryUrls,
+          logo_url: logoUrl,
+          cover_image_url: coverImageUrl,
+          cover_video_url: coverType === "video" ? coverMediaUrl : null,
+        }),
+        upsertStorePaymentDetails(storeId, paymentDetails),
+        upsertStoreMember(storeId, ownerUserId, "manager"),
+        syncStoreCatalogueAdmin({
+          storeId,
+          categories: categoriesPayload,
+          deletedCategoryIds: [],
+          deletedItemIds: [],
+        }),
+      ]);
 
       showToast({ type: "success", title: "Store saved successfully" });
       router.push("/dashboard/manage-stores");

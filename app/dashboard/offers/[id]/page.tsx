@@ -1,48 +1,62 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import axios from "axios";
-import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Offer = {
   id: number;
-  title: string;
+  title: string | null;
   type: string;
   media_url: string;
-  priority: number;
-  is_active: boolean;
+  priority: number | null;
+  is_active: boolean | null;
 };
 
+function buildStoragePath(type: string, fileName: string) {
+  const extension = fileName.split(".").pop() || "bin";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `${type}/${Date.now()}-${random}.${extension}`;
+}
+
+function extractStoragePath(publicUrl: string) {
+  const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
+  if (objectPublicMatch?.[1]) return objectPublicMatch[1];
+  const bucketMatch = publicUrl.match(/\/HomeHeroOffers\/(.+)$/);
+  return bucketMatch?.[1] ?? null;
+}
+
 export default function EditOfferPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [form, setForm] = useState({
     title: "",
     type: "image",
     priority: 1,
     is_active: true,
   });
-
   const [currentMediaUrl, setCurrentMediaUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  // Load existing offer data
   useEffect(() => {
     const loadOffer = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${backendUrl}/api/homeherooffers/${id}`, {
-          headers: { 'Cache-Control': 'no-cache' }
-        });
-        const offer: Offer = res.data.offer || res.data;
+        const { data, error } = await supabaseBrowser
+          .from("homeherooffers")
+          .select("id,title,type,media_url,priority,is_active")
+          .eq("id", Number(id))
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Offer not found");
 
+        const offer = data as Offer;
         setForm({
           title: offer.title || "",
           type: offer.type || "image",
@@ -50,58 +64,54 @@ export default function EditOfferPage() {
           is_active: offer.is_active ?? true,
         });
         setCurrentMediaUrl(offer.media_url || "");
-      } catch (err: unknown) {
-        const message = axios.isAxiosError(err)
-          ? err.response?.data?.message || err.message
-          : "Unknown error";
-        console.error("Error loading offer:", err);
-        console.error("Backend URL:", backendUrl);
-        console.error("Full URL:", `${backendUrl}/api/homeherooffers/${id}`);
-        alert(`Failed to load offer: ${message}`);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Failed to load offer");
         router.push("/dashboard/offers");
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) loadOffer();
-  }, [backendUrl, id, router]);
+    if (id) void loadOffer();
+  }, [id, router]);
 
   const onSubmit = async () => {
     try {
       setSaving(true);
 
-      // If user uploaded a new file, use FormData
+      let nextMediaUrl = currentMediaUrl;
       if (file) {
-        const formData = new FormData();
-        formData.append("title", form.title);
-        formData.append("type", form.type);
-        formData.append("priority", String(form.priority));
-        formData.append("is_active", String(form.is_active));
-        formData.append("media", file);
+        const path = buildStoragePath(form.type, file.name);
+        const { error: uploadError } = await supabaseBrowser.storage
+          .from("HomeHeroOffers")
+          .upload(path, file);
+        if (uploadError) throw uploadError;
 
-        await axios.put(`${backendUrl}/api/homeherooffers/${id}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-      } else {
-        // No new file, just update metadata
-        await axios.put(`${backendUrl}/api/homeherooffers/${id}`, {
-          title: form.title,
-          type: form.type,
-          priority: form.priority,
-          is_active: form.is_active,
-        });
+        const { data } = supabaseBrowser.storage.from("HomeHeroOffers").getPublicUrl(path);
+        nextMediaUrl = data.publicUrl;
+
+        const oldPath = extractStoragePath(currentMediaUrl);
+        if (oldPath) {
+          await supabaseBrowser.storage.from("HomeHeroOffers").remove([oldPath]).catch(() => undefined);
+        }
       }
 
-      alert("Offer updated successfully!");
-      router.refresh(); // Clear Next.js cache
+      const { error } = await supabaseBrowser
+        .from("homeherooffers")
+        .update({
+          title: form.title || null,
+          type: form.type,
+          media_url: nextMediaUrl,
+          priority: form.priority,
+          is_active: form.is_active,
+        })
+        .eq("id", Number(id));
+      if (error) throw error;
+
       router.push("/dashboard/offers");
-    } catch (err: unknown) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.message
-        : undefined;
-      console.error(err);
-      alert(message || "Failed to update offer");
+      router.refresh();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update offer");
     } finally {
       setSaving(false);
     }
@@ -111,10 +121,10 @@ export default function EditOfferPage() {
     return (
       <div className="max-w-xl p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-200 rounded w-1/3" />
-          <div className="h-12 bg-slate-200 rounded" />
-          <div className="h-12 bg-slate-200 rounded" />
-          <div className="h-32 bg-slate-200 rounded" />
+          <div className="h-8 w-1/3 rounded bg-slate-200" />
+          <div className="h-12 rounded bg-slate-200" />
+          <div className="h-12 rounded bg-slate-200" />
+          <div className="h-32 rounded bg-slate-200" />
         </div>
       </div>
     );
@@ -122,35 +132,29 @@ export default function EditOfferPage() {
 
   return (
     <div className="max-w-xl p-4">
-      <div className="py-5 flex items-center gap-3">
+      <div className="flex items-center gap-3 py-5">
         <Link href="/dashboard/offers">
-          <ChevronLeft className="cursor-pointer hover:bg-slate-100 rounded" />
+          <ChevronLeft className="cursor-pointer rounded hover:bg-slate-100" />
         </Link>
         <h1 className="text-2xl font-semibold">Edit Home Hero Offer</h1>
       </div>
 
       <div className="space-y-4">
-        {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Offer Title
-          </label>
+          <label className="mb-2 block text-sm font-medium text-slate-700">Offer Title</label>
           <input
             type="text"
             placeholder="Offer title"
-            className="w-full p-3 rounded border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded border border-gray-300 p-3"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
         </div>
 
-        {/* Type */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Type
-          </label>
+          <label className="mb-2 block text-sm font-medium text-slate-700">Type</label>
           <select
-            className="w-full p-3 rounded border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded border border-gray-300 p-3"
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
           >
@@ -160,96 +164,59 @@ export default function EditOfferPage() {
           </select>
         </div>
 
-        {/* Current Media Preview */}
         {currentMediaUrl && !file && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Current Media
-            </label>
-            <div className="border rounded-lg p-4 bg-slate-50">
-              {form.type === "image" && (
-                <img
-                  src={currentMediaUrl}
-                  alt="Current offer"
-                  className="w-full max-w-md rounded shadow-sm"
-                />
-              )}
-              {form.type === "video" && (
-                <video
-                  src={currentMediaUrl}
-                  className="w-full max-w-md rounded shadow-sm"
-                  controls
-                />
+            <label className="mb-2 block text-sm font-medium text-slate-700">Current Media</label>
+            <div className="rounded-lg border bg-slate-50 p-4">
+              {form.type === "image" ? (
+                <img src={currentMediaUrl} alt="Current offer" className="w-full max-w-md rounded shadow-sm" />
+              ) : (
+                <video src={currentMediaUrl} className="w-full max-w-md rounded shadow-sm" controls />
               )}
             </div>
           </div>
         )}
 
-        {/* File Upload (Optional - to replace) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-slate-700">
             {currentMediaUrl ? "Replace Media (optional)" : "Upload Media"}
           </label>
           <input
             type="file"
-            accept={
-              form.type === "video"
-                ? "video/*"
-                : form.type === "image"
-                ? "image/*"
-                : ".json"
-            }
+            accept={form.type === "video" ? "video/*" : form.type === "image" ? "image/*" : ".json"}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full p-3 rounded border border-gray-300 focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded border border-gray-300 p-3"
           />
         </div>
 
-        {/* New File Preview */}
         {file && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              New Media Preview
-            </label>
-            <div className="border rounded-lg p-4 bg-slate-50">
-              {form.type === "image" && (
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt="New preview"
-                  className="w-full max-w-md rounded shadow-sm"
-                />
-              )}
-              {form.type === "video" && (
-                <video
-                  src={URL.createObjectURL(file)}
-                  className="w-full max-w-md rounded shadow-sm"
-                  controls
-                />
+            <label className="mb-2 block text-sm font-medium text-slate-700">New Media Preview</label>
+            <div className="rounded-lg border bg-slate-50 p-4">
+              {form.type === "image" ? (
+                <img src={URL.createObjectURL(file)} alt="New preview" className="w-full max-w-md rounded shadow-sm" />
+              ) : (
+                <video src={URL.createObjectURL(file)} className="w-full max-w-md rounded shadow-sm" controls />
               )}
             </div>
           </div>
         )}
 
-        {/* Priority */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Priority (higher = shown first)
-          </label>
+          <label className="mb-2 block text-sm font-medium text-slate-700">Priority (higher = shown first)</label>
           <input
             type="number"
-            className="w-full p-3 rounded border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded border border-gray-300 p-3"
             value={form.priority}
-            onChange={(e) =>
-              setForm({ ...form, priority: Number(e.target.value) })
-            }
+            onChange={(e) => setForm({ ...form, priority: Number(e.target.value) || 1 })}
           />
         </div>
 
-        {/* Active Status */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
             id="is_active"
-            className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+            className="h-5 w-5 rounded"
             checked={form.is_active}
             onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
           />
@@ -258,19 +225,18 @@ export default function EditOfferPage() {
           </label>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 pt-4">
           <button
             onClick={onSubmit}
             disabled={saving}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 disabled:cursor-not-allowed"
+            className="rounded-lg bg-blue-600 px-6 py-2.5 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
           >
             {saving ? "Saving..." : "Update Offer"}
           </button>
 
           <Link
             href="/dashboard/offers"
-            className="px-6 py-2.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition flex items-center justify-center"
+            className="flex items-center justify-center rounded-lg bg-slate-200 px-6 py-2.5 text-slate-700 transition hover:bg-slate-300"
           >
             Cancel
           </Link>

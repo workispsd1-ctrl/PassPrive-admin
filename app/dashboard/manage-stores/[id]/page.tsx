@@ -17,6 +17,7 @@ import {
   replaceStoreRelations,
   type StoreFlatRecord,
   type StoreOfferInput,
+  upsertStorePaymentDetails,
   uploadStoreImages,
 } from "@/lib/storeAdmin";
 import {
@@ -27,18 +28,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useStoreCatalogue } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreCatalogue";
 import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
-import type { CatalogueCategoryDraft, OpenSection } from "@/app/dashboard/_components/StoreComponents/types";
+import type {
+  CatalogueCategoryDraft,
+  OpenSection,
+  PaymentDetails,
+} from "@/app/dashboard/_components/StoreComponents/types";
 import { fetchStoreCatalogueAdmin, syncStoreCatalogueAdmin } from "@/lib/storeCatalogueAdmin";
 
 /* ---------------- CONSTANTS ---------------- */
 
 const inputClass =
   "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
 
 type StoreMoodCategoryRecord = {
   title?: string;
@@ -155,6 +155,59 @@ const cleanObject = (obj: Record<string, unknown>) => {
   return out;
 };
 
+const emptyPaymentDetails = (): PaymentDetails => ({
+  legal_business_name: "",
+  display_name_on_invoice: "",
+  payout_method: "BANK_TRANSFER",
+  beneficiary_name: "",
+  bank_name: "",
+  account_number: "",
+  ifsc: "",
+  iban: "",
+  swift: "",
+  payout_upi_id: "",
+  settlement_cycle: "T+1",
+  commission_percent: "",
+  currency: "MUR",
+  tax_id_label: "VAT",
+  tax_id_value: "",
+  billing_email: "",
+  billing_phone: "",
+  kyc_status: "NOT_STARTED",
+  notes: "",
+});
+
+const normalizePaymentState = (
+  payment: StoreFlatRecord["payment_details"]
+): PaymentDetails => ({
+  legal_business_name: payment?.legal_business_name || "",
+  display_name_on_invoice: payment?.display_name_on_invoice || "",
+  payout_method:
+    (payment?.payout_method as PaymentDetails["payout_method"] | undefined) || "BANK_TRANSFER",
+  beneficiary_name: payment?.beneficiary_name || "",
+  bank_name: payment?.bank_name || "",
+  account_number: payment?.account_number || "",
+  ifsc: payment?.ifsc || "",
+  iban: payment?.iban || "",
+  swift: payment?.swift || "",
+  payout_upi_id: payment?.payout_upi_id || "",
+  settlement_cycle:
+    (payment?.settlement_cycle as PaymentDetails["settlement_cycle"] | undefined) || "T+1",
+  commission_percent:
+    payment?.commission_percent === null || payment?.commission_percent === undefined
+      ? ""
+      : String(payment.commission_percent),
+  currency: payment?.currency || "MUR",
+  tax_id_label:
+    (payment?.tax_id_label as PaymentDetails["tax_id_label"] | undefined) || "VAT",
+  tax_id_value: payment?.tax_id_value || "",
+  billing_email: payment?.billing_email || "",
+  billing_phone: payment?.billing_phone || "",
+  kyc_status:
+    (payment?.kyc_status as PaymentDetails["kyc_status"] | undefined) || "NOT_STARTED",
+  notes: payment?.notes || "",
+});
+
 const validateCatalogueForStoreType = (
   categories: CatalogueCategoryDraft[],
   storeType: "PRODUCT" | "SERVICE"
@@ -213,6 +266,8 @@ export default function StoreDetailPage() {
   // ✅ week include/exclude (same as restaurants)
   const [weekEnabled, setWeekEnabled] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [payment, setPayment] = useState<PaymentDetails>(emptyPaymentDetails());
+  const [paymentOriginal, setPaymentOriginal] = useState<PaymentDetails>(emptyPaymentDetails());
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -259,6 +314,9 @@ export default function StoreDetailPage() {
   const applyStoreState = (data: StoreFlatRecord) => {
     setStore(data);
     setStoreOriginal(data);
+    const normalizedPayment = normalizePaymentState(data.payment_details);
+    setPayment(normalizedPayment);
+    setPaymentOriginal(normalizedPayment);
 
     const parsed = parseHours(data.hours);
     setOpeningHours(parsed);
@@ -299,27 +357,27 @@ export default function StoreDetailPage() {
   useEffect(() => {
     const loadDropdownOptions = async () => {
       try {
-        const moodResult = await fetch(`${API_BASE}/api/storemoodcategories`, {
-          method: "GET",
-          cache: "no-store",
-        });
+        const { data, error } = await supabaseBrowser
+          .from("store_mood_categories")
+          .select("title")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("title", { ascending: true });
 
-        if (moodResult.ok) {
-          const payload = await moodResult.json().catch(() => null);
-          const categories = Array.from(
-            new Set(
-              extractCategoryList(payload)
-                .map((item) => item?.title)
-                .filter(
-                  (value): value is string =>
-                    typeof value === "string" && value.trim().length > 0
-                )
-                .map((value) => value.trim())
-            )
-          ).sort((a, b) => a.localeCompare(b));
+        if (error) throw error;
 
-          setCategoryOptions(categories);
-        }
+        const categories = Array.from(
+          new Set(
+            extractCategoryList(data)
+              .map((item) => item?.title)
+              .filter(
+                (value): value is string => typeof value === "string" && value.trim().length > 0
+              )
+              .map((value) => value.trim())
+          )
+        ).sort((a, b) => a.localeCompare(b));
+
+        setCategoryOptions(categories);
       } catch {
         // Keep form usable even if dropdown options fail to load.
       }
@@ -404,6 +462,7 @@ export default function StoreDetailPage() {
   const handleCancel = () => {
     setStore(storeOriginal);
     setOpeningHours(openingHoursOriginal);
+    setPayment(paymentOriginal);
     setWeekEnabled(Array.isArray(storeOriginal?.hours) && storeOriginal.hours.length > 0);
     catalogueApi.replaceCatalogue(catalogueOriginal);
     catalogueApi.clearDeletedTracking();
@@ -420,6 +479,14 @@ export default function StoreDetailPage() {
   const handleSave = async () => {
     if (!store?.name) {
       showToast({ type: "error", title: "Store name is required" });
+      return;
+    }
+    if (!payment.legal_business_name.trim()) {
+      showToast({
+        type: "error",
+        title: "Legal business name is required",
+        description: "Required for settlement & invoicing.",
+      });
       return;
     }
 
@@ -530,6 +597,29 @@ export default function StoreDetailPage() {
               ? (offer.metadata as Record<string, unknown>)
               : null,
         }));
+      const normalizedPayment = {
+        legal_business_name: payment.legal_business_name.trim(),
+        display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
+        payout_method: payment.payout_method,
+        beneficiary_name: payment.beneficiary_name?.trim() || null,
+        bank_name: payment.bank_name?.trim() || null,
+        account_number: payment.account_number?.trim() || null,
+        ifsc: payment.ifsc?.trim() || null,
+        iban: payment.iban?.trim() || null,
+        swift: payment.swift?.trim() || null,
+        payout_upi_id: payment.payout_upi_id?.trim() || null,
+        settlement_cycle: payment.settlement_cycle,
+        commission_percent: payment.commission_percent
+          ? Number(payment.commission_percent)
+          : null,
+        currency: payment.currency || "MUR",
+        tax_id_label: payment.tax_id_label || null,
+        tax_id_value: payment.tax_id_value?.trim() || null,
+        billing_email: payment.billing_email?.trim() || null,
+        billing_phone: payment.billing_phone?.trim() || null,
+        kyc_status: payment.kyc_status,
+        notes: payment.notes?.trim() || null,
+      };
 
       const categoriesPayload = await Promise.all(
         catalogueApi.catalogueCategories
@@ -600,11 +690,14 @@ export default function StoreDetailPage() {
           offers: normalizedOffers,
           subscription: store.subscription || null,
           gallery_urls: finalGalleryUrls,
+          logo_url: finalLogoUrl || null,
+          cover_image_url: finalCoverUrl || null,
           cover_video_url:
             store.cover_media_type === "video" && !coverToDelete
               ? store.cover_media_url
               : null,
         }),
+        upsertStorePaymentDetails(String(id), normalizedPayment),
         syncStoreCatalogueAdmin({
           storeId: String(id),
           categories: categoriesPayload,
@@ -941,6 +1034,239 @@ export default function StoreDetailPage() {
             />
           </Field>
         </Grid>
+      </Section>
+
+      <Section title="Payment & Settlement">
+        <Grid>
+          <Field label="Legal Business Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.legal_business_name}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, legal_business_name: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Invoice Display Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.display_name_on_invoice || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, display_name_on_invoice: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Payout Method">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.payout_method}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  payout_method: e.target.value as PaymentDetails["payout_method"],
+                }))
+              }
+            >
+              <option value="BANK_TRANSFER">BANK_TRANSFER</option>
+              <option value="UPI">UPI</option>
+              <option value="MANUAL">MANUAL</option>
+            </select>
+          </Field>
+
+          <Field label="Settlement Cycle">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.settlement_cycle}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  settlement_cycle: e.target.value as PaymentDetails["settlement_cycle"],
+                }))
+              }
+            >
+              <option value="T+0">T+0</option>
+              <option value="T+1">T+1</option>
+              <option value="T+2">T+2</option>
+              <option value="WEEKLY">WEEKLY</option>
+              <option value="MONTHLY">MONTHLY</option>
+            </select>
+          </Field>
+
+          <Field label="Beneficiary Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.beneficiary_name || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, beneficiary_name: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Bank Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.bank_name || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, bank_name: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Account Number">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.account_number || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, account_number: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="UPI ID">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.payout_upi_id || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, payout_upi_id: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="IFSC">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.ifsc || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, ifsc: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="IBAN">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.iban || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, iban: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="SWIFT">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.swift || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, swift: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Commission Percent">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.commission_percent || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, commission_percent: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Currency">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.currency}
+              onChange={(e) => setPayment((prev) => ({ ...prev, currency: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Tax ID Label">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.tax_id_label || "VAT"}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  tax_id_label: e.target.value as PaymentDetails["tax_id_label"],
+                }))
+              }
+            >
+              <option value="VAT">VAT</option>
+              <option value="GST">GST</option>
+              <option value="BRN">BRN</option>
+              <option value="TIN">TIN</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </Field>
+
+          <Field label="Tax ID Value">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.tax_id_value || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, tax_id_value: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Billing Email">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.billing_email || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, billing_email: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Billing Phone">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.billing_phone || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, billing_phone: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="KYC Status">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.kyc_status}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  kyc_status: e.target.value as PaymentDetails["kyc_status"],
+                }))
+              }
+            >
+              <option value="NOT_STARTED">NOT_STARTED</option>
+              <option value="PENDING">PENDING</option>
+              <option value="VERIFIED">VERIFIED</option>
+            </select>
+          </Field>
+        </Grid>
+
+        <Field label="Notes">
+          <Textarea
+            className={inputClass}
+            disabled={!editMode}
+            value={payment.notes || ""}
+            onChange={(e) => setPayment((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </Field>
       </Section>
 
       {/* LOCATION */}

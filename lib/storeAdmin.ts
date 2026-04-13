@@ -41,6 +41,29 @@ export type StoreSubscriptionInput = {
   expires_at?: string | null;
 };
 
+export type StorePaymentDetailsInput = {
+  legal_business_name?: string | null;
+  display_name_on_invoice?: string | null;
+  payout_method?: string | null;
+  beneficiary_name?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  ifsc?: string | null;
+  iban?: string | null;
+  swift?: string | null;
+  payout_upi_id?: string | null;
+  settlement_cycle?: string | null;
+  commission_percent?: number | null;
+  currency?: string | null;
+  tax_id_label?: string | null;
+  tax_id_value?: string | null;
+  billing_email?: string | null;
+  billing_phone?: string | null;
+  kyc_status?: string | null;
+  notes?: string | null;
+  payment_details?: Record<string, unknown> | null;
+};
+
 export type StoreFlatRecord = Record<string, unknown> & {
   id: string;
   name: string;
@@ -107,6 +130,7 @@ export type StoreFlatRecord = Record<string, unknown> & {
   opening_hours: Record<string, StoreDayHours>;
   offers: StoreOfferInput[];
   subscription: StoreSubscriptionInput | null;
+  payment_details: StorePaymentDetailsInput | null;
   gallery_urls: string[];
   cover_image_url: string | null;
   cover_media_url: string | null;
@@ -127,6 +151,7 @@ type NormalizeParams = {
   media?: DatabaseRow[];
   offers?: DatabaseRow[];
   subscriptions?: DatabaseRow[];
+  paymentDetails?: DatabaseRow | null;
 };
 
 type StoreRelationsInput = {
@@ -139,7 +164,10 @@ type StoreRelationsInput = {
   opening_hours?: Record<string, StoreDayHours>;
   offers?: StoreOfferInput[];
   subscription?: StoreSubscriptionInput | null;
+  payment_details?: StorePaymentDetailsInput | null;
   gallery_urls?: string[];
+  logo_url?: string | null;
+  cover_image_url?: string | null;
   cover_video_url?: string | null;
 };
 
@@ -376,6 +404,36 @@ function normalizeSubscription(rows: DatabaseRow[]): StoreSubscriptionInput | nu
   };
 }
 
+function normalizePaymentDetails(row?: DatabaseRow | null): StorePaymentDetailsInput | null {
+  if (!row) return null;
+
+  return {
+    legal_business_name: asString(row.legal_business_name),
+    display_name_on_invoice: asString(row.display_name_on_invoice),
+    payout_method: asString(row.payout_method),
+    beneficiary_name: asString(row.beneficiary_name),
+    bank_name: asString(row.bank_name),
+    account_number: asString(row.account_number),
+    ifsc: asString(row.ifsc),
+    iban: asString(row.iban),
+    swift: asString(row.swift),
+    payout_upi_id: asString(row.payout_upi_id),
+    settlement_cycle: asString(row.settlement_cycle),
+    commission_percent: asNumber(row.commission_percent),
+    currency: asString(row.currency),
+    tax_id_label: asString(row.tax_id_label),
+    tax_id_value: asString(row.tax_id_value),
+    billing_email: asString(row.billing_email),
+    billing_phone: asString(row.billing_phone),
+    kyc_status: asString(row.kyc_status),
+    notes: asString(row.notes),
+    payment_details:
+      row.payment_details && typeof row.payment_details === "object"
+        ? (row.payment_details as Record<string, unknown>)
+        : null,
+  };
+}
+
 function normalizeMedia(rows: DatabaseRow[]) {
   const sorted = [...(rows || [])].sort(
     (left, right) => (asNumber(left.sort_order) ?? 0) - (asNumber(right.sort_order) ?? 0)
@@ -386,10 +444,14 @@ function normalizeMedia(rows: DatabaseRow[]) {
       .map((row) => asString(row.file_url))
       .filter((value): value is string => Boolean(value));
 
+  const logo = byType("logo")[0] ?? null;
+  const coverImage = byType("cover_image")[0] ?? null;
   const coverVideo = byType("cover_video")[0] ?? null;
   const gallery = byType("gallery");
 
   return {
+    logo,
+    coverImage,
     coverVideo,
     gallery,
   };
@@ -418,14 +480,25 @@ function buildFullAddress(store: {
   return parts.length ? parts.join(", ") : null;
 }
 
-function normalizeStore({ store, tags = [], socialLinks = [], openingHours = [], media = [], offers = [], subscriptions = [] }: NormalizeParams): StoreFlatRecord {
+function normalizeStore({
+  store,
+  tags = [],
+  socialLinks = [],
+  openingHours = [],
+  media = [],
+  offers = [],
+  subscriptions = [],
+  paymentDetails = null,
+}: NormalizeParams): StoreFlatRecord {
   const normalizedOpeningHours = normalizeOpeningHours(openingHours);
   const normalizedSocialLinks = normalizeSocialLinks(socialLinks);
   const normalizedMedia = normalizeMedia(media);
+  const directLogo = asString(store.logo_url);
   const directCoverImage = asString(store.cover_image);
-  const coverImageUrl = directCoverImage;
-  const coverMediaUrl = normalizedMedia.coverVideo || directCoverImage;
-  const coverMediaType = normalizedMedia.coverVideo ? "video" : directCoverImage ? "image" : null;
+  const logoUrl = normalizedMedia.logo || directLogo;
+  const coverImageUrl = normalizedMedia.coverImage || directCoverImage;
+  const coverMediaUrl = normalizedMedia.coverVideo || coverImageUrl;
+  const coverMediaType = normalizedMedia.coverVideo ? "video" : coverImageUrl ? "image" : null;
 
   return {
     id: String(store.id),
@@ -457,7 +530,7 @@ function normalizeStore({ store, tags = [], socialLinks = [], openingHours = [],
     lat: asNumber(store.lat),
     lng: asNumber(store.lng),
     google_place_id: asString(store.google_place_id),
-    logo_url: asString(store.logo_url),
+    logo_url: logoUrl,
     cover_image: directCoverImage,
     owner_user_id: asString(store.owner_user_id),
     created_by: asString(store.created_by),
@@ -501,6 +574,7 @@ function normalizeStore({ store, tags = [], socialLinks = [], openingHours = [],
     opening_hours: normalizedOpeningHours,
     offers: normalizeOffers(offers),
     subscription: normalizeSubscription(subscriptions),
+    payment_details: normalizePaymentDetails(paymentDetails),
     gallery_urls: normalizedMedia.gallery,
     cover_image_url: coverImageUrl,
     cover_media_url: coverMediaUrl,
@@ -513,7 +587,16 @@ function normalizeStore({ store, tags = [], socialLinks = [], openingHours = [],
 }
 
 export async function fetchStoreDetail(storeId: string) {
-  const [storeResult, tagsResult, socialResult, openingHoursResult, mediaResult, offersResult, subscriptionsResult] =
+  const [
+    storeResult,
+    tagsResult,
+    socialResult,
+    openingHoursResult,
+    mediaResult,
+    offersResult,
+    subscriptionsResult,
+    paymentDetailsResult,
+  ] =
     await Promise.all([
       supabaseBrowser.from("stores").select("*").eq("id", storeId).single(),
       supabaseBrowser.from("store_tags").select("*").eq("store_id", storeId),
@@ -522,6 +605,11 @@ export async function fetchStoreDetail(storeId: string) {
       supabaseBrowser.from("store_media_assets").select("*").eq("store_id", storeId),
       supabaseBrowser.from("store_offers").select("*").eq("store_id", storeId),
       supabaseBrowser.from("store_subscriptions").select("*").eq("store_id", storeId),
+      supabaseBrowser
+        .from("store_payment_details")
+        .select("*")
+        .eq("store_id", storeId)
+        .maybeSingle(),
     ]);
 
   if (storeResult.error) throw storeResult.error;
@@ -532,6 +620,7 @@ export async function fetchStoreDetail(storeId: string) {
   if (mediaResult.error) throw mediaResult.error;
   if (offersResult.error) throw offersResult.error;
   if (subscriptionsResult.error) throw subscriptionsResult.error;
+  if (paymentDetailsResult.error) throw paymentDetailsResult.error;
 
   return normalizeStore({
     store: storeResult.data,
@@ -541,6 +630,7 @@ export async function fetchStoreDetail(storeId: string) {
     media: mediaResult.data || [],
     offers: offersResult.data || [],
     subscriptions: subscriptionsResult.data || [],
+    paymentDetails: paymentDetailsResult.data,
   });
 }
 
@@ -716,6 +806,30 @@ function buildStoreSubscriptionRows(
 
 function buildStoreMediaRows(storeId: string, input: StoreRelationsInput) {
   return [
+    ...(input.logo_url
+      ? [
+          {
+            store_id: storeId,
+            asset_type: "logo",
+            file_url: input.logo_url,
+            file_path: extractStoreStoragePath(input.logo_url),
+            sort_order: 0,
+            is_active: true,
+          },
+        ]
+      : []),
+    ...(input.cover_image_url
+      ? [
+          {
+            store_id: storeId,
+            asset_type: "cover_image",
+            file_url: input.cover_image_url,
+            file_path: extractStoreStoragePath(input.cover_image_url),
+            sort_order: 0,
+            is_active: true,
+          },
+        ]
+      : []),
     ...(input.cover_video_url
       ? [
           {
@@ -749,6 +863,74 @@ async function replaceStoreRows(table: string, storeId: string, rows: Record<str
 
   const { error: insertError } = await supabaseBrowser.from(table).insert(rows);
   if (insertError) throw insertError;
+}
+
+function buildStorePaymentDetailsRow(
+  storeId: string,
+  paymentDetails: StoreRelationsInput["payment_details"]
+) {
+  if (!paymentDetails || !hasValue(paymentDetails.legal_business_name)) return null;
+
+  return {
+    store_id: storeId,
+    legal_business_name: asString(paymentDetails.legal_business_name),
+    display_name_on_invoice: asString(paymentDetails.display_name_on_invoice),
+    payout_method: asString(paymentDetails.payout_method),
+    beneficiary_name: asString(paymentDetails.beneficiary_name),
+    bank_name: asString(paymentDetails.bank_name),
+    account_number: asString(paymentDetails.account_number),
+    ifsc: asString(paymentDetails.ifsc),
+    iban: asString(paymentDetails.iban),
+    swift: asString(paymentDetails.swift),
+    payout_upi_id: asString(paymentDetails.payout_upi_id),
+    settlement_cycle: asString(paymentDetails.settlement_cycle),
+    commission_percent: asNumber(paymentDetails.commission_percent),
+    currency: asString(paymentDetails.currency),
+    tax_id_label: asString(paymentDetails.tax_id_label),
+    tax_id_value: asString(paymentDetails.tax_id_value),
+    billing_email: asString(paymentDetails.billing_email),
+    billing_phone: asString(paymentDetails.billing_phone),
+    kyc_status: asString(paymentDetails.kyc_status),
+    notes: asString(paymentDetails.notes),
+    payment_details:
+      paymentDetails.payment_details && typeof paymentDetails.payment_details === "object"
+        ? paymentDetails.payment_details
+        : {},
+  };
+}
+
+export async function upsertStorePaymentDetails(
+  storeId: string,
+  paymentDetails: StoreRelationsInput["payment_details"]
+) {
+  const row = buildStorePaymentDetailsRow(storeId, paymentDetails);
+  if (!row) {
+    const { error } = await supabaseBrowser
+      .from("store_payment_details")
+      .delete()
+      .eq("store_id", storeId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabaseBrowser
+    .from("store_payment_details")
+    .upsert(row, { onConflict: "store_id" });
+
+  if (error) throw error;
+}
+
+export async function upsertStoreMember(storeId: string, userId: string, role = "manager") {
+  const { error } = await supabaseBrowser.from("store_members").upsert(
+    {
+      store_id: storeId,
+      user_id: userId,
+      role,
+    },
+    { onConflict: "store_id,user_id" }
+  );
+
+  if (error) throw error;
 }
 
 export async function replaceStoreRelations(storeId: string, input: StoreRelationsInput) {
