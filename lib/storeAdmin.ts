@@ -175,8 +175,58 @@ type StoreAssetType = "logo" | "cover" | "gallery";
 
 function asString(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim();
+  const trimmed = value.trim().replace(/^"+|"+$/g, "");
   return trimmed ? trimmed : null;
+}
+
+function inferStorageBucket(value?: string | null) {
+  if (!value) return STORE_STORAGE_BUCKET;
+
+  const publicUrlMatch = value.match(/\/storage\/v1\/object\/public\/([^/]+)\//i);
+  if (publicUrlMatch?.[1]) return publicUrlMatch[1];
+
+  const normalized = value.replace(/^\/+/, "");
+  const [firstSegment] = normalized.split("/");
+  if (!firstSegment) return STORE_STORAGE_BUCKET;
+
+  const knownBuckets = new Set([
+    STORE_STORAGE_BUCKET,
+    "store",
+    "stores",
+    "restaurant",
+    "restaurants",
+  ]);
+
+  return knownBuckets.has(firstSegment) ? firstSegment : STORE_STORAGE_BUCKET;
+}
+
+function buildStorePublicUrl(path: string, bucketHint?: string | null) {
+  const bucket = inferStorageBucket(bucketHint || path);
+  const normalizedPath = path
+    .replace(/^\/+/, "")
+    .replace(/^storage\/v1\/object\/public\/[^/]+\//, "")
+    .replace(new RegExp(`^${bucket}/`), "");
+
+  const { data } = supabaseBrowser.storage.from(bucket).getPublicUrl(normalizedPath);
+  return data.publicUrl || null;
+}
+
+function resolveStoreMediaUrl(value: unknown, filePath?: unknown): string | null {
+  const directValue = asString(value);
+  const normalizedFilePath = asString(filePath);
+
+  // Prefer the stored object path over any persisted public URL so stale URLs do not win.
+  if (normalizedFilePath) {
+    return buildStorePublicUrl(normalizedFilePath, directValue || normalizedFilePath);
+  }
+
+  if (directValue?.startsWith("http://") || directValue?.startsWith("https://")) {
+    return directValue;
+  }
+
+  const path = directValue;
+  if (!path) return null;
+  return buildStorePublicUrl(path, directValue || path);
 }
 
 export function extractStoreStoragePath(publicUrl: string): string | null {
@@ -438,16 +488,19 @@ function normalizeMedia(rows: DatabaseRow[]) {
   const sorted = [...(rows || [])].sort(
     (left, right) => (asNumber(left.sort_order) ?? 0) - (asNumber(right.sort_order) ?? 0)
   );
+  const activeRows = sorted.filter((row) => asBoolean(row.is_active, true));
   const byType = (type: string) =>
-    sorted
+    activeRows
       .filter((row) => asString(row.asset_type) === type && asBoolean(row.is_active, true))
-      .map((row) => asString(row.file_url))
+      .map((row) => resolveStoreMediaUrl(row.file_url, row.file_path))
       .filter((value): value is string => Boolean(value));
 
-  const logo = byType("logo")[0] ?? null;
-  const coverImage = byType("cover_image")[0] ?? null;
+  const fallbackImageAssets = ["gallery", "ambience", "food", "menu"];
+  const fallbackImages = fallbackImageAssets.flatMap((type) => byType(type));
+  const logo = byType("logo")[0] ?? fallbackImages[0] ?? null;
+  const coverImage = byType("cover_image")[0] ?? fallbackImages[0] ?? null;
   const coverVideo = byType("cover_video")[0] ?? null;
-  const gallery = byType("gallery");
+  const gallery = Array.from(new Set(fallbackImages));
 
   return {
     logo,
@@ -493,8 +546,8 @@ function normalizeStore({
   const normalizedOpeningHours = normalizeOpeningHours(openingHours);
   const normalizedSocialLinks = normalizeSocialLinks(socialLinks);
   const normalizedMedia = normalizeMedia(media);
-  const directLogo = asString(store.logo_url);
-  const directCoverImage = asString(store.cover_image);
+  const directLogo = resolveStoreMediaUrl(store.logo_url);
+  const directCoverImage = resolveStoreMediaUrl(store.cover_image);
   const logoUrl = normalizedMedia.logo || directLogo;
   const coverImageUrl = normalizedMedia.coverImage || directCoverImage;
   const coverMediaUrl = normalizedMedia.coverVideo || coverImageUrl;
@@ -622,7 +675,7 @@ export async function fetchStoreDetail(storeId: string) {
   if (subscriptionsResult.error) throw subscriptionsResult.error;
   if (paymentDetailsResult.error) throw paymentDetailsResult.error;
 
-  return normalizeStore({
+  const normalizedStore = normalizeStore({
     store: storeResult.data,
     tags: tagsResult.data || [],
     socialLinks: socialResult.data || [],
@@ -632,6 +685,30 @@ export async function fetchStoreDetail(storeId: string) {
     subscriptions: subscriptionsResult.data || [],
     paymentDetails: paymentDetailsResult.data,
   });
+
+  console.info("[store-edit][fetchStoreDetail] media snapshot", {
+    storeId,
+    rawStoreMedia: {
+      logo_url: storeResult.data.logo_url ?? null,
+      cover_image: storeResult.data.cover_image ?? null,
+    },
+    mediaAssetCount: (mediaResult.data || []).length,
+    mediaAssets: (mediaResult.data || []).map((row) => ({
+      id: asString(row.id),
+      asset_type: asString(row.asset_type),
+      file_url: asString(row.file_url),
+      file_path: asString(row.file_path),
+      is_active: asBoolean(row.is_active, true),
+      sort_order: asNumber(row.sort_order),
+    })),
+    normalizedMedia: {
+      logo_url: normalizedStore.logo_url ?? null,
+      cover_image_url: normalizedStore.cover_image_url ?? null,
+      gallery_urls: normalizedStore.gallery_urls ?? [],
+    },
+  });
+
+  return normalizedStore;
 }
 
 export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<string, unknown>) {
@@ -805,54 +882,57 @@ function buildStoreSubscriptionRows(
 }
 
 function buildStoreMediaRows(storeId: string, input: StoreRelationsInput) {
+  const createMediaRow = (
+    assetType: "logo" | "cover_image" | "cover_video" | "gallery",
+    value: string,
+    sortOrder: number
+  ) => {
+    const filePath = extractStoreStoragePath(value) || asString(value);
+    if (!filePath) return null;
+
+    const canonicalUrl = buildStorePublicUrl(filePath, value) || value;
+    const normalizedPath = extractStoreStoragePath(canonicalUrl) || filePath;
+
+    if (!normalizedPath.includes(`/${storeId}/`)) {
+      console.warn("[storeAdmin] media path does not match store id", {
+        storeId,
+        assetType,
+        value,
+        normalizedPath,
+      });
+    }
+
+    return {
+      store_id: storeId,
+      asset_type: assetType,
+      file_url: canonicalUrl,
+      file_path: normalizedPath,
+      sort_order: sortOrder,
+      is_active: true,
+    };
+  };
+
   return [
     ...(input.logo_url
-      ? [
-          {
-            store_id: storeId,
-            asset_type: "logo",
-            file_url: input.logo_url,
-            file_path: extractStoreStoragePath(input.logo_url),
-            sort_order: 0,
-            is_active: true,
-          },
-        ]
+      ? [createMediaRow("logo", input.logo_url, 0)].filter(
+          (row): row is NonNullable<ReturnType<typeof createMediaRow>> => Boolean(row)
+        )
       : []),
     ...(input.cover_image_url
-      ? [
-          {
-            store_id: storeId,
-            asset_type: "cover_image",
-            file_url: input.cover_image_url,
-            file_path: extractStoreStoragePath(input.cover_image_url),
-            sort_order: 0,
-            is_active: true,
-          },
-        ]
+      ? [createMediaRow("cover_image", input.cover_image_url, 0)].filter(
+          (row): row is NonNullable<ReturnType<typeof createMediaRow>> => Boolean(row)
+        )
       : []),
     ...(input.cover_video_url
-      ? [
-          {
-            store_id: storeId,
-            asset_type: "cover_video",
-            file_url: input.cover_video_url,
-            file_path: extractStoreStoragePath(input.cover_video_url),
-            sort_order: 0,
-            is_active: true,
-          },
-        ]
+      ? [createMediaRow("cover_video", input.cover_video_url, 0)].filter(
+          (row): row is NonNullable<ReturnType<typeof createMediaRow>> => Boolean(row)
+        )
       : []),
     ...(input.gallery_urls || [])
       .map((url) => asString(url))
       .filter((url): url is string => Boolean(url))
-      .map((url, index) => ({
-        store_id: storeId,
-        asset_type: "gallery",
-        file_url: url,
-        file_path: extractStoreStoragePath(url),
-        sort_order: index,
-        is_active: true,
-      })),
+      .map((url, index) => createMediaRow("gallery", url, index))
+      .filter((row): row is NonNullable<ReturnType<typeof createMediaRow>> => Boolean(row)),
   ];
 }
 
@@ -934,20 +1014,45 @@ export async function upsertStoreMember(storeId: string, userId: string, role = 
 }
 
 export async function replaceStoreRelations(storeId: string, input: StoreRelationsInput) {
-  await Promise.all([
-    replaceStoreRows("store_tags", storeId, buildStoreTagRows(storeId, input)),
-    replaceStoreRows("store_social_links", storeId, buildStoreSocialRows(storeId, input.social_links)),
-    replaceStoreRows(
-      "store_opening_hours",
-      storeId,
-      buildStoreOpeningHoursRows(storeId, input.opening_hours)
-    ),
-    replaceStoreRows("store_offers", storeId, buildStoreOfferRows(storeId, input.offers)),
-    replaceStoreRows(
-      "store_subscriptions",
-      storeId,
-      buildStoreSubscriptionRows(storeId, input.subscription)
-    ),
-    replaceStoreRows("store_media_assets", storeId, buildStoreMediaRows(storeId, input)),
-  ]);
+  const tasks: Promise<void>[] = [];
+
+  if ("tags" in input || "facilities" in input || "highlights" in input || "worth_visit" in input || "mood_tags" in input) {
+    tasks.push(replaceStoreRows("store_tags", storeId, buildStoreTagRows(storeId, input)));
+  }
+
+  if ("social_links" in input) {
+    tasks.push(
+      replaceStoreRows("store_social_links", storeId, buildStoreSocialRows(storeId, input.social_links))
+    );
+  }
+
+  if ("opening_hours" in input) {
+    tasks.push(
+      replaceStoreRows(
+        "store_opening_hours",
+        storeId,
+        buildStoreOpeningHoursRows(storeId, input.opening_hours)
+      )
+    );
+  }
+
+  if ("offers" in input) {
+    tasks.push(replaceStoreRows("store_offers", storeId, buildStoreOfferRows(storeId, input.offers)));
+  }
+
+  if ("subscription" in input) {
+    tasks.push(
+      replaceStoreRows(
+        "store_subscriptions",
+        storeId,
+        buildStoreSubscriptionRows(storeId, input.subscription)
+      )
+    );
+  }
+
+  if ("gallery_urls" in input || "logo_url" in input || "cover_image_url" in input || "cover_video_url" in input) {
+    tasks.push(replaceStoreRows("store_media_assets", storeId, buildStoreMediaRows(storeId, input)));
+  }
+
+  await Promise.all(tasks);
 }
