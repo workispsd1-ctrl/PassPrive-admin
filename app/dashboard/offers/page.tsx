@@ -1,11 +1,11 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type BannerRecord = {
   id: number;
@@ -23,9 +23,8 @@ type BannerConfig = {
   title: string;
   description: string;
   collectionLabel: string;
-  listEndpoint: string;
-  uploadEndpoint?: string;
-  deleteEndpoint: string;
+  table: string;
+  storageBucket: string;
   emptyLabel: string;
   addLabel: string;
   supportsEdit: boolean;
@@ -37,11 +36,6 @@ type UploadFormState = {
   priority: number;
   is_active: boolean;
 };
-
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:8000";
 
 const initialUploadForm: UploadFormState = {
   title: "",
@@ -56,9 +50,8 @@ const bannerConfigs: BannerConfig[] = [
     title: "Home Hero Offers",
     description: "Top-level hero creatives shown on the main home experience.",
     collectionLabel: "Hero offers",
-    listEndpoint: "/api/homeherooffers",
-    uploadEndpoint: "/api/homeherooffers/upload",
-    deleteEndpoint: "/api/homeherooffers",
+    table: "homeherooffers",
+    storageBucket: "HomeHeroOffers",
     emptyLabel: "No home hero offers available yet.",
     addLabel: "Add Home Hero Offer",
     supportsEdit: true,
@@ -68,9 +61,8 @@ const bannerConfigs: BannerConfig[] = [
     title: "Dine-In Home Banners",
     description: "Promotional banners shown in the dine-in home section.",
     collectionLabel: "Dine-in banners",
-    listEndpoint: "/api/dineinhomebanners",
-    uploadEndpoint: "/api/dineinhomebanners/upload",
-    deleteEndpoint: "/api/dineinhomebanners",
+    table: "dineinhomebanners",
+    storageBucket: "DineinHomeBanners",
     emptyLabel: "No dine-in home banners available yet.",
     addLabel: "Add Dine-In Banner",
     supportsEdit: false,
@@ -80,9 +72,8 @@ const bannerConfigs: BannerConfig[] = [
     title: "Store Home Banners",
     description: "Promotional banners shown in the store home section.",
     collectionLabel: "Store banners",
-    listEndpoint: "/api/storeshomebanners",
-    uploadEndpoint: "/api/storeshomebanners/upload",
-    deleteEndpoint: "/api/storeshomebanners",
+    table: "storeshomebanners",
+    storageBucket: "homeherooffers",
     emptyLabel: "No store home banners available yet.",
     addLabel: "Add Store Banner",
     supportsEdit: false,
@@ -114,6 +105,20 @@ function extractBannerList(payload: unknown): BannerRecord[] {
   }
 
   return [];
+}
+
+function extractStoragePath(publicUrl: string, bucket: string): string | null {
+  if (!publicUrl) return null;
+  const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
+  if (objectPublicMatch?.[1]) return objectPublicMatch[1];
+  const bucketMatch = publicUrl.match(new RegExp(`/${bucket}/(.+)$`));
+  return bucketMatch?.[1] ?? null;
+}
+
+function buildBannerStoragePath(type: string, fileName: string) {
+  const extension = fileName.split(".").pop() || "bin";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `${type}/${Date.now()}-${random}.${extension}`;
 }
 
 function BannerPreview({ banner }: { banner: BannerRecord }) {
@@ -318,12 +323,15 @@ export default function OffersPage() {
   async function loadBannerGroup(config: BannerConfig) {
     try {
       setLoading((current) => ({ ...current, [config.key]: true }));
-      const res = await axios.get(`${backendUrl}${config.listEndpoint}`, {
-        headers: { "Cache-Control": "no-cache" },
-      });
+      const { data, error } = await supabaseBrowser
+        .from(config.table)
+        .select("id,title,type,media_url,thumbnail_url,is_active,priority,start_at,end_at,created_at,updated_at")
+        .order("priority", { ascending: true })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
       setRecords((current) => ({
         ...current,
-        [config.key]: extractBannerList(res.data),
+        [config.key]: extractBannerList(data),
       }));
     } catch (error) {
       console.error(`Failed to load ${config.key} banners`, error);
@@ -362,13 +370,24 @@ export default function OffersPage() {
 
     try {
       setDeleting(deletingKey);
-      await axios.delete(`${backendUrl}${config.deleteEndpoint}/${id}`);
+      const banner = records[config.key].find((item) => item.id === id) as
+        | (BannerRecord & { thumbnail_url?: string | null })
+        | undefined;
+      const paths = [banner?.media_url, banner?.thumbnail_url]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => extractStoragePath(value, config.storageBucket))
+        .filter((value): value is string => Boolean(value));
+
+      if (paths.length > 0) {
+        await supabaseBrowser.storage.from(config.storageBucket).remove(paths);
+      }
+
+      const { error } = await supabaseBrowser.from(config.table).delete().eq("id", id);
+      if (error) throw error;
       await loadBannerGroup(config);
       alert(`${config.title} item deleted successfully.`);
     } catch (error: unknown) {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.message
-        : undefined;
+      const message = error instanceof Error ? error.message : undefined;
       console.error(error);
       alert(message || "Failed to delete banner");
     } finally {
@@ -380,10 +399,6 @@ export default function OffersPage() {
     const file = files[config.key];
     const form = forms[config.key];
 
-    if (!config.uploadEndpoint) {
-      return;
-    }
-
     if (!file) {
       alert("Please upload a file");
       return;
@@ -391,25 +406,32 @@ export default function OffersPage() {
 
     try {
       setSaving((current) => ({ ...current, [config.key]: true }));
+      const path = buildBannerStoragePath(form.type, file.name);
+      const { error: uploadError } = await supabaseBrowser.storage
+        .from(config.storageBucket)
+        .upload(path, file);
+      if (uploadError) throw uploadError;
 
-      const formData = new FormData();
-      formData.append("title", form.title);
-      formData.append("type", form.type);
-      formData.append("priority", String(form.priority));
-      formData.append("is_active", String(form.is_active));
-      formData.append("media", file);
-
-      await axios.post(`${backendUrl}${config.uploadEndpoint}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const { data } = supabaseBrowser.storage.from(config.storageBucket).getPublicUrl(path);
+      const { error: insertError } = await supabaseBrowser.from(config.table).insert({
+        title: form.title || null,
+        type: form.type,
+        media_url: data.publicUrl,
+        thumbnail_url: null,
+        cta_text: null,
+        cta_link: null,
+        priority: form.priority,
+        is_active: form.is_active,
+        start_at: null,
+        end_at: null,
       });
+      if (insertError) throw insertError;
 
       await loadBannerGroup(config);
       resetForm(config.key);
       alert(`${config.addLabel} created successfully.`);
     } catch (error: unknown) {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.message
-        : undefined;
+      const message = error instanceof Error ? error.message : undefined;
       console.error(error);
       alert(message || "Failed to upload banner");
     } finally {
@@ -521,11 +543,6 @@ export default function OffersPage() {
                 <div className="max-w-2xl">
                   <h2 className="text-xl font-semibold text-slate-900">{config.title}</h2>
                   <p className="mt-1 text-sm text-slate-500">{config.description}</p>
-                  {!config.supportsEdit && (
-                    <p className="mt-2 text-xs font-medium text-amber-600">
-                      Upload and delete are available here. Edit is not added because only create/delete routes were provided.
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-3">

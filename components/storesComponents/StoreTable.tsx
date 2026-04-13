@@ -8,18 +8,7 @@ import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
-
-async function getAccessToken() {
-  const { data, error } = await supabaseBrowser.auth.getSession();
-  if (error) throw error;
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
-  return token;
-}
+import { deleteStoreImages, fetchStoreDetail } from "@/lib/storeAdmin";
 
 interface Store {
   id: string;
@@ -83,17 +72,25 @@ export const StoreTable = ({
 
     setLoading(true);
     try {
-      const token = await getAccessToken();
-      const response = await fetch(`${API_BASE}/api/stores/${confirmDelete.id}?hard=true`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const existingStore = await fetchStoreDetail(confirmDelete.id).catch(() => null);
+      const urlsToDelete = Array.from(
+        new Set(
+          [
+            existingStore?.logo_url,
+            existingStore?.cover_image_url,
+            existingStore?.cover_media_type === "video" ? existingStore.cover_media_url : null,
+            ...(existingStore?.gallery_urls || []),
+          ].filter((value): value is string => Boolean(value))
+        )
+      );
 
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || payload?.message || "Failed to delete store");
+      const { error } = await supabaseBrowser.from("stores").delete().eq("id", confirmDelete.id);
+      if (error) throw error;
+
+      if (urlsToDelete.length > 0) {
+        await deleteStoreImages(urlsToDelete).catch((cleanupError) => {
+          console.error("[StoreTable] storage cleanup failed", cleanupError);
+        });
       }
 
       showToast({ type: "success", title: "Store deleted" });
