@@ -8,6 +8,9 @@ export default function MoodCategoriesPage() {
       title="Restaurant Mood Categories"
       description="Create, edit, and organize restaurant category cards shown in the app."
       apiPath="/api/moodcategories"
+      supabaseTable="restaurant_mood_categories"
+      storageBucket="restaurant"
+      storageFolder="mood-categories"
     />
   );
 }

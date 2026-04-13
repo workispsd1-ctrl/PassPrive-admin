@@ -46,17 +46,11 @@ import {
 import { showToast } from "@/hooks/useToast";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import {
-  API_BASE,
   StoreCampaign,
   StoreCampaignItem,
   StoreOption,
-  extractCampaigns,
   extractErrorMessage,
-  extractItems,
   formatDate,
-  getErrorFromResponse,
-  isForbiddenResponse,
-  parseResponse,
   resolveStoreField,
 } from "../_lib";
 
@@ -145,49 +139,58 @@ export default function StoreCampaignDetailPage() {
       setLoading(true);
       setPageError(null);
 
-      const [campaignsResponse, itemsResponse] = await Promise.all([
-        fetch(`${API_BASE}/api/stores-home/sections`, {
-          method: "GET",
-          cache: "no-store",
-        }),
-        fetch(`${API_BASE}/api/stores-home/sections/${campaignId}/items`, {
-          method: "GET",
-          cache: "no-store",
-        }),
-      ]);
+      const [{ data: campaignRow, error: campaignError }, { data: itemRows, error: itemsError }] =
+        await Promise.all([
+          supabaseBrowser
+            .from("stores_home_sections")
+            .select("id,slug,title,subtitle,is_active,max_items,starts_at,ends_at,thumbnail_url,created_at,updated_at")
+            .eq("id", campaignId)
+            .maybeSingle(),
+          supabaseBrowser
+            .from("stores_home_section_items")
+            .select("id,section_id,store_id,source_type,sort_order,is_active,created_at,updated_at")
+            .eq("section_id", campaignId)
+            .order("sort_order", { ascending: true }),
+        ]);
 
-      if (!campaignsResponse.ok) {
-        if (isForbiddenResponse(campaignsResponse)) {
-          setPageError("You do not have permission to view store campaigns.");
-          return;
-        }
-        throw new Error(await getErrorFromResponse(campaignsResponse, "Failed to load campaigns."));
-      }
+      if (campaignError) throw campaignError;
+      if (itemsError) throw itemsError;
 
-      if (!itemsResponse.ok) {
-        if (isForbiddenResponse(itemsResponse)) {
-          setPageError("You do not have permission to manage stores in this campaign.");
-          return;
-        }
-        throw new Error(await getErrorFromResponse(itemsResponse, "Failed to load campaign stores."));
-      }
-
-      const [campaignsPayload, itemsPayload] = await Promise.all([
-        parseResponse(campaignsResponse),
-        parseResponse(itemsResponse),
-      ]);
-
-      const matchedCampaign = extractCampaigns(campaignsPayload).find((item) => item.id === campaignId) || null;
-      const extractedItems = extractItems(itemsPayload).sort(
-        (left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0)
-      );
-
-      if (!matchedCampaign) {
+      if (!campaignRow) {
         setPageError("Campaign not found.");
         return;
       }
 
-      setCampaign(matchedCampaign);
+      const storeIds = Array.from(
+        new Set(
+          (((itemRows as StoreCampaignItem[] | null) || []).map((item) => item.store_id).filter(Boolean))
+        )
+      );
+
+      let storeDetailsMap = new Map<string, StoreOption>();
+      if (storeIds.length > 0) {
+        const { data: storeRows, error: storesError } = await supabaseBrowser
+          .from("stores")
+          .select("id,name,city,category,subcategory")
+          .in("id", storeIds);
+
+        if (storesError) throw storesError;
+
+        storeDetailsMap = new Map(
+          (((storeRows as Record<string, unknown>[] | null) || [])
+            .map(normalizeStoreOption)
+            .filter(Boolean) as StoreOption[]).map((store) => [store.id, store])
+        );
+      }
+
+      const extractedItems = (((itemRows as StoreCampaignItem[] | null) || []).map((item) => ({
+        ...item,
+        store: storeDetailsMap.get(item.store_id) || null,
+      })) as StoreCampaignItem[]).sort(
+        (left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0)
+      );
+
+      setCampaign(campaignRow as StoreCampaign);
       setItems(extractedItems);
     } catch (error: unknown) {
       setPageError(extractErrorMessage(error, "Unable to load campaign details."));
@@ -276,27 +279,23 @@ export default function StoreCampaignDetailPage() {
 
     try {
       setSaving(true);
-      const endpoint = editingItem
-        ? `${API_BASE}/api/stores-home/sections/${campaignId}/items/${editingItem.id}`
-        : `${API_BASE}/api/stores-home/sections/${campaignId}/items`;
+      const payload = {
+        section_id: campaignId,
+        store_id: form.store_id,
+        source_type: "MANUAL",
+        sort_order: sortOrder,
+        is_active: form.is_active,
+      };
 
-      const response = await fetch(endpoint, {
-        method: editingItem ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          store_id: form.store_id,
-          sort_order: sortOrder,
-          is_active: form.is_active,
-        }),
-      });
-
-      if (!response.ok) {
-        if (isForbiddenResponse(response)) {
-          throw new Error("You do not have permission to perform this action.");
-        }
-        throw new Error(await getErrorFromResponse(response, "Failed to save campaign item."));
+      if (editingItem) {
+        const { error } = await supabaseBrowser
+          .from("stores_home_section_items")
+          .update(payload)
+          .eq("id", editingItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseBrowser.from("stores_home_section_items").insert(payload);
+        if (error) throw error;
       }
 
       showToast({
@@ -321,19 +320,11 @@ export default function StoreCampaignDetailPage() {
 
     try {
       setSaving(true);
-      const response = await fetch(
-        `${API_BASE}/api/stores-home/sections/${campaignId}/items/${removingItem.id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        if (isForbiddenResponse(response)) {
-          throw new Error("You do not have permission to perform this action.");
-        }
-        throw new Error(await getErrorFromResponse(response, "Failed to remove store from campaign."));
-      }
+      const { error } = await supabaseBrowser
+        .from("stores_home_section_items")
+        .delete()
+        .eq("id", removingItem.id);
+      if (error) throw error;
 
       showToast({ title: "Store removed from campaign" });
       setRemovingItem(null);

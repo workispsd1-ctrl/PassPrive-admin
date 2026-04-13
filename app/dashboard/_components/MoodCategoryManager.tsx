@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showToast } from "@/hooks/useToast";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -32,6 +33,7 @@ type MoodCategoryRecord = {
   slug: string;
   title: string;
   image_url?: string | null;
+  image_path?: string | null;
   sort_order: number;
   updated_at?: string;
 };
@@ -39,12 +41,14 @@ type MoodCategoryRecord = {
 type MoodCategoryForm = {
   title: string;
   image_url: string;
+  image_path: string;
   sort_order: string;
 };
 
 const initialForm: MoodCategoryForm = {
   title: "",
   image_url: "",
+  image_path: "",
   sort_order: "100",
 };
 
@@ -138,9 +142,25 @@ type Props = {
   title: string;
   description: string;
   apiPath: string;
+  supabaseTable?: string;
+  storageBucket?: string;
+  storageFolder?: string;
 };
 
-export default function MoodCategoryManager({ title, description, apiPath }: Props) {
+function buildStoragePath(folder: string, fileName: string) {
+  const extension = fileName.split(".").pop() || "jpg";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `${folder}/${Date.now()}-${random}.${extension}`;
+}
+
+export default function MoodCategoryManager({
+  title,
+  description,
+  apiPath,
+  supabaseTable,
+  storageBucket,
+  storageFolder = "mood-categories",
+}: Props) {
   const [categories, setCategories] = useState<MoodCategoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -165,6 +185,20 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
+      if (supabaseTable) {
+        const { data, error } = await supabaseBrowser
+          .from(supabaseTable)
+          .select("id,key,slug,title,image_url,image_path,sort_order,updated_at")
+          .order("sort_order", { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        setCategories((data as MoodCategoryRecord[] | null) || []);
+        return;
+      }
+
       const response = await fetch(`${API_BASE}${apiPath}`, {
         method: "GET",
         cache: "no-store",
@@ -186,7 +220,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
     } finally {
       setLoading(false);
     }
-  }, [apiPath, title]);
+  }, [apiPath, supabaseTable, title]);
 
   useEffect(() => {
     void loadCategories();
@@ -218,6 +252,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
     setForm({
       title: category.title || "",
       image_url: category.image_url || "",
+      image_path: category.image_path || "",
       sort_order: String(category.sort_order ?? 100),
     });
     setImageFile(null);
@@ -233,6 +268,25 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
     try {
       setLoadingEditId(id);
+      if (supabaseTable) {
+        const { data, error } = await supabaseBrowser
+          .from(supabaseTable)
+          .select("id,key,slug,title,image_url,image_path,sort_order,updated_at")
+          .eq("id", id)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error("Category not found.");
+        }
+
+        populateForm(data as MoodCategoryRecord);
+        return;
+      }
+
       const response = await fetch(`${API_BASE}${apiPath}/${id}`, {
         method: "GET",
         cache: "no-store",
@@ -274,7 +328,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
     setImageFile(null);
     setImagePreview("");
     setRemoveImage(true);
-    setForm((current) => ({ ...current, image_url: "" }));
+    setForm((current) => ({ ...current, image_url: "", image_path: "" }));
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -302,6 +356,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
       description: null,
       badge_text: null,
       image_url: form.image_url.trim() || null,
+      image_path: form.image_path.trim() || null,
       sort_order: Number(form.sort_order || 100),
       is_active: true,
       selection_type: "MULTI" as const,
@@ -311,6 +366,72 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
     try {
       setSaving(true);
+      if (supabaseTable) {
+        let nextImageUrl = payload.image_url;
+        let nextImagePath = payload.image_path;
+
+        if (storageBucket && removeImage && form.image_path) {
+          const { error: removeError } = await supabaseBrowser.storage
+            .from(storageBucket)
+            .remove([form.image_path]);
+          if (removeError) {
+            throw removeError;
+          }
+          nextImageUrl = null;
+          nextImagePath = null;
+        }
+
+        if (storageBucket && imageFile) {
+          const path = buildStoragePath(storageFolder, imageFile.name);
+          const { error: uploadError } = await supabaseBrowser.storage
+            .from(storageBucket)
+            .upload(path, imageFile);
+          if (uploadError) {
+            throw uploadError;
+          }
+
+          const { data } = supabaseBrowser.storage.from(storageBucket).getPublicUrl(path);
+          nextImageUrl = data.publicUrl;
+          nextImagePath = path;
+
+          if (editingId && form.image_path && form.image_path !== path) {
+            await supabaseBrowser.storage.from(storageBucket).remove([form.image_path]).catch(() => undefined);
+          }
+        }
+
+        const record = {
+          key: payload.key,
+          slug: payload.slug,
+          title: payload.title,
+          subtitle: payload.subtitle,
+          description: payload.description,
+          badge_text: payload.badge_text,
+          image_url: nextImageUrl,
+          image_path: nextImagePath,
+          sort_order: payload.sort_order,
+          is_active: payload.is_active,
+          selection_type: payload.selection_type,
+          metadata: payload.metadata,
+        };
+
+        if (editingId) {
+          const { error } = await supabaseBrowser.from(supabaseTable).update(record).eq("id", editingId);
+          if (error) {
+            throw error;
+          }
+        } else {
+          const { error } = await supabaseBrowser.from(supabaseTable).insert(record);
+          if (error) {
+            throw error;
+          }
+        }
+
+        showToast({ title: editingId ? "Category updated" : "Category created" });
+        await loadCategories();
+        resetForm();
+        return;
+      }
+
       const method = editingId ? "PUT" : "POST";
       const endpoint = editingId ? `${API_BASE}${apiPath}/${editingId}` : `${API_BASE}${apiPath}`;
 
@@ -362,6 +483,22 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
     try {
       setDeletingId(id);
+      if (supabaseTable) {
+        if (storageBucket && category.image_path) {
+          await supabaseBrowser.storage.from(storageBucket).remove([category.image_path]).catch(() => undefined);
+        }
+
+        const { error } = await supabaseBrowser.from(supabaseTable).delete().eq("id", id);
+        if (error) {
+          throw error;
+        }
+
+        if (editingId === id) resetForm();
+        setCategories((current) => current.filter((item) => item.id !== id));
+        showToast({ title: "Category deleted" });
+        return;
+      }
+
       const response = await fetch(`${API_BASE}${apiPath}/${id}`, {
         method: "DELETE",
       });
@@ -395,6 +532,10 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
           }}
         >
           <CardContent className="space-y-4 px-4 py-4 sm:px-5">
+            <div className="space-y-1">
+              <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+              <p className="text-sm text-slate-500">{description}</p>
+            </div>
             <div className="flex flex-wrap justify-end gap-3">
               <div className="flex flex-wrap gap-3">
                 <Button
