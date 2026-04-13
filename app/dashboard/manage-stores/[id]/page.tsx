@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 
@@ -26,14 +26,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useStoreCatalogue } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreCatalogue";
-import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
-import type {
-  CatalogueCategoryDraft,
-  OpenSection,
-  PaymentDetails,
-} from "@/app/dashboard/_components/StoreComponents/types";
-import { fetchStoreCatalogueAdmin, syncStoreCatalogueAdmin } from "@/lib/storeCatalogueAdmin";
+import type { PaymentDetails } from "@/app/dashboard/_components/StoreComponents/types";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -61,89 +54,6 @@ function extractCategoryList(payload: unknown): StoreMoodCategoryRecord[] {
 
   return [];
 }
-
-const DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
-
-const HOUR_OPTIONS = Array.from(
-  { length: 24 },
-  (_, hour) => `${String(hour).padStart(2, "0")}:00`
-);
-
-type DayHours = {
-  open: string;
-  close: string;
-  closed: boolean;
-};
-
-const emptyWeek = () =>
-  DAYS.reduce((acc, day) => {
-    acc[day] = { open: "", close: "", closed: false };
-    return acc;
-  }, {} as Record<string, DayHours>);
-
-const normalizeDayLabel = (day: string) => {
-  if (!day) return "";
-  const lowered = day.toLowerCase();
-  const match = DAYS.find((d) => d.toLowerCase() === lowered);
-  return match || "";
-};
-
-/* ---------------- HOURS UTILS ---------------- */
-
-const parseHours = (raw: unknown) => {
-  const week = emptyWeek();
-
-  if (Array.isArray(raw)) {
-    for (const item of raw) {
-      const day = normalizeDayLabel(item?.day || "");
-      if (!day || !week[day]) continue;
-
-      const closed = !!item?.closed;
-      const slot0 = Array.isArray(item?.slots) ? item.slots[0] : null;
-
-      week[day] = {
-        closed,
-        open: closed ? "" : (slot0?.open || ""),
-        close: closed ? "" : (slot0?.close || ""),
-      };
-    }
-
-    return week;
-  }
-
-  if (raw && typeof raw === "object") {
-    for (const [dayKey, value] of Object.entries(raw)) {
-      const day = normalizeDayLabel(dayKey);
-      if (!day || !week[day]) continue;
-
-      if (typeof value === "string" && value.includes("-")) {
-        const [open, close] = value.split("-").map((x) => x.trim());
-        week[day] = { open: open || "", close: close || "", closed: false };
-        continue;
-      }
-
-      if (value && typeof value === "object") {
-        const obj = value as { open?: string; close?: string; closed?: boolean };
-        const closed = !!obj.closed;
-        week[day] = {
-          closed,
-          open: closed ? "" : (obj.open || ""),
-          close: closed ? "" : (obj.close || ""),
-        };
-      }
-    }
-  }
-
-  return week;
-};
 
 const cleanObject = (obj: Record<string, unknown>) => {
   const out: Record<string, unknown> = {};
@@ -208,44 +118,6 @@ const normalizePaymentState = (
   notes: payment?.notes || "",
 });
 
-const validateCatalogueForStoreType = (
-  categories: CatalogueCategoryDraft[],
-  storeType: "PRODUCT" | "SERVICE"
-) => {
-  const enabledCategories = categories.filter((category) => category.enabled);
-
-  for (const category of enabledCategories) {
-    if (!category.title.trim()) {
-      return `${storeType === "SERVICE" ? "Service" : "Catalogue"} category title is required.`;
-    }
-
-    for (const item of category.items) {
-      const hasMeaningfulContent =
-        item.title.trim() ||
-        item.description?.trim() ||
-        item.price.trim() ||
-        item.imageUrl?.trim() ||
-        item.imageFile;
-
-      if (!hasMeaningfulContent) continue;
-
-      if (!item.title.trim()) {
-        return `Each ${storeType === "SERVICE" ? "service" : "catalogue"} item needs a title.`;
-      }
-
-      if (item.is_billable && !item.price.trim()) {
-        return `Price is required for billable item "${item.title}".`;
-      }
-
-      if (item.supports_slot_booking && !item.duration_minutes.trim()) {
-        return `Duration is required for slot-bookable item "${item.title}".`;
-      }
-    }
-  }
-
-  return null;
-};
-
 /* ---------------- COMPONENT ---------------- */
 
 export default function StoreDetailPage() {
@@ -254,17 +126,7 @@ export default function StoreDetailPage() {
 
   const [store, setStore] = useState<StoreFlatRecord | null>(null);
   const [storeOriginal, setStoreOriginal] = useState<StoreFlatRecord | null>(null);
-  const [catalogueOriginal, setCatalogueOriginal] = useState<CatalogueCategoryDraft[]>([]);
-  const [catalogueOpenSection, setCatalogueOpenSection] = useState<OpenSection>("catalogue");
 
-  const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(
-    emptyWeek()
-  );
-  const [openingHoursOriginal, setOpeningHoursOriginal] =
-    useState<Record<string, DayHours>>(emptyWeek());
-
-  // ✅ week include/exclude (same as restaurants)
-  const [weekEnabled, setWeekEnabled] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [payment, setPayment] = useState<PaymentDetails>(emptyPaymentDetails());
   const [paymentOriginal, setPaymentOriginal] = useState<PaymentDetails>(emptyPaymentDetails());
@@ -279,11 +141,6 @@ export default function StoreDetailPage() {
   const [logoToDelete, setLogoToDelete] = useState(false);
   const [coverToDelete, setCoverToDelete] = useState(false);
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
-  const hasLoadedCatalogueRef = useRef(false);
-  const catalogueApi = useStoreCatalogue(
-    (fn) => fn(),
-    (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
-  );
 
   const headerLocation = useMemo(() => {
     if (!store) return "";
@@ -317,18 +174,6 @@ export default function StoreDetailPage() {
     const normalizedPayment = normalizePaymentState(data.payment_details);
     setPayment(normalizedPayment);
     setPaymentOriginal(normalizedPayment);
-
-    const parsed = parseHours(data.hours);
-    setOpeningHours(parsed);
-    setOpeningHoursOriginal(parsed);
-
-    const hasArrayHours = Array.isArray(data.hours) && data.hours.length > 0;
-    const hasObjectHours =
-      !!data.hours &&
-      typeof data.hours === "object" &&
-      !Array.isArray(data.hours) &&
-      Object.keys(data.hours).length > 0;
-    setWeekEnabled(hasArrayHours || hasObjectHours);
   };
 
   // Function to refresh store data (can be called manually)
@@ -387,85 +232,34 @@ export default function StoreDetailPage() {
   }, []);
 
   useEffect(() => {
-    const loadCatalogue = async () => {
-      if (!id || hasLoadedCatalogueRef.current) return;
-      hasLoadedCatalogueRef.current = true;
+    if (!store) return;
 
-      try {
-        const data = await fetchStoreCatalogueAdmin(String(id));
-        const mapped: CatalogueCategoryDraft[] = data.map((category) => ({
-          id: category.id || `cat_${Date.now()}`,
-          persistedId: category.id,
-          enabled: category.enabled,
-          title: category.title,
-          starting_from:
-            category.starting_from === null || category.starting_from === undefined
-              ? ""
-              : String(category.starting_from),
-          sort_order: String(category.sort_order ?? 0),
-          expanded: false,
-          items: category.items.map((item) => ({
-            id: item.id || `item_${Date.now()}`,
-            persistedId: item.id,
-            title: item.title,
-            price: item.price === null || item.price === undefined ? "" : String(item.price),
-            sku: item.sku || "",
-            description: item.description || "",
-            is_available: item.is_available,
-            sort_order: String(item.sort_order ?? 0),
-            item_type: item.item_type,
-            is_billable: item.is_billable,
-            duration_minutes:
-              item.duration_minutes === null || item.duration_minutes === undefined
-                ? ""
-                : String(item.duration_minutes),
-            supports_slot_booking: item.supports_slot_booking,
-            imageFile: null,
-            imageUrl: item.image_url || null,
-          })),
-        }));
-
-        catalogueApi.replaceCatalogue(mapped);
-        setCatalogueOriginal(mapped);
-      } catch (error: unknown) {
-        showToast({
-          type: "error",
-          title: "Failed to load catalogue",
-          description: error instanceof Error ? error.message : "Unable to load catalogue.",
-        });
-      }
-    };
-
-    void loadCatalogue();
-  }, [id]);
-
-  /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
-
-  const uploadCatalogueImage = async (
-    storeId: string,
-    categoryId: string,
-    itemId: string,
-    file: File
-  ): Promise<string> => {
-    const ext = file.name.split(".").pop() || "jpg";
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).slice(2, 9);
-    const path = `catalogue/${storeId}/${categoryId}/${itemId}-${timestamp}-${random}.${ext}`;
-
-    const { error } = await supabaseBrowser.storage.from("stores").upload(path, file);
-    if (error) throw error;
-
-    const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
-    return data.publicUrl;
-  };
+    console.info("[store-edit][page] render media state", {
+      storeId: String(id),
+      storeName: store.name,
+      mediaState: {
+        logo_url: store.logo_url ?? null,
+        cover_image_url: store.cover_image_url ?? null,
+        gallery_urls: store.gallery_urls ?? [],
+      },
+      deleteState: {
+        logoToDelete,
+        coverToDelete,
+        galleryToDelete,
+      },
+      renderedSources: {
+        logo: logoToDelete ? null : store.logo_url ?? null,
+        cover: coverToDelete ? null : store.cover_image_url ?? null,
+        gallery: (store.gallery_urls || []).filter(
+          (url: string) => !galleryToDelete.includes(url)
+        ),
+      },
+    });
+  }, [id, store, logoToDelete, coverToDelete, galleryToDelete]);
 
   const handleCancel = () => {
     setStore(storeOriginal);
-    setOpeningHours(openingHoursOriginal);
     setPayment(paymentOriginal);
-    setWeekEnabled(Array.isArray(storeOriginal?.hours) && storeOriginal.hours.length > 0);
-    catalogueApi.replaceCatalogue(catalogueOriginal);
-    catalogueApi.clearDeletedTracking();
     // ✅ Reset image changes
     setLogoToAdd(null);
     setCoverToAdd(null);
@@ -487,16 +281,6 @@ export default function StoreDetailPage() {
         title: "Legal business name is required",
         description: "Required for settlement & invoicing.",
       });
-      return;
-    }
-
-    const catalogueValidationError = validateCatalogueForStoreType(
-      catalogueApi.catalogueCategories,
-      (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
-    );
-    if (catalogueValidationError) {
-      showToast({ type: "error", title: catalogueValidationError });
-      setCatalogueOpenSection("catalogue");
       return;
     }
 
@@ -545,12 +329,6 @@ export default function StoreDetailPage() {
         website: store.website,
         ...(store.social_links || {}),
       }) as Record<string, string | null | undefined>;
-
-      const normalizedOpeningHours = DAYS.reduce((acc, day) => {
-        const value = openingHours[day] || { open: "", close: "", closed: false };
-        acc[day] = weekEnabled ? value : { open: "", close: "", closed: true };
-        return acc;
-      }, {} as Record<string, DayHours>);
 
       const basePayload = buildStorePayload({
         id: String(id),
@@ -621,60 +399,6 @@ export default function StoreDetailPage() {
         notes: payment.notes?.trim() || null,
       };
 
-      const categoriesPayload = await Promise.all(
-        catalogueApi.catalogueCategories
-          .filter((category) => category.enabled && category.title.trim())
-          .map(async (category, categoryIndex) => ({
-            id: category.persistedId,
-            clientId: category.id,
-            title: category.title.trim(),
-            starting_from: category.starting_from ? Number(category.starting_from) : null,
-            enabled: true,
-            sort_order: category.sort_order ? Number(category.sort_order) : categoryIndex,
-            items: (
-              await Promise.all(
-                category.items.map(async (item, itemIndex) => {
-                  const title = item.title.trim();
-                  const hasMeaningfulContent =
-                    title ||
-                    item.description?.trim() ||
-                    item.price.trim() ||
-                    item.imageUrl?.trim() ||
-                    item.imageFile;
-
-                  if (!hasMeaningfulContent) return null;
-
-                  let imageUrl = item.imageUrl?.trim() || null;
-                  if (item.imageFile) {
-                    imageUrl = await uploadCatalogueImage(
-                      String(id),
-                      category.persistedId || category.id,
-                      item.persistedId || item.id,
-                      item.imageFile
-                    );
-                  }
-
-                  return {
-                    id: item.persistedId,
-                    clientId: item.id,
-                    title,
-                    description: item.description?.trim() || null,
-                    price: item.price ? Number(item.price) : null,
-                    image_url: imageUrl,
-                    sku: item.sku?.trim() || null,
-                    sort_order: item.sort_order ? Number(item.sort_order) : itemIndex,
-                    is_available: !!item.is_available,
-                    item_type: item.item_type,
-                    is_billable: !!item.is_billable,
-                    duration_minutes: item.duration_minutes ? Number(item.duration_minutes) : null,
-                    supports_slot_booking: !!item.supports_slot_booking,
-                  };
-                })
-              )
-            ).filter((item): item is Exclude<typeof item, null> => item !== null),
-          }))
-      );
-
       const { error: updateError } = await supabaseBrowser
         .from("stores")
         .update(basePayload)
@@ -686,7 +410,6 @@ export default function StoreDetailPage() {
         replaceStoreRelations(String(id), {
           tags: tagsArray,
           social_links,
-          opening_hours: normalizedOpeningHours,
           offers: normalizedOffers,
           subscription: store.subscription || null,
           gallery_urls: finalGalleryUrls,
@@ -698,57 +421,13 @@ export default function StoreDetailPage() {
               : null,
         }),
         upsertStorePaymentDetails(String(id), normalizedPayment),
-        syncStoreCatalogueAdmin({
-          storeId: String(id),
-          categories: categoriesPayload,
-          deletedCategoryIds: catalogueApi.deletedCategoryIds,
-          deletedItemIds: catalogueApi.deletedItemIds,
-        }),
       ]);
 
-      const [refreshedStore, refreshedCatalogue] = await Promise.all([
-        fetchStoreDetail(String(id)),
-        fetchStoreCatalogueAdmin(String(id)),
-      ]);
-
-      const mappedCatalogue: CatalogueCategoryDraft[] = refreshedCatalogue.map((category) => ({
-        id: category.id || `cat_${Date.now()}`,
-        persistedId: category.id,
-        enabled: category.enabled,
-        title: category.title,
-        starting_from:
-          category.starting_from === null || category.starting_from === undefined
-            ? ""
-            : String(category.starting_from),
-        sort_order: String(category.sort_order ?? 0),
-        expanded: false,
-        items: category.items.map((item) => ({
-          id: item.id || `item_${Date.now()}`,
-          persistedId: item.id,
-          title: item.title,
-          price: item.price === null || item.price === undefined ? "" : String(item.price),
-          sku: item.sku || "",
-          description: item.description || "",
-          is_available: item.is_available,
-          sort_order: String(item.sort_order ?? 0),
-          item_type: item.item_type,
-          is_billable: item.is_billable,
-          duration_minutes:
-            item.duration_minutes === null || item.duration_minutes === undefined
-              ? ""
-              : String(item.duration_minutes),
-          supports_slot_booking: item.supports_slot_booking,
-          imageFile: null,
-          imageUrl: item.image_url || null,
-        })),
-      }));
+      const refreshedStore = await fetchStoreDetail(String(id));
 
       showToast({ type: "success", title: "Store updated" });
       setEditMode(false);
       applyStoreState(refreshedStore);
-      catalogueApi.replaceCatalogue(mappedCatalogue);
-      catalogueApi.clearDeletedTracking();
-      setCatalogueOriginal(mappedCatalogue);
       setLogoToAdd(null);
       setCoverToAdd(null);
       setGalleryToAdd([]);
@@ -1378,102 +1057,6 @@ export default function StoreDetailPage() {
         </Grid>
       </Section>
 
-      {/* ✅ WEEK ENABLE / DISABLE */}
-      <Section title="Weekly Schedule">
-        <div className="flex items-center gap-4">
-          <span className="text-sm">Enable opening hours for this week</span>
-          <Switch
-            checked={weekEnabled}
-            disabled={!editMode}
-            onCheckedChange={setWeekEnabled}
-            className="data-[state=unchecked]:bg-rose-500 data-[state=checked]:bg-blue-600"
-          />
-          <span
-            className={`text-sm font-medium ${weekEnabled ? "text-blue-700" : "text-rose-600"}`}
-          >
-            {weekEnabled ? "Open" : "Closed"}
-          </span>
-        </div>
-        {!weekEnabled && (
-          <p className="text-xs text-gray-500">
-            Week disabled: hours will be saved as empty (store closed for the week).
-          </p>
-        )}
-      </Section>
-
-      {/* OPENING HOURS */}
-      <Section title="Opening Hours">
-        {DAYS.map((day) => (
-          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{day}</span>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  disabled={!editMode || !weekEnabled}
-                  checked={!!openingHours[day]?.closed}
-                  onChange={(e) =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: {
-                        ...prev[day],
-                        closed: e.target.checked,
-                        open: e.target.checked ? "" : (prev[day]?.open || ""),
-                        close: e.target.checked ? "" : (prev[day]?.close || ""),
-                      },
-                    }))
-                  }
-                />
-                <span className="text-sm text-gray-600">Closed</span>
-              </div>
-            </div>
-
-            {!openingHours[day]?.closed && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select
-                  disabled={!editMode || !weekEnabled}
-                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-                  value={openingHours[day]?.open || ""}
-                  onChange={(e) =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: { ...prev[day], open: e.target.value },
-                    }))
-                  }
-                >
-                  <option value="">Open</option>
-                  {HOUR_OPTIONS.map((t) => (
-                    <option key={`${day}-open-${t}`} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  disabled={!editMode || !weekEnabled}
-                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-                  value={openingHours[day]?.close || ""}
-                  onChange={(e) =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: { ...prev[day], close: e.target.value },
-                    }))
-                  }
-                >
-                  <option value="">Close</option>
-                  {HOUR_OPTIONS.map((t) => (
-                    <option key={`${day}-close-${t}`} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
-      </Section>
-
       {/* IMAGES */}
       <Section title="Images">
         {/* Logo Image */}
@@ -1609,30 +1192,6 @@ export default function StoreDetailPage() {
         </div>
       </Section>
 
-      <CatalogueSection
-        openSection={catalogueOpenSection}
-        onToggle={(next) =>
-          setCatalogueOpenSection((current) => (current === next ? null : next))
-        }
-        preserveScroll={(fn) => fn()}
-        storeType={(store.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"}
-        catalogueCategories={catalogueApi.catalogueCategories}
-        customCategoryTitle={catalogueApi.customCategoryTitle}
-        setCustomCategoryTitle={catalogueApi.setCustomCategoryTitle}
-        customCategoryStartingFrom={catalogueApi.customCategoryStartingFrom}
-        setCustomCategoryStartingFrom={catalogueApi.setCustomCategoryStartingFrom}
-        customCategorySortOrder={catalogueApi.customCategorySortOrder}
-        setCustomCategorySortOrder={catalogueApi.setCustomCategorySortOrder}
-        toggleCategoryEnabled={catalogueApi.toggleCategoryEnabled}
-        toggleCategoryExpanded={catalogueApi.toggleCategoryExpanded}
-        addCategory={catalogueApi.addCategory}
-        removeCategory={catalogueApi.removeCategory}
-        updateCategoryField={catalogueApi.updateCategoryField}
-        addItemToCategory={catalogueApi.addItemToCategory}
-        removeItemFromCategory={catalogueApi.removeItemFromCategory}
-        updateItem={catalogueApi.updateItem}
-      />
-
       {/* SYSTEM (Read Only) */}
       <Section title="System Info (Read Only)">
         <Grid>
@@ -1692,28 +1251,52 @@ const EditableSingleImage = ({
   src: string | null;
   onDelete: () => void;
   disabled: boolean;
-}) => (
-  <div className="space-y-2">
-    <h3 className="text-sm font-medium">{title}</h3>
-    {src ? (
-      <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
-        <img src={src} className="w-full h-full object-cover" alt={title} />
-        {!disabled && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-            aria-label="Delete image"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
-    ) : (
-      <p className="text-sm text-gray-400">No image</p>
-    )}
-  </div>
-);
+}) => {
+  useEffect(() => {
+    console.info("[store-edit][single-image] received src", {
+      title,
+      src: src ?? null,
+      disabled,
+    });
+  }, [title, src, disabled]);
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">{title}</h3>
+      {src ? (
+        <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
+          <img
+            src={src}
+            className="w-full h-full object-cover"
+            alt={title}
+            onLoad={() => {
+              console.info("[store-edit][single-image] image loaded", { title, src });
+            }}
+            onError={(event) => {
+              console.error("[store-edit][single-image] image failed to load", {
+                title,
+                src,
+                currentSrc: event.currentTarget.currentSrc || event.currentTarget.src,
+              });
+            }}
+          />
+          {!disabled && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+              aria-label="Delete image"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400">No image</p>
+      )}
+    </div>
+  );
+};
 
 /**
  * Single File Preview - shows preview of newly selected file with remove button
@@ -1755,32 +1338,62 @@ const EditableImageGrid = ({
   images: string[];
   onDelete: (url: string) => void;
   disabled: boolean;
-}) => (
-  <div className="space-y-2">
-    <h3 className="text-sm font-medium">{title}</h3>
-    <div className="grid grid-cols-4 gap-3">
-      {images?.length ? (
-        images.map((src: string, i: number) => (
-          <div key={i} className="relative h-32 rounded-md overflow-hidden border">
-            <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => onDelete(src)}
-                className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-                aria-label="Delete image"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        ))
-      ) : (
-        <p className="text-sm text-gray-400">No images</p>
-      )}
+}) => {
+  useEffect(() => {
+    console.info("[store-edit][gallery] received images", {
+      title,
+      count: images?.length || 0,
+      images,
+      disabled,
+    });
+  }, [title, images, disabled]);
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">{title}</h3>
+      <div className="grid grid-cols-4 gap-3">
+        {images?.length ? (
+          images.map((src: string, i: number) => (
+            <div key={i} className="relative h-32 rounded-md overflow-hidden border">
+              <img
+                src={src}
+                className="w-full h-full object-cover"
+                alt={`${title} ${i + 1}`}
+                onLoad={() => {
+                  console.info("[store-edit][gallery] image loaded", {
+                    title,
+                    index: i,
+                    src,
+                  });
+                }}
+                onError={(event) => {
+                  console.error("[store-edit][gallery] image failed to load", {
+                    title,
+                    index: i,
+                    src,
+                    currentSrc: event.currentTarget.currentSrc || event.currentTarget.src,
+                  });
+                }}
+              />
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(src)}
+                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+                  aria-label="Delete image"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-400">No images</p>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * File Preview Grid - shows newly selected files with remove buttons
