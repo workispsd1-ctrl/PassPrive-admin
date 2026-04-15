@@ -29,15 +29,17 @@ import { toast } from "sonner";
 import Link from "next/link";
 interface User {
   id: string;
-  display_name: string;
+  display_name?: string;
   email: string;
   phone?: string;
   status?: string;
   subscription?: string;
   created_at: string;
-  user_subscription: UserSubscription[];
-  website_last_opened: string;
-  full_name: string;
+  user_subscription?: UserSubscription[];
+  full_name?: string;
+  last_opened?: string | null;
+  membership?: string | null;
+  membership_tier?: string | null;
   // Added new property to the User interface
   fb_chatbot_user_blocked?: boolean;
 }
@@ -113,10 +115,19 @@ export const UserTable = ({
     }
   };
   const handleUserDetails = async (user: User) => {
-    console.log(user, "userssss");
-    setSelectedData(user);
+    const { data, error } = await supabaseBrowser
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .eq("role", "user")
+      .single();
 
-    console.log("user data", user);
+    if (error) {
+      toast.error("Failed to fetch user details");
+      return;
+    }
+
+    setSelectedData(data || user);
     setIsOpen(true);
   };
   // Toggles the block status of a user
@@ -231,13 +242,13 @@ export const UserTable = ({
                     idx !== users.length - 1 ? "border-b" : ""
                   }`}
                 >
-                  <td className="py-3 px-6 text-[#1D293D] font-medium">{user.full_name || user.display_name}</td>
+                  <td className="py-3 px-6 text-[#1D293D] font-medium">{user.full_name || user.display_name || "-"}</td>
                   <td className="py-3 px-6 text-center text-[#5b6473]">
                     {user.phone ?? "-"}
                   </td>
                   <td className="py-3 px-6 text-[#5b6473]">{user.email}</td>
                   <td className="py-3 px-6">
-                    <StatusBadge status={user.subscription} />
+                    <StatusBadge status={user.membership_tier || user.membership || "none"} />
                   </td>
                   <td className="py-3 px-6 text-[#5b6473]">
                     {(user.user_subscription?.length ?? 0) > 0
@@ -252,7 +263,7 @@ export const UserTable = ({
                     {displayValidTill(user.created_at, user.created_at)}
                   </td>
                   <td className="py-4 px-6 text-[#5b6473]">
-                    {formatToIndia(user.website_last_opened)}
+                    {formatToIndia(user.last_opened)}
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
@@ -354,7 +365,7 @@ export const UserTable = ({
           {/* Header */}
           <div className="flex justify-between items-center border-b pb-4 mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">
-              {selectedData?.full_name || selectedData?.display_name}
+              {selectedData?.full_name || selectedData?.display_name || "User"}
             </h2>
             <span
               className={`text-[12px] font-semibold px-3 py-1 rounded-full ${
@@ -547,13 +558,14 @@ const PlanBadge = ({ plan }: { plan?: string }) => {
   );
 };
 const StatusBadge = ({ status }: { status?: string }) => {
-  const value = status?.trim().toLowerCase() || "free";
+  const value = status?.trim().toLowerCase() || "none";
 
   const map: Record<string, string> = {
     active: "bg-green-100 text-green-700",
     canceled: "bg-red-100 text-red-600",
     past_due: "bg-yellow-100 text-yellow-700",
     unpaid: "bg-yellow-100 text-yellow-700",
+    none: "bg-gray-200 text-gray-700",
     free: "bg-gray-200 text-gray-700",
   };
 
@@ -562,6 +574,7 @@ const StatusBadge = ({ status }: { status?: string }) => {
     canceled: "Canceled",
     past_due: "Past Due",
     unpaid: "Unpaid",
+    none: "None",
     free: "Free",
   };
 

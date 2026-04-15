@@ -38,10 +38,20 @@ function useDebounced<T>(value: T, ms = 350) {
   return v;
 }
 
+const extractErrorMessage = (err: any) => {
+  if (!err) return "Failed to fetch users";
+  if (typeof err === "string") return err;
+  if (typeof err?.message === "string" && err.message.trim()) return err.message;
+  if (typeof err?.error_description === "string" && err.error_description.trim()) {
+    return err.error_description;
+  }
+  if (typeof err?.details === "string" && err.details.trim()) return err.details;
+  return "Failed to fetch users";
+};
+
 function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [planFilter, setPlanFilter] = useState("");   // optional, if you store plan on users.subscription
-  const [statusFilter, setStatusFilter] = useState(""); // optional, if you store status on users.status
+  const [planFilter, setPlanFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newUser, setNewUser] = useState<Seminar>({ fullname: "", email: "", phone: "" });
@@ -65,35 +75,46 @@ function UsersPage() {
       try {
         let query = supabaseBrowser
           .from("users")
-          .select("*", { count: "exact" })
+          .select("*, user_subscription(start_date, created_at, end_date)", { count: "exact" })
           .eq("role", "user")
           .order("created_at", { ascending: false })
           .range((page - 1) * limit, page * limit - 1);
 
         if (debouncedSearch) {
           query = query.or(
-            `email.ilike.%${debouncedSearch}%,display_name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
+            `email.ilike.%${debouncedSearch}%,full_name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
           );
         }
 
-        // These two are optional—only apply if your users table actually has those columns.
-        if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
-        if (planFilter && planFilter !== "all") query = query.eq("subscription", planFilter);
+        if (planFilter && planFilter !== "all") {
+          if (planFilter.toLowerCase() === "free") {
+            query = query.eq("membership_tier", "none");
+          } else {
+            query = query.eq("membership_tier", planFilter);
+          }
+        }
 
         const { data, error, count } = await query;
-        if (error) throw error;
+
+        if (error) {
+          setUsers([]);
+          setTotal(0);
+          setError(extractErrorMessage(error));
+          return;
+        }
 
         setUsers(data || []);
         setTotal(count || 0);
       } catch (err: any) {
-        console.error(err);
-        setError(err?.message || "Failed to fetch users");
+        setUsers([]);
+        setTotal(0);
+        setError(extractErrorMessage(err));
       } finally {
         setLoading(false);
       }
     };
     fetchUsers();
-  }, [page, limit, debouncedSearch, planFilter, statusFilter, deleteRefresh]);
+  }, [page, limit, debouncedSearch, planFilter, deleteRefresh]);
 
   const handleExportFile = async () => {
     try {
@@ -119,8 +140,6 @@ function UsersPage() {
           onSearchChange={setSearchTerm}
           planFilter={planFilter}
           onPlanFilterChange={setPlanFilter}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
           placeholder="Search by name, email, or phone no..."
 
         />
