@@ -40,6 +40,8 @@ interface User {
   last_opened?: string | null;
   membership?: string | null;
   membership_tier?: string | null;
+  membership_started?: string | null;
+  membership_expiry?: string | null;
   // Added new property to the User interface
   fb_chatbot_user_blocked?: boolean;
 }
@@ -247,7 +249,7 @@ export const UserTable = ({
                           user.user_subscription[0]?.start_date ??
                             user.user_subscription[0]?.created_at
                         )
-                      : "-"}
+                      : formatStartDateIST(user.membership_started)}
                   </td>
                   <td className="py-3 px-6 text-[#5b6473]">
                     {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
