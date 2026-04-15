@@ -126,6 +126,7 @@ export default function StoreDetailPage() {
 
   const [store, setStore] = useState<StoreFlatRecord | null>(null);
   const [storeOriginal, setStoreOriginal] = useState<StoreFlatRecord | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
 
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [payment, setPayment] = useState<PaymentDetails>(emptyPaymentDetails());
@@ -229,6 +230,10 @@ export default function StoreDetailPage() {
     };
 
     void loadDropdownOptions();
+  }, []);
+
+  useEffect(() => {
+    setHasMounted(true);
   }, []);
 
   const handleCancel = () => {
@@ -508,53 +513,66 @@ export default function StoreDetailPage() {
           </Field>
 
           <Field label="Category">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!editMode}
-                  className="w-full justify-between bg-white border-gray-300"
+            {hasMounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!editMode}
+                    className="w-full justify-between bg-white border-gray-300"
+                  >
+                    {selectedStoreCategories.length
+                      ? `${selectedStoreCategories.length} categories selected`
+                      : "Select categories"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  sideOffset={6}
+                  className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
                 >
-                  {selectedStoreCategories.length
-                    ? `${selectedStoreCategories.length} categories selected`
-                    : "Select categories"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                sideOffset={6}
-                className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
-              >
-                {categoryOptions.length ? (
-                  categoryOptions.map((category) => (
-                    <DropdownMenuCheckboxItem
-                      key={category}
-                      checked={selectedStoreCategories.includes(category)}
-                      onCheckedChange={(checked) => {
-                        const next =
-                          checked === true
-                            ? selectedStoreCategories.includes(category)
-                              ? selectedStoreCategories
-                              : [...selectedStoreCategories, category]
-                            : selectedStoreCategories.filter((item: string) => item !== category);
+                  {categoryOptions.length ? (
+                    categoryOptions.map((category) => (
+                      <DropdownMenuCheckboxItem
+                        key={category}
+                        checked={selectedStoreCategories.includes(category)}
+                        onCheckedChange={(checked) => {
+                          const next =
+                            checked === true
+                              ? selectedStoreCategories.includes(category)
+                                ? selectedStoreCategories
+                                : [...selectedStoreCategories, category]
+                              : selectedStoreCategories.filter((item: string) => item !== category);
 
-                        setStore({
-                          ...store,
-                          category: next.join(", "),
-                        });
-                      }}
-                    >
-                      {category}
-                    </DropdownMenuCheckboxItem>
-                  ))
-                ) : (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No store mood categories found
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                          setStore({
+                            ...store,
+                            category: next.join(", "),
+                          });
+                        }}
+                      >
+                        {category}
+                      </DropdownMenuCheckboxItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No store mood categories found
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                disabled
+                className="w-full justify-between bg-white border-gray-300"
+              >
+                {selectedStoreCategories.length
+                  ? `${selectedStoreCategories.length} categories selected`
+                  : "Select categories"}
+              </Button>
+            )}
             {selectedStoreCategories.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {selectedStoreCategories.map((category: string) => (

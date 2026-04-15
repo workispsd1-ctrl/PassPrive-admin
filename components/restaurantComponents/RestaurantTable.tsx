@@ -6,22 +6,13 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
-import { type RestaurantFlatRecord } from "@/lib/restaurantAdmin";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
-
-async function getAccessToken() {
-  const { data, error } = await supabaseBrowser.auth.getSession();
-  if (error) throw error;
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
-  return token;
-}
+import {
+  deleteRestaurantImages,
+  fetchRestaurantDetail,
+  type RestaurantFlatRecord,
+} from "@/lib/restaurantAdmin";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 interface Props {
   restaurants: Pick<RestaurantFlatRecord, "id" | "name" | "city" | "area" | "rating" | "cost_for_two">[];
@@ -66,8 +57,22 @@ export const RestaurantTable = ({
 
     setLoading(true);
     try {
-      const token = await getAccessToken();
-      const res = await fetch(`${API_BASE}/api/restaurants/${confirmDelete.id}?hard=true`, {
+      const existingRestaurant = await fetchRestaurantDetail(confirmDelete.id).catch(() => null);
+      const urlsToDelete = Array.from(
+        new Set(
+          [
+            existingRestaurant?.cover_image,
+            ...(existingRestaurant?.food_images || []),
+            ...(existingRestaurant?.ambience_images || []),
+            ...(existingRestaurant?.menu || []),
+          ].filter((value): value is string => Boolean(value))
+        )
+      );
+
+      const token = await getTokenClient();
+      if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+
+      const res = await fetch(`/api/restaurants/${confirmDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -77,6 +82,12 @@ export const RestaurantTable = ({
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(payload?.error || "Failed to delete restaurant");
+      }
+
+      if (urlsToDelete.length > 0) {
+        await deleteRestaurantImages(urlsToDelete).catch((cleanupError) => {
+          console.error("[RestaurantTable] storage cleanup failed", cleanupError);
+        });
       }
 
       showToast({ type: "success", title: "Restaurant deleted" });
