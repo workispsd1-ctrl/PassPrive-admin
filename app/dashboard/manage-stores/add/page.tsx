@@ -8,6 +8,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import {
   buildStorePayload,
+  deleteStoreImages,
   replaceStoreRelations,
   type StoreOfferInput,
   uploadStoreImages,
@@ -95,6 +96,15 @@ function isImage(file?: File | null): boolean {
 
 function isVideo(file?: File | null): boolean {
   return !!file?.type?.startsWith("video/");
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const message = "message" in error ? error.message : null;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return "Unknown error";
 }
 
 async function getAccessToken() {
@@ -316,10 +326,6 @@ function AddStorePageInner() {
     return data.publicUrl;
   };
 
-  const cleanupUploads = async () => {
-    return;
-  };
-
   /* ---------------------------------------------
      ✅ CREATE STORE PARTNER LOGIN (Frontend)
   --------------------------------------------- */
@@ -458,9 +464,13 @@ function AddStorePageInner() {
 
     setLoading(true);
 
+    let uploadedUrls: string[] = [];
+    let createdStoreId: string | null = null;
+
     try {
       const ownerUserId = await resolveStoreOwnerId(); // auth user id
       const storeId = uuid(); // store uuid (branch id)
+      createdStoreId = storeId;
 
       const normalizedOpeningHours = DAYS.reduce((acc, day) => {
         const value = openingHours[day] || { open: "", close: "", closed: false };
@@ -548,13 +558,6 @@ function AddStorePageInner() {
         is_featured: !!form.is_featured,
       });
 
-      const [logoUrl, coverMediaUrl, galleryUrls] = await Promise.all([
-        uploadSingle(storeId, logoFile, "logo"),
-        uploadSingle(storeId, coverMediaFile, "cover"),
-        uploadGallery(storeId, galleryFiles),
-      ]);
-
-      const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
       const paymentDetails = {
         legal_business_name: payment.legal_business_name.trim(),
         display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
@@ -580,11 +583,32 @@ function AddStorePageInner() {
       };
       const storePayload = {
         ...baseStorePayload,
-        logo_url: logoUrl,
-        cover_image: coverImageUrl,
+        logo_url: null,
+        cover_image: null,
       };
       const { error: createError } = await supabaseBrowser.from("stores").insert(storePayload);
       if (createError) throw createError;
+
+      const [logoUrl, coverMediaUrl, galleryUrls] = await Promise.all([
+        uploadSingle(storeId, logoFile, "logo"),
+        uploadSingle(storeId, coverMediaFile, "cover"),
+        uploadGallery(storeId, galleryFiles),
+      ]);
+
+      const coverImageUrl = coverType === "image" ? coverMediaUrl : null;
+      uploadedUrls = [logoUrl, coverMediaUrl, ...galleryUrls].filter(
+        (value): value is string => Boolean(value)
+      );
+
+      const { error: updateStoreError } = await supabaseBrowser
+        .from("stores")
+        .update({
+          logo_url: logoUrl,
+          cover_image: coverImageUrl,
+        })
+        .eq("id", storeId);
+
+      if (updateStoreError) throw updateStoreError;
 
       // 4) Catalogue / Services via admin CRUD APIs
       const enabledCats = catalogueApi.catalogueCategories
@@ -662,12 +686,26 @@ function AddStorePageInner() {
       showToast({ type: "success", title: "Store saved successfully" });
       router.push("/dashboard/manage-stores");
     } catch (err: unknown) {
-      await cleanupUploads();
+      if (uploadedUrls.length > 0) {
+        try {
+          await deleteStoreImages(uploadedUrls);
+        } catch {
+          // Keep the original error surfaced to the user.
+        }
+      }
+
+      if (createdStoreId) {
+        try {
+          await supabaseBrowser.from("stores").delete().eq("id", createdStoreId);
+        } catch {
+          // Keep the original error surfaced to the user.
+        }
+      }
 
       showToast({
         type: "error",
         title: "Failed to save store",
-        description: err instanceof Error ? err.message : "Unknown error",
+        description: getErrorMessage(err),
       });
     } finally {
       setLoading(false);
