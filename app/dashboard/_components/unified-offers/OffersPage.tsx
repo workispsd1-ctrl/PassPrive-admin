@@ -9,9 +9,8 @@ import {
   OFFER_SOURCE_TYPES,
   OFFER_STATUSES,
   PAYMENT_FLOWS,
-  apiDelete,
-  apiGet,
-  normalizeArrayPayload,
+  deleteOfferDirect,
+  listOffersDirect,
   type OfferRecord,
 } from "@/app/dashboard/_components/unified-offers/model";
 import {
@@ -76,8 +75,7 @@ export function UnifiedOffersPage() {
     try {
       if (silent) setRefreshing(true);
       else setLoading(true);
-      const payload = await apiGet("/api/offers");
-      setOffers(normalizeArrayPayload<OfferRecord>(payload));
+      setOffers(await listOffersDirect());
     } catch (error) {
       showToast({ title: "Failed to load offers", description: error instanceof Error ? error.message : "Please try again.", type: "error" });
     } finally {
@@ -93,7 +91,7 @@ export function UnifiedOffersPage() {
   async function deleteOffer() {
     if (!deleteCandidate) return;
     try {
-      await apiDelete(`/api/offers/${deleteCandidate.id}`);
+      await deleteOfferDirect(deleteCandidate.id);
       setOffers((current) => current.filter((item) => item.id !== deleteCandidate.id));
       setDeleteCandidate(null);
       showToast({ title: "Offer deleted", description: "Offer deleted successfully." });
