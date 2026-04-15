@@ -6,9 +6,9 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import { deleteStoreImages, fetchStoreDetail } from "@/lib/storeAdmin";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 interface Store {
   id: string;
@@ -84,8 +84,20 @@ export const StoreTable = ({
         )
       );
 
-      const { error } = await supabaseBrowser.from("stores").delete().eq("id", confirmDelete.id);
-      if (error) throw error;
+      const token = await getTokenClient();
+      if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+
+      const response = await fetch(`/api/stores/${confirmDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to delete store");
+      }
 
       if (urlsToDelete.length > 0) {
         await deleteStoreImages(urlsToDelete).catch((cleanupError) => {
