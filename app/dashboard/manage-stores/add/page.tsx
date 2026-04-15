@@ -10,6 +10,7 @@ import {
   buildStorePayload,
   replaceStoreRelations,
   type StoreOfferInput,
+  uploadStoreImages,
   upsertStoreMember,
   upsertStorePaymentDetails,
 } from "@/lib/storeAdmin";
@@ -140,22 +141,6 @@ function validateCatalogueForStoreType(
   }
 
   return null;
-}
-
-async function runWithConcurrency<T>(
-  items: T[],
-  limit: number,
-  worker: (item: T, idx: number) => Promise<void>
-) {
-  const queue = items.map((item, idx) => ({ item, idx }));
-  const runners = Array.from({ length: Math.max(1, limit) }).map(async () => {
-    while (queue.length) {
-      const next = queue.shift();
-      if (!next) return;
-      await worker(next.item, next.idx);
-    }
-  });
-  await Promise.all(runners);
 }
 
 /* -------------------------------------------------------
@@ -299,43 +284,18 @@ function AddStorePageInner() {
      ✅ STORAGE UPLOAD HELPERS
   --------------------------------------------- */
 
-  const uploadedPathsRef = React.useRef<string[]>([]);
-
-  const uploadToBucket = async (path: string, file: File) => {
-    const { error } = await supabaseBrowser.storage.from("stores").upload(path, file, {
-      upsert: false,
-    });
-
-    if (error) throw error;
-
-    uploadedPathsRef.current.push(path);
-
-    const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
-    return data.publicUrl;
-  };
-
   const uploadSingle = async (
     storeId: string,
     file: File | null,
     folder: "logo" | "cover"
   ) => {
     if (!file) return null;
-    const ext = getExt(file);
-    const path = `${folder}/${storeId}/${uuid()}.${ext}`;
-    return uploadToBucket(path, file);
+    const [url] = await uploadStoreImages(storeId, [file], folder);
+    return url || null;
   };
 
   const uploadGallery = async (storeId: string, files: File[]) => {
-    const urls: string[] = new Array(files.length).fill("");
-
-    await runWithConcurrency(files, 3, async (file, idx) => {
-      const ext = getExt(file);
-      const path = `gallery/${storeId}/${uuid()}.${ext}`;
-      const url = await uploadToBucket(path, file);
-      urls[idx] = url;
-    });
-
-    return urls.filter(Boolean);
+    return uploadStoreImages(storeId, files, "gallery");
   };
 
   const uploadCatalogueImage = async (
@@ -346,14 +306,18 @@ function AddStorePageInner() {
   ) => {
     const ext = getExt(file);
     const path = `catalogue/${storeId}/${categoryId}/${itemId}-${uuid()}.${ext}`;
-    return uploadToBucket(path, file);
+    const { error } = await supabaseBrowser.storage.from("stores").upload(path, file, {
+      upsert: false,
+    });
+
+    if (error) throw error;
+
+    const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
+    return data.publicUrl;
   };
 
   const cleanupUploads = async () => {
-    const uploaded = uploadedPathsRef.current;
-    if (!uploaded.length) return;
-    await supabaseBrowser.storage.from("stores").remove(uploaded);
-    uploadedPathsRef.current = [];
+    return;
   };
 
   /* ---------------------------------------------

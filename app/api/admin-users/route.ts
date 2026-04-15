@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
     const phone = sanitizeString(body.phone);
     const role = normalizeAssignableRole(body.role);
 
-    if (!email || !password || !fullName || !phone || !role) {
+    if (!email || !password || !fullName || !role) {
       return NextResponse.json(
-        { error: "Email, password, full name, phone, and role are required" },
+        { error: "Email, password, full name, and role are required" },
         { status: 400 }
       );
     }
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         id: authUserId,
         email,
         full_name: fullName,
-        phone,
+        phone: phone || null,
         role,
       },
       { onConflict: "id" }
