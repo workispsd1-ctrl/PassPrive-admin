@@ -675,7 +675,7 @@ export async function fetchStoreDetail(storeId: string) {
   if (subscriptionsResult.error) throw subscriptionsResult.error;
   if (paymentDetailsResult.error) throw paymentDetailsResult.error;
 
-  const normalizedStore = normalizeStore({
+  return normalizeStore({
     store: storeResult.data,
     tags: tagsResult.data || [],
     socialLinks: socialResult.data || [],
@@ -685,30 +685,6 @@ export async function fetchStoreDetail(storeId: string) {
     subscriptions: subscriptionsResult.data || [],
     paymentDetails: paymentDetailsResult.data,
   });
-
-  console.info("[store-edit][fetchStoreDetail] media snapshot", {
-    storeId,
-    rawStoreMedia: {
-      logo_url: storeResult.data.logo_url ?? null,
-      cover_image: storeResult.data.cover_image ?? null,
-    },
-    mediaAssetCount: (mediaResult.data || []).length,
-    mediaAssets: (mediaResult.data || []).map((row) => ({
-      id: asString(row.id),
-      asset_type: asString(row.asset_type),
-      file_url: asString(row.file_url),
-      file_path: asString(row.file_path),
-      is_active: asBoolean(row.is_active, true),
-      sort_order: asNumber(row.sort_order),
-    })),
-    normalizedMedia: {
-      logo_url: normalizedStore.logo_url ?? null,
-      cover_image_url: normalizedStore.cover_image_url ?? null,
-      gallery_urls: normalizedStore.gallery_urls ?? [],
-    },
-  });
-
-  return normalizedStore;
 }
 
 export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<string, unknown>) {

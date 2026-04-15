@@ -231,32 +231,6 @@ export default function StoreDetailPage() {
     void loadDropdownOptions();
   }, []);
 
-  useEffect(() => {
-    if (!store) return;
-
-    console.info("[store-edit][page] render media state", {
-      storeId: String(id),
-      storeName: store.name,
-      mediaState: {
-        logo_url: store.logo_url ?? null,
-        cover_image_url: store.cover_image_url ?? null,
-        gallery_urls: store.gallery_urls ?? [],
-      },
-      deleteState: {
-        logoToDelete,
-        coverToDelete,
-        galleryToDelete,
-      },
-      renderedSources: {
-        logo: logoToDelete ? null : store.logo_url ?? null,
-        cover: coverToDelete ? null : store.cover_image_url ?? null,
-        gallery: (store.gallery_urls || []).filter(
-          (url: string) => !galleryToDelete.includes(url)
-        ),
-      },
-    });
-  }, [id, store, logoToDelete, coverToDelete, galleryToDelete]);
-
   const handleCancel = () => {
     setStore(storeOriginal);
     setPayment(paymentOriginal);
@@ -1252,34 +1226,12 @@ const EditableSingleImage = ({
   onDelete: () => void;
   disabled: boolean;
 }) => {
-  useEffect(() => {
-    console.info("[store-edit][single-image] received src", {
-      title,
-      src: src ?? null,
-      disabled,
-    });
-  }, [title, src, disabled]);
-
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-medium">{title}</h3>
       {src ? (
         <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
-          <img
-            src={src}
-            className="w-full h-full object-cover"
-            alt={title}
-            onLoad={() => {
-              console.info("[store-edit][single-image] image loaded", { title, src });
-            }}
-            onError={(event) => {
-              console.error("[store-edit][single-image] image failed to load", {
-                title,
-                src,
-                currentSrc: event.currentTarget.currentSrc || event.currentTarget.src,
-              });
-            }}
-          />
+          <img src={src} className="w-full h-full object-cover" alt={title} />
           {!disabled && (
             <button
               type="button"
@@ -1339,15 +1291,6 @@ const EditableImageGrid = ({
   onDelete: (url: string) => void;
   disabled: boolean;
 }) => {
-  useEffect(() => {
-    console.info("[store-edit][gallery] received images", {
-      title,
-      count: images?.length || 0,
-      images,
-      disabled,
-    });
-  }, [title, images, disabled]);
-
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-medium">{title}</h3>
@@ -1355,26 +1298,7 @@ const EditableImageGrid = ({
         {images?.length ? (
           images.map((src: string, i: number) => (
             <div key={i} className="relative h-32 rounded-md overflow-hidden border">
-              <img
-                src={src}
-                className="w-full h-full object-cover"
-                alt={`${title} ${i + 1}`}
-                onLoad={() => {
-                  console.info("[store-edit][gallery] image loaded", {
-                    title,
-                    index: i,
-                    src,
-                  });
-                }}
-                onError={(event) => {
-                  console.error("[store-edit][gallery] image failed to load", {
-                    title,
-                    index: i,
-                    src,
-                    currentSrc: event.currentTarget.currentSrc || event.currentTarget.src,
-                  });
-                }}
-              />
+              <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
               {!disabled && (
                 <button
                   type="button"
