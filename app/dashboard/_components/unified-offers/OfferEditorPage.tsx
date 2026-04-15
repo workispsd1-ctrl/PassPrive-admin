@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
@@ -17,15 +16,11 @@ import {
   OfferUsageLimitsEditor,
 } from "@/app/dashboard/_components/unified-offers/OfferNestedEditors";
 import {
-  apiDelete,
-  apiPost,
-  apiPostForm,
-  apiPut,
-  apiPutForm,
-  buildOfferPayload,
   createEmptyOfferForm,
+  deleteOfferDirect,
   fetchOfferBundle,
   offerToForm,
+  saveOfferDirect,
   usageLimitToDraft,
   validateOfferForm,
   type EntityOption,
@@ -69,50 +64,6 @@ async function loadEntityOptions(table: "stores" | "restaurants"): Promise<Entit
     city: null,
     area: null,
   }));
-}
-
-function getApiErrorMessage(error: unknown) {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data;
-    if (typeof data === "string" && data.trim()) return data;
-    if (data && typeof data === "object") {
-      const record = data as Record<string, unknown>;
-      const candidates = [
-        record.message,
-        record.error,
-        typeof record.details === "string" ? record.details : record.details ? JSON.stringify(record.details) : null,
-        Array.isArray(record.errors) ? record.errors.join(", ") : null,
-      ];
-      for (const candidate of candidates) {
-        if (typeof candidate === "string" && candidate.trim()) return candidate;
-      }
-    }
-    return error.message;
-  }
-  return error instanceof Error ? error.message : "Please try again.";
-}
-
-function toFormData(payload: Record<string, unknown>, logoFile: File | null) {
-  const formData = new FormData();
-
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value === undefined) return;
-    if (value === null) {
-      formData.append(key, "");
-      return;
-    }
-    if (Array.isArray(value) || typeof value === "object") {
-      formData.append(key, JSON.stringify(value));
-      return;
-    }
-    formData.append(key, String(value));
-  });
-
-  if (logoFile) {
-    formData.append("logo", logoFile);
-  }
-
-  return formData;
 }
 
 export function UnifiedOfferEditorPage({
@@ -192,45 +143,15 @@ export function UnifiedOfferEditorPage({
       return;
     }
 
-    const payloadResult = buildOfferPayload(form);
-    if ("error" in payloadResult) {
-      showToast({
-        title: "Validation failed",
-        description: typeof payloadResult.error === "string" ? payloadResult.error : "Please review the form and try again.",
-        type: "error",
-      });
-      return;
-    }
-
     try {
       setSaving(true);
-      const hasLogoUpload = form.source_type === "BANK" && Boolean(form.logo_file);
-      const response = offerId
-        ? hasLogoUpload
-          ? await apiPutForm(`/api/offers/${offerId}`, toFormData(payloadResult.payload, form.logo_file))
-          : await apiPut(`/api/offers/${offerId}`, payloadResult.payload)
-        : hasLogoUpload
-        ? await apiPostForm(`/api/offers`, toFormData(payloadResult.payload, form.logo_file))
-        : await apiPost(`/api/offers`, payloadResult.payload);
-      const savedOffer = (response as { offer?: OfferRecord; data?: OfferRecord }).offer || (response as { data?: OfferRecord }).data || (response as OfferRecord);
+      const savedOffer = await saveOfferDirect(offerId, form);
       setOffer(savedOffer);
       setForm(offerToForm(savedOffer));
       showToast({ title: offerId ? "Offer updated" : "Offer created", description: offerId ? "Offer saved successfully." : "Offer created. You can now manage nested rules." });
       if (!offerId && savedOffer.id) router.replace(`/dashboard/unified-offers/${savedOffer.id}`);
     } catch (error) {
-      const debugError = axios.isAxiosError(error)
-        ? {
-            message: error.message,
-            status: error.response?.status ?? null,
-            data: error.response?.data ?? null,
-          }
-        : error;
-      console.error("Offer save failed", {
-        offerId,
-        payload: payloadResult.payload,
-        error: debugError,
-      });
-      showToast({ title: "Failed to save offer", description: getApiErrorMessage(error), type: "error" });
+      showToast({ title: "Failed to save offer", description: error instanceof Error ? error.message : "Please try again.", type: "error" });
     } finally {
       setSaving(false);
     }
@@ -240,7 +161,7 @@ export function UnifiedOfferEditorPage({
     if (!offerId) return;
     try {
       setDeleting(true);
-      await apiDelete(`/api/offers/${offerId}`);
+      await deleteOfferDirect(offerId);
       showToast({ title: "Offer deleted", description: "Offer deleted successfully." });
       router.push("/dashboard/unified-offers");
     } catch (error) {

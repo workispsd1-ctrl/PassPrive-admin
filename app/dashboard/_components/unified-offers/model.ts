@@ -1,13 +1,6 @@
 "use client";
 
-import axios, { AxiosRequestConfig } from "axios";
-
-import { getTokenClient } from "@/lib/getTokenClient";
-
-export const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:8000";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 export const OFFER_SOURCE_TYPES = ["PLATFORM", "MERCHANT", "BANK"] as const;
 export const OFFER_MODULES = ["STORES", "DINEIN", "BOTH"] as const;
@@ -155,14 +148,13 @@ export type OfferFormValues = {
 export type OfferTargetRecord = {
   id: string;
   target_type: string;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  store_id?: string | null;
-  restaurant_id?: string | null;
+  target_entity_id?: string | null;
   city?: string | null;
+  area?: string | null;
   category?: string | null;
   subcategory?: string | null;
   tag?: string | null;
+  plan_code?: string | null;
 };
 
 export type OfferConditionRecord = {
@@ -176,11 +168,12 @@ export type OfferConditionRecord = {
 
 export type OfferPaymentRuleRecord = {
   id: string;
-  payment_flow?: string | null;
   payment_instrument_type?: string | null;
   card_network?: string | null;
   issuer_bank_name?: string | null;
+  requires_coupon_code?: boolean | null;
   coupon_code?: string | null;
+  requires_saved_card?: boolean | null;
 };
 
 export type OfferBinRecord = {
@@ -193,9 +186,10 @@ export type OfferBinRecord = {
 export type OfferUsageLimitRecord = {
   total_redemption_limit?: number | null;
   per_user_redemption_limit?: number | null;
-  per_store_redemption_limit?: number | null;
-  per_restaurant_redemption_limit?: number | null;
+  per_entity_redemption_limit?: number | null;
   per_day_redemption_limit?: number | null;
+  budget_amount?: number | null;
+  budget_consumed?: number | null;
 };
 
 export type OfferUsageLimitDraft = {
@@ -255,53 +249,6 @@ export function normalizeObjectPayload<T extends JsonRecord>(payload: unknown): 
     if (isRecord(payload[key])) return payload[key] as T;
   }
   return payload as T;
-}
-
-async function getHeaders(contentType?: string) {
-  const token = await getTokenClient();
-  if (!token) throw new Error("Not logged in. Please sign in again.");
-
-  return {
-    ...(contentType ? { "Content-Type": contentType } : {}),
-    Authorization: `Bearer ${token}`,
-  };
-}
-
-async function apiRequest<T>(config: AxiosRequestConfig) {
-  const headers = await getHeaders(config.headers?.["Content-Type"] as string | undefined);
-  const response = await axios.request<T>({
-    baseURL: backendUrl,
-    ...config,
-    headers: {
-      ...headers,
-      ...config.headers,
-    },
-  });
-  return response.data;
-}
-
-export async function apiGet<T>(url: string, params?: Record<string, string | number | boolean | undefined>) {
-  return apiRequest<T>({ url, method: "GET", params });
-}
-
-export async function apiPost<T>(url: string, data: unknown) {
-  return apiRequest<T>({ url, method: "POST", data, headers: { "Content-Type": "application/json" } });
-}
-
-export async function apiPut<T>(url: string, data: unknown) {
-  return apiRequest<T>({ url, method: "PUT", data, headers: { "Content-Type": "application/json" } });
-}
-
-export async function apiPostForm<T>(url: string, data: FormData) {
-  return apiRequest<T>({ url, method: "POST", data });
-}
-
-export async function apiPutForm<T>(url: string, data: FormData) {
-  return apiRequest<T>({ url, method: "PUT", data });
-}
-
-export async function apiDelete<T>(url: string) {
-  return apiRequest<T>({ url, method: "DELETE" });
 }
 
 export function numberOrNull(value: string) {
@@ -447,6 +394,8 @@ export function buildOfferPayload(form: OfferFormValues) {
 
   const payload = {
     source_type: form.source_type,
+    module: "BOTH",
+    payment_flow: "ANY",
     title: safeTrim(form.title),
     offer_type: form.offer_type,
     currency_code: safeTrim(form.currency_code) || "MUR",
@@ -456,6 +405,13 @@ export function buildOfferPayload(form: OfferFormValues) {
     priority: numberOrNull(form.priority) ?? 100,
     status: form.status,
   } as Record<string, unknown>;
+
+  payload.sponsor_type =
+    form.source_type === "BANK"
+      ? "BANK"
+      : form.source_type === "MERCHANT"
+      ? "MERCHANT"
+      : "PLATFORM";
 
   if (safeTrim(form.subtitle)) payload.subtitle = safeTrim(form.subtitle);
   if (safeTrim(form.description)) payload.description = safeTrim(form.description);
@@ -487,26 +443,123 @@ export function validateOfferForm(form: OfferFormValues) {
   return null;
 }
 
+async function getCurrentUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabaseBrowser.auth.getUser();
+  if (error) throw error;
+  return user?.id || null;
+}
+
+function getBankLogoStoragePath(publicUrl: string) {
+  const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
+  if (objectPublicMatch?.[1]) return objectPublicMatch[1];
+  const bucketMatch = publicUrl.match(/\/bank-offers\/(.+)$/);
+  return bucketMatch?.[1] ?? null;
+}
+
+function buildBankLogoStoragePath(fileName: string) {
+  const extension = fileName.split(".").pop() || "bin";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `logos/${Date.now()}-${random}.${extension}`;
+}
+
+async function uploadOfferLogoIfNeeded(form: OfferFormValues) {
+  if (!form.logo_file) return form.logo_url.trim() || null;
+
+  const path = buildBankLogoStoragePath(form.logo_file.name);
+  const { error: uploadError } = await supabaseBrowser.storage.from("bank-offers").upload(path, form.logo_file, {
+    upsert: true,
+  });
+  if (uploadError) throw uploadError;
+
+  const { data } = supabaseBrowser.storage.from("bank-offers").getPublicUrl(path);
+  const nextLogoUrl = data.publicUrl;
+
+  const oldPath = getBankLogoStoragePath(form.logo_url.trim());
+  if (oldPath && oldPath !== path) {
+    await supabaseBrowser.storage.from("bank-offers").remove([oldPath]).catch(() => undefined);
+  }
+
+  return nextLogoUrl;
+}
+
+export async function listOffersDirect() {
+  const { data, error } = await supabaseBrowser
+    .from("offers")
+    .select("*")
+    .order("priority", { ascending: true })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as OfferRecord[];
+}
+
+export async function saveOfferDirect(offerId: string | undefined, form: OfferFormValues) {
+  const payloadResult = buildOfferPayload(form);
+  const userId = await getCurrentUserId();
+  const logoUrl = form.source_type === "BANK" ? await uploadOfferLogoIfNeeded(form) : form.logo_url.trim() || null;
+
+  const payload: Record<string, unknown> = {
+    ...payloadResult.payload,
+    logo_url: logoUrl,
+    updated_by: userId,
+  };
+
+  if (!offerId) {
+    if (userId) payload.created_by = userId;
+    const { data, error } = await supabaseBrowser.from("offers").insert(payload).select("*").single();
+    if (error) throw error;
+    return data as OfferRecord;
+  }
+
+  const { data, error } = await supabaseBrowser.from("offers").update(payload).eq("id", offerId).select("*").single();
+  if (error) throw error;
+  return data as OfferRecord;
+}
+
+export async function deleteOfferDirect(offerId: string) {
+  const { error } = await supabaseBrowser.from("offers").delete().eq("id", offerId);
+  if (error) throw error;
+}
+
 export async function fetchOfferBundle(offerId: string) {
   const [offerRes, targetsRes, conditionsRes, paymentRulesRes, binsRes, usageLimitRes, redemptionsRes] =
     await Promise.all([
-      apiGet(`/api/offers/${offerId}`),
-      apiGet(`/api/offers/${offerId}/targets`),
-      apiGet(`/api/offers/${offerId}/conditions`),
-      apiGet(`/api/offers/${offerId}/payment-rules`),
-      apiGet(`/api/offers/${offerId}/bins`),
-      apiGet(`/api/offers/${offerId}/usage-limit`).catch(() => null),
-      apiGet(`/api/offers/${offerId}/redemptions`).catch(() => []),
+      supabaseBrowser.from("offers").select("*").eq("id", offerId).maybeSingle(),
+      supabaseBrowser.from("offer_targets").select("*").eq("offer_id", offerId).order("created_at", { ascending: true }),
+      supabaseBrowser.from("offer_conditions").select("*").eq("offer_id", offerId).order("sort_order", { ascending: true }),
+      supabaseBrowser.from("offer_payment_rules").select("*").eq("offer_id", offerId).order("created_at", { ascending: true }),
+      supabaseBrowser.from("offer_bins").select("*").eq("offer_id", offerId).order("created_at", { ascending: true }),
+      supabaseBrowser.from("offer_usage_limits").select("*").eq("offer_id", offerId).maybeSingle(),
+      supabaseBrowser.from("offer_redemptions").select("*").eq("offer_id", offerId).order("redeemed_at", { ascending: false }),
     ]);
 
+  if (offerRes.error) throw offerRes.error;
+  if (targetsRes.error) throw targetsRes.error;
+  if (conditionsRes.error) throw conditionsRes.error;
+  if (paymentRulesRes.error) throw paymentRulesRes.error;
+  if (binsRes.error) throw binsRes.error;
+  if (usageLimitRes.error) throw usageLimitRes.error;
+  if (redemptionsRes.error) throw redemptionsRes.error;
+
   return {
-    offer: normalizeObjectPayload<OfferRecord>(offerRes),
-    targets: normalizeArrayPayload<OfferTargetRecord>(targetsRes),
-    conditions: normalizeArrayPayload<OfferConditionRecord>(conditionsRes),
-    paymentRules: normalizeArrayPayload<OfferPaymentRuleRecord>(paymentRulesRes),
-    bins: normalizeArrayPayload<OfferBinRecord>(binsRes),
-    usageLimit: usageLimitRes ? normalizeObjectPayload<OfferUsageLimitRecord>(usageLimitRes) : null,
-    redemptions: normalizeArrayPayload<OfferRedemptionRecord>(redemptionsRes),
+    offer: (offerRes.data || null) as OfferRecord | null,
+    targets: (targetsRes.data || []) as OfferTargetRecord[],
+    conditions: (conditionsRes.data || []) as OfferConditionRecord[],
+    paymentRules: (paymentRulesRes.data || []) as OfferPaymentRuleRecord[],
+    bins: (binsRes.data || []) as OfferBinRecord[],
+    usageLimit: (usageLimitRes.data || null) as OfferUsageLimitRecord | null,
+    redemptions: ((redemptionsRes.data || []) as Array<Record<string, unknown>>).map((item) => ({
+      id: String(item.id || ""),
+      user_id: typeof item.user_id === "string" ? item.user_id : null,
+      order_id: typeof item.order_reference === "string" ? item.order_reference : null,
+      status: typeof item.redemption_status === "string" ? item.redemption_status : null,
+      bill_amount: typeof item.bill_amount === "number" ? item.bill_amount : typeof item.original_amount === "number" ? item.original_amount : null,
+      discount_amount: typeof item.discount_amount === "number" ? item.discount_amount : null,
+      redeemed_at: typeof item.redeemed_at === "string" ? item.redeemed_at : null,
+    })) as OfferRedemptionRecord[],
   };
 }
 
@@ -525,8 +578,8 @@ export function usageLimitToDraft(limit: OfferUsageLimitRecord | null): OfferUsa
   return {
     total_redemption_limit: limit.total_redemption_limit?.toString() || "",
     per_user_redemption_limit: limit.per_user_redemption_limit?.toString() || "",
-    per_store_redemption_limit: limit.per_store_redemption_limit?.toString() || "",
-    per_restaurant_redemption_limit: limit.per_restaurant_redemption_limit?.toString() || "",
+    per_store_redemption_limit: limit.per_entity_redemption_limit?.toString() || "",
+    per_restaurant_redemption_limit: limit.per_entity_redemption_limit?.toString() || "",
     per_day_redemption_limit: limit.per_day_redemption_limit?.toString() || "",
   };
 }
@@ -534,18 +587,102 @@ export function usageLimitToDraft(limit: OfferUsageLimitRecord | null): OfferUsa
 export function getTargetLabel(target: OfferTargetRecord) {
   switch (target.target_type) {
     case "STORE":
-      return target.store_id || target.entity_id || "Store";
+      return target.target_entity_id || "Store";
     case "RESTAURANT":
-      return target.restaurant_id || target.entity_id || "Restaurant";
+      return target.target_entity_id || "Restaurant";
     case "CITY":
       return target.city || "City";
+    case "AREA":
+      return target.area || "Area";
     case "CATEGORY":
       return target.category || "Category";
     case "SUBCATEGORY":
       return target.subcategory || "Subcategory";
     case "TAG":
       return target.tag || "Tag";
+    case "PLAN":
+      return target.plan_code || "Plan";
     default:
       return "All";
   }
+}
+
+export async function createOfferTargetDirect(offerId: string, payload: Record<string, unknown>) {
+  const { data, error } = await supabaseBrowser
+    .from("offer_targets")
+    .insert({ ...payload, offer_id: offerId })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as OfferTargetRecord;
+}
+
+export async function deleteOfferTargetDirect(targetId: string) {
+  const { error } = await supabaseBrowser.from("offer_targets").delete().eq("id", targetId);
+  if (error) throw error;
+}
+
+export async function createOfferConditionDirect(offerId: string, payload: Record<string, unknown>) {
+  const { data, error } = await supabaseBrowser
+    .from("offer_conditions")
+    .insert({ ...payload, offer_id: offerId })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as OfferConditionRecord;
+}
+
+export async function deleteOfferConditionDirect(conditionId: string) {
+  const { error } = await supabaseBrowser.from("offer_conditions").delete().eq("id", conditionId);
+  if (error) throw error;
+}
+
+export async function createOfferPaymentRuleDirect(offerId: string, payload: Record<string, unknown>) {
+  const { data, error } = await supabaseBrowser
+    .from("offer_payment_rules")
+    .insert({ ...payload, offer_id: offerId })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as OfferPaymentRuleRecord;
+}
+
+export async function deleteOfferPaymentRuleDirect(ruleId: string) {
+  const { error } = await supabaseBrowser.from("offer_payment_rules").delete().eq("id", ruleId);
+  if (error) throw error;
+}
+
+export async function createOfferBinDirect(offerId: string, payload: Record<string, unknown>) {
+  const { data, error } = await supabaseBrowser
+    .from("offer_bins")
+    .insert({ ...payload, offer_id: offerId })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as OfferBinRecord;
+}
+
+export async function deleteOfferBinDirect(binId: string) {
+  const { error } = await supabaseBrowser.from("offer_bins").delete().eq("id", binId);
+  if (error) throw error;
+}
+
+export async function saveOfferUsageLimitDirect(offerId: string, value: OfferUsageLimitDraft) {
+  const payload = {
+    offer_id: offerId,
+    total_redemption_limit: numberOrNull(value.total_redemption_limit),
+    per_user_redemption_limit: numberOrNull(value.per_user_redemption_limit),
+    per_entity_redemption_limit:
+      numberOrNull(value.per_store_redemption_limit) ?? numberOrNull(value.per_restaurant_redemption_limit),
+    per_day_redemption_limit: numberOrNull(value.per_day_redemption_limit),
+  };
+
+  const { data, error } = await supabaseBrowser
+    .from("offer_usage_limits")
+    .upsert(payload, { onConflict: "offer_id" })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as OfferUsageLimitRecord;
 }
