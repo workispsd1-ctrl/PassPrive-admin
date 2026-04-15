@@ -73,7 +73,7 @@ const bannerConfigs: BannerConfig[] = [
     description: "Promotional banners shown in the store home section.",
     collectionLabel: "Store banners",
     table: "storeshomebanners",
-    storageBucket: "homeherooffers",
+    storageBucket: "StoresHomeBanners",
     emptyLabel: "No store home banners available yet.",
     addLabel: "Add Store Banner",
     supportsEdit: false,
