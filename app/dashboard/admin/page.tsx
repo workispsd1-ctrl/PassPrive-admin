@@ -24,16 +24,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Modal from "../_components/Modal";
 import { Card, CardContent } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
 import { showToast } from "@/hooks/useToast";
-import { exportToExcel } from "@/lib/exportToExcel";
 import PaginationBar from "../_components/Pagination";
 
 const PhoneInput = dynamic(() => import("react-phone-input-2"), { ssr: false });
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
 
 type User = {
   id: string;
@@ -63,9 +57,6 @@ async function getAccessToken() {
   return token;
 }
 
-/**
- * Backend payload for your /api/auth/create-user
- */
 type CreateUserPayload = {
   email: string;
   password: string;
@@ -74,15 +65,34 @@ type CreateUserPayload = {
   role: string;
 };
 
+const ADMIN_MANAGEMENT_ROLES = [
+  "admin",
+  "superadmin",
+  "restaurantpartner",
+  "storepartner",
+  "storeowner",
+] as const;
+
+const ADMIN_ROLE_OPTIONS = [
+  "admin",
+  "superadmin",
+  "user",
+  "storepartner",
+  "storeowner",
+  "restaurantpartner",
+] as const;
+
+function normalizeRoleValue(role: unknown) {
+  if (typeof role !== "string") return "";
+  return role.trim().toLowerCase().replace(/[\s_-]+/g, "");
+}
+
 export default function AdminPage() {
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [admins, setAdmins] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [fetchingCurrentUser, setFetchingCurrentUser] = useState(true);
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -110,8 +120,8 @@ export default function AdminPage() {
   const [page, setPage] = useState(1);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedData, setSelectedData] = useState<any>(null);
-  const [rowData, setRowData] = useState<any>(null);
+  const [selectedData, setSelectedData] = useState<User | null>(null);
+  const [rowData, setRowData] = useState<User | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const totalPages = Math.ceil(total / limit);
@@ -134,7 +144,7 @@ export default function AdminPage() {
     role: "",
   });
 
-  const [deleteRefresh, setDeleteRefresh] = useState<any>(null);
+  const [deleteRefresh, setDeleteRefresh] = useState<number | null>(null);
 
   // Fetch current user's role to check deletion permissions
   useEffect(() => {
@@ -157,8 +167,6 @@ export default function AdminPage() {
       } catch (err) {
         console.error("Error fetching current user role:", err);
         setCurrentUserRole(null);
-      } finally {
-        setFetchingCurrentUser(false);
       }
     };
     
@@ -190,7 +198,7 @@ export default function AdminPage() {
       setLoading(true);
       const token = await getAccessToken();
       
-      const res = await fetch(`${API_BASE}/api/auth/users/${rowData.id}`, {
+      const res = await fetch(`/api/admin-users/${rowData.id}`, {
         method: "DELETE",
         headers: { 
           "Content-Type": "application/json",
@@ -210,10 +218,11 @@ export default function AdminPage() {
       handleRefresh();
       setIsConfirmOpen(false);
       setRowData(null);
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete user";
       showToast({
         title: "Error",
-        description: err.message || `Failed to delete user`,
+        description: message,
         type: "error"
       });
     } finally {
@@ -225,10 +234,12 @@ export default function AdminPage() {
   const handleFetchuser = useCallback(async () => {
     setLoading(true);
     try {
+      const allowedRoles = new Set(ADMIN_MANAGEMENT_ROLES.map((role) => normalizeRoleValue(role)));
+
       let query = supabaseBrowser
         .from("users")
-        .select("*", { count: "exact" })
-        .in("role", ["admin", "superadmin", "restaurantpartner", "storepartner"]);
+        .select("*")
+        .order("created_at", { ascending: true });
 
       if (searchTerm) {
         query = query.or(
@@ -236,23 +247,25 @@ export default function AdminPage() {
         );
       }
 
-
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
-      query = query.order("created_at", { ascending: true }).range(from, to);
-
-      const { data, error, count } = await query;
+      const { data, error } = await query;
 
       if (error) {
         console.error("Supabase fetch error:", error);
         setError(error.message);
       } else {
-        setAdmins((data as User[]) || []);
-        setTotal(count || 0);
+        const filtered = ((data as User[]) || []).filter((user) =>
+          allowedRoles.has(normalizeRoleValue(user.role))
+        );
+
+        const from = (page - 1) * limit;
+        const to = from + limit;
+        setAdmins(filtered.slice(from, to));
+        setTotal(filtered.length);
       }
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to fetch User data";
       console.error("Failed to fetch User data:", error);
-      setError(error.message || "Failed to fetch User data");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -296,32 +309,6 @@ export default function AdminPage() {
     setIsEditing(true);
   };
 
-  const handleExportFile = async () => {
-    try {
-      const { data, error } = await supabaseBrowser
-        .from("users")
-        .select("*")
-        .in("role", ["admin", "superadmin"])
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw new Error("Failed to fetch data for export!");
-      }
-      await exportToExcel(data, "admin_users");
-      showToast({
-        title: "Success",
-        description: "Data exported successfully!",
-      });
-    } catch (error: any) {
-      console.error("Export error:", error);
-      showToast({
-        type: "error",
-        title: "Error",
-        description: error?.message || "Something went wrong during export!",
-      });
-    }
-  };
-
   const formatRole = (role?: string) => {
     if (!role) return "";
 
@@ -330,6 +317,7 @@ export default function AdminPage() {
       admin: "Admin",
       restaurantpartner: "Restaurant Partner",
       storepartner: "Store Partner",
+      storeowner: "Store Owner",
       user: "User",
     };
 
@@ -337,14 +325,12 @@ export default function AdminPage() {
   };
 
   /**
-   * ✅ NEW: Create user via backend API (instead of supabaseBrowser.auth.signUp on client)
+   * Create user through the local Next.js route in this app.
    */
   const createUserViaBackend = async (payload: CreateUserPayload) => {
     const token = await getAccessToken();
 
-    // If your backend route differs, change this:
-    // e.g. `${API_BASE}/api/auth/create-user/create-user`
-    const res = await fetch(`${API_BASE}/api/auth/create-user`, {
+    const res = await fetch(`/api/admin-users`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -363,7 +349,7 @@ export default function AdminPage() {
   };
 
   /**
-   * ✅ UPDATED: now uses backend API
+   * Uses the local in-app API route.
    */
   const hadleAddNewAdmin = async () => {
     setSaving(true);
@@ -380,7 +366,7 @@ export default function AdminPage() {
         );
       }
 
-      const { status, json } = await createUserViaBackend({
+      await createUserViaBackend({
         email: newSem.email.trim(),
         password: newSem.password,
         full_name: newSem.name?.trim(),
@@ -388,21 +374,10 @@ export default function AdminPage() {
         role: newSem.role,
       });
 
-      // Your backend might return 202 if email confirmation is ON (no session)
-      if (status === 202) {
-        showToast({
-          type: "success",
-          title: "User created",
-          description:
-            json?.message ||
-            "Auth user created. Email confirmation may be enabled — user must confirm email before first login.",
-        });
-      } else {
-        showToast({
-          title: "Success",
-          description: `${formatRole(newSem.role)} created successfully!`,
-        });
-      }
+      showToast({
+        title: "Success",
+        description: `${formatRole(newSem.role)} created successfully!`,
+      });
 
       setNewSem({
         id: crypto.randomUUID(),
@@ -425,13 +400,14 @@ export default function AdminPage() {
       setDialogOpen(false);
       setPage(1);
       handleFetchuser();
-    } catch (error: any) {
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Something went wrong while creating the account!";
       console.error("Add new admin error:", error);
       showToast({
         type: "error",
         title: "Error",
-        description:
-          error?.message || "Something went wrong while creating admin!",
+        description: message,
       });
     } finally {
       setSaving(false);
@@ -449,7 +425,7 @@ export default function AdminPage() {
         role: editSem.role,
       };
 
-      const res = await fetch(`${API_BASE}/api/auth/users/${editSem.id}`, {
+      const res = await fetch(`/api/admin-users/${editSem.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -483,14 +459,15 @@ export default function AdminPage() {
       setIsEditing(false);
       showToast({
         title: "Success",
-        description: "Admin Updated!",
+        description: "Account updated!",
       });
       handleRefresh();
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Something went wrong!";
       showToast({
         type: "error",
         title: "Error",
-        description: error?.message || "Something went wrong!",
+        description: message,
       });
     } finally {
       setSaving(false);
@@ -546,7 +523,7 @@ export default function AdminPage() {
             title="Add New Admin"
           >
             <Plus className="h-5 w-5" />
-            <span>Add New Admin</span>
+            <span>Add New Account</span>
           </button>
         </div>
 
@@ -554,11 +531,11 @@ export default function AdminPage() {
           <div className="flex flex-col justify-center items-center text-gray-900 p-6 border rounded-lg bg-gray-50 mt-8">
             <FileText className="w-16 h-16 text-gray-400 mb-4" />
             <h2 className="text-2xl font-semibold mb-2">
-              No Admin Users Found
+              No Matching Users Found
             </h2>
             <p className="text-gray-500 text-center max-w-md">
-              It looks like there are no administrative users matching your
-              criteria. Click "Add New Admin" to get started or clear your
+              It looks like there are no matching users for these management
+              roles. Click &quot;Add New Account&quot; to get started or clear your
               search.
             </p>
           </div>
@@ -680,12 +657,12 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* CREATE NEW ADMIN */}
+        {/* CREATE NEW ACCOUNT */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-lg bg-white border-gray-300">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                Create New Admin
+                Create New Account
               </DialogTitle>
             </DialogHeader>
 
@@ -729,8 +706,11 @@ export default function AdminPage() {
                   <option value="" disabled>
                     Select Role
                   </option>
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Super Admin</option>
+                  {ADMIN_ROLE_OPTIONS.map((role) => (
+                    <option key={role} value={role}>
+                      {formatRole(role)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -824,7 +804,7 @@ export default function AdminPage() {
           <Card className="max-w-md w-full mx-auto shadow-md border mt-5 p-4 rounded-2xl bg-white">
             <CardContent className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-800">
-                Admin Details
+                Account Details
               </h2>
               <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-gray-700">
                 <div className="font-medium">Email:</div>
@@ -849,12 +829,12 @@ export default function AdminPage() {
           </Card>
         </Modal>
 
-        {/* EDIT ADMIN */}
+        {/* EDIT ACCOUNT */}
         <Dialog open={isEditing} onOpenChange={setIsEditing}>
           <DialogContent className="sm:max-w-lg bg-white border-gray-300">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                Edit Admin
+                Edit Account
               </DialogTitle>
             </DialogHeader>
 
@@ -892,8 +872,11 @@ export default function AdminPage() {
                   <option value="" disabled>
                     Select Role
                   </option>
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Super Admin</option>
+                  {ADMIN_ROLE_OPTIONS.map((role) => (
+                    <option key={role} value={role}>
+                      {formatRole(role)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -956,4 +939,3 @@ export default function AdminPage() {
     </>
   );
 }
-
