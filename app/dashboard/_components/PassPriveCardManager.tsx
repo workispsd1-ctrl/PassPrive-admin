@@ -452,6 +452,15 @@ export default function PassPriveCardManager({
                             {editIconSrc ? <Image src={editIconSrc} alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" /> : null}
                             Edit
                           </Button>
+                          <Button
+                            variant="destructive"
+                            className="h-9 rounded-xl bg-red-600 px-3 text-[13px] font-medium text-white hover:bg-red-700"
+                            onClick={() => setDeletingCard(card)}
+                            disabled={saving}
+                          >
+                            <Trash2 className=" h-3.5 w-3.5" />
+                            Delete
+                          </Button>
                           <Button asChild variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
                             <Link href={`${basePath}/${card.id}`}>
                               {manageIconSrc ? <Image src={manageIconSrc} alt="Manage" width={14} height={14} className="mr-2 h-3.5 w-3.5" /> : null}
@@ -541,7 +550,7 @@ export default function PassPriveCardManager({
       </Dialog>
 
       <AlertDialog open={Boolean(deletingCard)} onOpenChange={(open) => !open && setDeletingCard(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this card?</AlertDialogTitle>
             <AlertDialogDescription>
