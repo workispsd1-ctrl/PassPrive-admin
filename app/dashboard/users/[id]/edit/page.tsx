@@ -14,7 +14,6 @@ export default async function EditUserPage({
     .from("users")
     .select("*")
     .eq("id", id)
-    .eq("role", "user")
     .single();
 
   if (error || !user) {

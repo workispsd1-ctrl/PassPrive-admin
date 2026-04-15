@@ -115,19 +115,10 @@ export const UserTable = ({
     }
   };
   const handleUserDetails = async (user: User) => {
-    const { data, error } = await supabaseBrowser
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .eq("role", "user")
-      .single();
+    console.log(user, "userssss");
+    setSelectedData(user);
 
-    if (error) {
-      toast.error("Failed to fetch user details");
-      return;
-    }
-
-    setSelectedData(data || user);
+    console.log("user data", user);
     setIsOpen(true);
   };
   // Toggles the block status of a user

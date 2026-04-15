@@ -38,17 +38,6 @@ function useDebounced<T>(value: T, ms = 350) {
   return v;
 }
 
-const extractErrorMessage = (err: any) => {
-  if (!err) return "Failed to fetch users";
-  if (typeof err === "string") return err;
-  if (typeof err?.message === "string" && err.message.trim()) return err.message;
-  if (typeof err?.error_description === "string" && err.error_description.trim()) {
-    return err.error_description;
-  }
-  if (typeof err?.details === "string" && err.details.trim()) return err.details;
-  return "Failed to fetch users";
-};
-
 function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
@@ -95,20 +84,13 @@ function UsersPage() {
         }
 
         const { data, error, count } = await query;
-
-        if (error) {
-          setUsers([]);
-          setTotal(0);
-          setError(extractErrorMessage(error));
-          return;
-        }
+        if (error) throw error;
 
         setUsers(data || []);
         setTotal(count || 0);
       } catch (err: any) {
-        setUsers([]);
-        setTotal(0);
-        setError(extractErrorMessage(err));
+        console.error(err);
+        setError(err?.message || "Failed to fetch users");
       } finally {
         setLoading(false);
       }
