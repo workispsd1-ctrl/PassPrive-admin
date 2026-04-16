@@ -153,6 +153,31 @@ function validateCatalogueForStoreType(
   return null;
 }
 
+function toDbOfferType(
+  uiOfferType: string | undefined,
+  valueType: "PERCENT" | "FLAT" | undefined
+): string {
+  const normalized = String(uiOfferType || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  if (normalized === "percentage" || normalized === "percent") return "percentage";
+  if (normalized === "flat" || normalized === "flat_discount") return "flat";
+  if (normalized === "cashback" || normalized === "cover_discount") return "cover_discount";
+
+  if (
+    normalized === "in_store" ||
+    normalized === "passprive_pass" ||
+    normalized === "bank_benefit" ||
+    normalized === "coupon"
+  ) {
+    return valueType === "FLAT" ? "flat" : "percentage";
+  }
+
+  return valueType === "FLAT" ? "flat" : "percentage";
+}
+
 /* -------------------------------------------------------
   ✅ FIX: useSearchParams must be inside Suspense boundary
 ------------------------------------------------------- */
@@ -496,7 +521,7 @@ function AddStorePageInner() {
           title: o.title?.trim(),
           description: o.subtitle?.trim() || null,
           badge_text: o.badge_text?.trim() || null,
-          offer_type: o.type,
+          offer_type: toDbOfferType(o.type, o.value_type),
           discount_value:
             o.value_type === "PERCENT"
               ? safeNumberOrNull(o.percent || "")
@@ -506,6 +531,7 @@ function AddStorePageInner() {
           end_at: o.end_at || null,
           is_active: true,
           metadata: {
+            offer_type_ui: o.type,
             subtitle: o.subtitle?.trim() || null,
             value_type: o.value_type,
             currency: o.currency || "MUR",
