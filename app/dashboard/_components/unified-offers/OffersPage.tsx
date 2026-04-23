@@ -108,7 +108,7 @@ export function UnifiedOffersPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col space-y-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <Card
         className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
         style={{
@@ -116,8 +116,8 @@ export function UnifiedOffersPage() {
             "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
         }}
       >
-        <CardContent className="space-y-4 px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap justify-end gap-3">
+        <CardContent className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
             <PrimaryButton asChild className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]">
               <Link href="/dashboard/unified-offers/new">
                 <Plus className="mr-2 h-4 w-4" />
@@ -126,7 +126,7 @@ export function UnifiedOffersPage() {
             </PrimaryButton>
             <Button
               variant="outline"
-              className="h-10 rounded-2xl border-slate-200 bg-white px-5 text-sm"
+              className="h-10 rounded-2xl border-slate-200 bg-white px-5 text-sm shadow-sm"
               onClick={() => loadOffers(true)}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -142,9 +142,9 @@ export function UnifiedOffersPage() {
               { label: "Merchant", value: counts.merchants },
             ].map((card) => (
               <Card key={card.label} className="border-white/70 bg-white/80 shadow-sm backdrop-blur">
-                <CardContent className="p-4">
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{card.label}</div>
-                  <div className="mt-2 text-3xl font-semibold text-slate-900">{card.value}</div>
+                <CardContent className="px-4 py-4 sm:px-5 sm:py-5">
+                  <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">{card.label}</div>
+                  <div className="mt-2 text-[30px] font-semibold leading-none text-slate-900">{card.value}</div>
                 </CardContent>
               </Card>
             ))}
@@ -169,9 +169,10 @@ export function UnifiedOffersPage() {
         <EmptyState title="No offers found" description="Try wider filters or create a new offer." action={<PrimaryButton asChild><Link href="/dashboard/unified-offers/new">Create offer</Link></PrimaryButton>} />
       ) : (
         <SectionCard title="Offer List" description={`${filteredOffers.length} result${filteredOffers.length === 1 ? "" : "s"} shown.`}>
-          <Table className="min-w-[1100px]">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <Table className="min-w-[980px] text-[13px] [&_th]:h-10 [&_th]:px-3 [&_th]:py-2 [&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-slate-50/70">
                 <TableHead>Title</TableHead>
                 <TableHead>Source type</TableHead>
                 <TableHead>Badge</TableHead>
@@ -182,15 +183,15 @@ export function UnifiedOffersPage() {
                 <TableHead>Sponsor</TableHead>
                 <TableHead>Module</TableHead>
                 <TableHead>Payment flow</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-[170px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredOffers.map((offer) => (
-                <TableRow key={offer.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-slate-900">{offer.title || "Untitled offer"}</p>
+                <TableRow key={offer.id} className="hover:bg-slate-50/80">
+                  <TableCell className="min-w-[290px] whitespace-normal">
+                    <div className="space-y-0.5">
+                      <p className="font-medium leading-5 text-slate-900">{offer.title || "Untitled offer"}</p>
                       <p className="text-xs text-slate-500">{offer.owner_entity_type || "No owner"}{offer.owner_entity_id ? ` • ${offer.owner_entity_id}` : ""}</p>
                     </div>
                   </TableCell>
@@ -199,19 +200,19 @@ export function UnifiedOffersPage() {
                   <TableCell>{offer.offer_type || "—"}</TableCell>
                   <TableCell>{offer.priority ?? "—"}</TableCell>
                   <TableCell><StatusPill label={offer.status || "Unknown"} active={offer.status === "ACTIVE"} /></TableCell>
-                  <TableCell>{formatDateRange(offer)}</TableCell>
-                  <TableCell>{offer.sponsor_name || "—"}</TableCell>
+                  <TableCell className="whitespace-normal">{formatDateRange(offer)}</TableCell>
+                  <TableCell className="whitespace-normal">{offer.sponsor_name || "—"}</TableCell>
                   <TableCell>{offer.module || "—"}</TableCell>
                   <TableCell>{offer.payment_flow || "—"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button asChild variant="outline">
+                  <TableCell className="w-[170px] text-right">
+                    <div className="flex justify-end gap-2 whitespace-nowrap">
+                      <Button asChild variant="outline" size="sm" className="h-9 rounded-lg px-3">
                         <Link href={`/dashboard/unified-offers/${offer.id}`}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </Link>
                       </Button>
-                      <Button variant="outline" className="text-rose-600 hover:text-rose-700" onClick={() => setDeleteCandidate(offer)}>
+                      <Button variant="outline" size="sm" className="h-9 rounded-lg px-3 text-rose-600 hover:text-rose-700" onClick={() => setDeleteCandidate(offer)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </Button>
@@ -220,7 +221,8 @@ export function UnifiedOffersPage() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </SectionCard>
       )}
 

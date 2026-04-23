@@ -32,14 +32,14 @@ export function SectionCard({
 }) {
   return (
     <Card className="rounded-[18px] border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-col gap-4 space-y-0 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-6">
         <div className="space-y-1">
-          <CardTitle className="text-lg text-slate-900">{title}</CardTitle>
-          {description ? <CardDescription>{description}</CardDescription> : null}
+          <CardTitle className="text-lg tracking-tight text-slate-900">{title}</CardTitle>
+          {description ? <CardDescription className="max-w-3xl leading-6">{description}</CardDescription> : null}
         </div>
         {action}
       </CardHeader>
-      <CardContent className="space-y-5">{children}</CardContent>
+      <CardContent className="space-y-5 px-5 pb-5 pt-0 sm:px-6 sm:pb-6">{children}</CardContent>
     </Card>
   );
 }

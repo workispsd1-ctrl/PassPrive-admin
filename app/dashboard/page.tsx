@@ -330,7 +330,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-full w-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] p-1 md:p-2">
+    <div className="min-h-full w-full space-y-4">
       {loading ? (
         <DashboardSkeleton />
       ) : (

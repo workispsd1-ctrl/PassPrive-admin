@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Plus, Search, Trash2, type LucideIcon } from "lucide-react";
@@ -144,6 +144,100 @@ function toIsoOrNull(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve(result);
+        return;
+      }
+      reject(new Error("Unable to read the selected image."));
+    };
+    reader.onerror = () => reject(new Error("Unable to read the selected image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageUploadField({
+  id,
+  label,
+  value,
+  uploadedValue,
+  placeholder,
+  helpText,
+  onUpload,
+  onClearUpload,
+  onUrlChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  uploadedValue: string;
+  placeholder: string;
+  helpText: string;
+  onUpload: (value: string) => void;
+  onClearUpload: () => void;
+  onUrlChange: (value: string) => void;
+}) {
+  const activeValue = uploadedValue || value.trim();
+  const activeSource = uploadedValue ? "Uploaded from computer" : value.trim() ? "Image URL" : "No image selected";
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      onUpload(dataUrl);
+      event.target.value = "";
+    } catch (error: unknown) {
+      showToast({
+        type: "error",
+        title: `Failed to load ${label.toLowerCase()}`,
+        description: error instanceof Error ? error.message : "Try another image file.",
+      });
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            {activeValue ? (
+              <img src={activeValue} alt={`${label} preview`} className="h-full w-full object-cover" />
+            ) : (
+              <div className="px-2 text-center text-[10px] font-medium uppercase tracking-wide text-slate-400">Preview</div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">{activeSource}</p>
+            <p className="mt-1 text-xs text-slate-500">{helpText}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Input type="file" accept="image/*" onChange={handleFileChange} />
+          {uploadedValue ? (
+            <Button type="button" variant="outline" className="w-fit" onClick={onClearUpload}>
+              Clear uploaded image
+            </Button>
+          ) : null}
+          <Input
+            id={id}
+            value={value}
+            onChange={(event) => onUrlChange(event.target.value)}
+            placeholder={placeholder}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EditorialCollectionManager({
   basePath,
   pageTitle,
@@ -160,6 +254,8 @@ export default function EditorialCollectionManager({
   const [editingCollection, setEditingCollection] = useState<EditorialCollection | null>(null);
   const [deletingCollection, setDeletingCollection] = useState<EditorialCollection | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
+  const [coverImageUploadUrl, setCoverImageUploadUrl] = useState("");
+  const [sourceImageUploadUrl, setSourceImageUploadUrl] = useState("");
   const [query, setQuery] = useState("");
 
   const filteredCollections = useMemo(() => {
@@ -232,11 +328,15 @@ export default function EditorialCollectionManager({
   function openCreateDialog() {
     setEditingCollection(null);
     setForm(initialForm);
+    setCoverImageUploadUrl("");
+    setSourceImageUploadUrl("");
     setDialogOpen(true);
   }
 
   function openEditDialog(collection: EditorialCollection) {
     setEditingCollection(collection);
+    setCoverImageUploadUrl("");
+    setSourceImageUploadUrl("");
     setForm({
       slug: collection.slug || "",
       title: collection.title || "",
@@ -299,10 +399,10 @@ export default function EditorialCollectionManager({
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || null,
       description: form.description.trim() || null,
-      cover_image_url: form.cover_image_url.trim() || null,
+      cover_image_url: coverImageUploadUrl || form.cover_image_url.trim() || null,
       badge_text: form.badge_text.trim() || null,
       source_name: form.source_name.trim() || "PassPrive",
-      source_url: form.source_url.trim() || null,
+      source_url: sourceImageUploadUrl || form.source_url.trim() || null,
       content_type: form.content_type,
       entity_type: form.entity_type,
       city: form.city.trim() || null,
@@ -335,6 +435,8 @@ export default function EditorialCollectionManager({
       setDialogOpen(false);
       setEditingCollection(null);
       setForm(initialForm);
+      setCoverImageUploadUrl("");
+      setSourceImageUploadUrl("");
       await loadCollections();
     } catch (error: unknown) {
       showToast({
@@ -541,15 +643,23 @@ export default function EditorialCollectionManager({
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="collection-cover-image">Cover image URL</Label>
-                <Input
-                  id="collection-cover-image"
-                  value={form.cover_image_url}
-                  onChange={(event) => setForm((current) => ({ ...current, cover_image_url: event.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
+              <ImageUploadField
+                id="collection-cover-image"
+                label="Cover image"
+                value={form.cover_image_url}
+                uploadedValue={coverImageUploadUrl}
+                placeholder="Paste a cover image URL if you are not uploading a file"
+                helpText="Upload from your computer or paste an image URL. The uploaded image takes priority until you clear it."
+                onUpload={(value) => {
+                  setCoverImageUploadUrl(value);
+                  setForm((current) => ({ ...current, cover_image_url: "" }));
+                }}
+                onClearUpload={() => setCoverImageUploadUrl("")}
+                onUrlChange={(value) => {
+                  setCoverImageUploadUrl("");
+                  setForm((current) => ({ ...current, cover_image_url: value }));
+                }}
+              />
 
               <div className="grid gap-2">
                 <Label htmlFor="collection-badge">Badge text</Label>
@@ -573,15 +683,23 @@ export default function EditorialCollectionManager({
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="collection-source-url">Source URL</Label>
-                <Input
-                  id="collection-source-url"
-                  value={form.source_url}
-                  onChange={(event) => setForm((current) => ({ ...current, source_url: event.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
+              <ImageUploadField
+                id="collection-source-url"
+                label="Source image"
+                value={form.source_url}
+                uploadedValue={sourceImageUploadUrl}
+                placeholder="Paste a source image URL if you are not uploading a file"
+                helpText="Use this for a source logo or source artwork. Upload from your computer or paste an image URL."
+                onUpload={(value) => {
+                  setSourceImageUploadUrl(value);
+                  setForm((current) => ({ ...current, source_url: "" }));
+                }}
+                onClearUpload={() => setSourceImageUploadUrl("")}
+                onUrlChange={(value) => {
+                  setSourceImageUploadUrl("");
+                  setForm((current) => ({ ...current, source_url: value }));
+                }}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

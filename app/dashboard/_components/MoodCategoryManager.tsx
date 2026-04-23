@@ -523,33 +523,33 @@ export default function MoodCategoryManager({
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
         <Card
-          className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
+          className="mt-2 overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
           style={{
             background:
               "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
           }}
         >
-          <CardContent className="space-y-4 px-4 py-4 sm:px-5">
-            <div className="space-y-1">
-              <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-              <p className="text-sm text-slate-500">{description}</p>
+          <CardContent className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">
+            <div className="space-y-2">
+              <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
+              <p className="max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
             </div>
-            <div className="flex flex-wrap justify-end gap-3">
-              <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Button
                   variant="outline"
                   onClick={() => void loadCategories()}
                   disabled={loading}
-                  className="h-10 rounded-2xl border-slate-200 bg-white px-5 text-sm"
+                  className="h-11 rounded-2xl border-slate-200 bg-white px-5 text-sm shadow-sm sm:min-w-36"
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   Refresh
                 </Button>
                 <Button
                   onClick={resetForm}
-                  className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]"
+                  className="h-11 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090] sm:min-w-40"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   New category
@@ -574,14 +574,14 @@ export default function MoodCategoryManager({
           </CardContent>
         </Card>
 
-        <div className="grid gap-7 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="mt-2 grid gap-7 xl:grid-cols-[380px_minmax(0,1fr)]">
           <Card className="h-fit border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <CardTitle className="text-lg">{editingId ? "Edit category" : "New category"}</CardTitle>
-              <CardDescription>Only the essentials are editable. Key and slug are generated automatically.</CardDescription>
+            <CardHeader className="border-b border-slate-100 px-5 pb-5 pt-5 sm:px-6">
+              <CardTitle className="text-lg tracking-tight">{editingId ? "Edit category" : "New category"}</CardTitle>
+              <CardDescription className="max-w-xl leading-6">Only the essentials are editable. Key and slug are generated automatically.</CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-6 pt-6">
+            <CardContent className="space-y-7 px-5 py-6 sm:px-6 sm:py-7">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -610,7 +610,7 @@ export default function MoodCategoryManager({
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-slate-900">Category image</p>
-                  <p className="text-xs text-slate-500">Upload the image shown on the category card.</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">Upload the image shown on the category card.</p>
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
@@ -632,7 +632,7 @@ export default function MoodCategoryManager({
                 </div>
 
                 <div className="grid gap-3">
-                  <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="justify-start bg-white">
+                  <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="h-11 justify-start rounded-2xl border-slate-300 bg-white px-4 shadow-sm">
                     <Upload className="mr-2 h-4 w-4" />
                     Upload image
                   </Button>
@@ -644,7 +644,7 @@ export default function MoodCategoryManager({
                     onChange={handleImagePick}
                   />
                   {(imagePreview || form.image_url) ? (
-                    <Button type="button" variant="ghost" onClick={clearImage} className="justify-start text-slate-600">
+                    <Button type="button" variant="ghost" onClick={clearImage} className="h-10 justify-start rounded-2xl px-4 text-slate-600">
                       <X className="mr-2 h-4 w-4" />
                       Remove image
                     </Button>
@@ -652,16 +652,16 @@ export default function MoodCategoryManager({
                 </div>
               </div>
 
-              <div className="flex gap-3 border-t border-slate-100 pt-4">
+              <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center">
                 <Button
-                  className="flex-1 bg-[#5800AB] text-white hover:bg-[#4a0090]"
+                  className="h-11 flex-1 rounded-2xl bg-[#5800AB] px-5 text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]"
                   onClick={() => void saveCategory()}
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {editingId ? "Save changes" : "Create category"}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm} disabled={saving} className="bg-white">
+                <Button type="button" variant="outline" onClick={resetForm} disabled={saving} className="h-11 rounded-2xl border-slate-300 bg-white px-5 shadow-sm sm:w-32">
                   Reset
                 </Button>
               </div>
@@ -669,11 +669,11 @@ export default function MoodCategoryManager({
           </Card>
 
           <Card className="border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <CardHeader className="border-b border-slate-100 px-5 pb-5 pt-5 sm:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                 <div>
-                  <CardTitle className="text-lg">Category list</CardTitle>
-                  <CardDescription>Search, review, and update existing categories.</CardDescription>
+                  <CardTitle className="text-lg tracking-tight">Category list</CardTitle>
+                  <CardDescription className="max-w-xl leading-6">Search, review, and update existing categories.</CardDescription>
                 </div>
                 <div className="relative w-full lg:max-w-sm">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -681,7 +681,7 @@ export default function MoodCategoryManager({
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search by title, key, or slug"
-                    className="h-11 border-slate-300 bg-white pl-9"
+                    className="h-11 border-slate-300 bg-white pl-9 shadow-sm"
                   />
                 </div>
               </div>
@@ -689,19 +689,19 @@ export default function MoodCategoryManager({
 
             <CardContent className="p-0">
               {loading ? (
-                <div className="flex h-64 items-center justify-center text-slate-500">
+                <div className="flex h-64 items-center justify-center px-6 text-slate-500">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Loading categories...
                 </div>
               ) : filteredCategories.length === 0 ? (
                 <div className="px-6 py-16 text-center text-slate-500">No categories found.</div>
               ) : (
-                <div className="space-y-4 p-4 sm:p-6">
+                <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
                   {filteredCategories.map((category) => (
-                    <div key={category.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition hover:border-slate-300 hover:bg-white">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex min-w-0 items-start gap-4">
-                          <div className="relative h-18 w-18 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                    <div key={category.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm transition hover:border-slate-300 hover:bg-white sm:p-5">
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                        <div className="flex min-w-0 items-start gap-4 sm:gap-5">
+                          <div className="relative h-18 w-18 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
                             {category.image_url ? (
                               <Image
                                 src={category.image_url}
@@ -733,12 +733,12 @@ export default function MoodCategoryManager({
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 flex-wrap gap-2">
+                        <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
                           <Button
                             variant={editingId === category.id ? "default" : "outline"}
                             size="sm"
                             onClick={() => void startEdit(category.id)}
-                            className={editingId === category.id ? "bg-[#5800AB] text-white hover:bg-[#4a0090]" : "bg-white"}
+                            className={editingId === category.id ? "h-10 rounded-xl bg-[#5800AB] px-4 text-white hover:bg-[#4a0090]" : "h-10 rounded-xl bg-white px-4 shadow-sm"}
                             disabled={loadingEditId === category.id}
                           >
                             {loadingEditId === category.id ? (
@@ -751,7 +751,7 @@ export default function MoodCategoryManager({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                            className="h-10 rounded-xl border-red-200 bg-white px-4 text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700"
                             onClick={() => void deleteCategory(category.id)}
                             disabled={deletingId === category.id}
                           >
