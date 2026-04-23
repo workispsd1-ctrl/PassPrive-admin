@@ -675,7 +675,7 @@ function KPI({
 
 function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-[2px]">
+    <div className="flex items-center justify-between py-0.5">
       <span className="text-[12px] font-normal leading-4 text-[#45556C]">{label}</span>
       <span className="text-[14px] font-normal leading-5 text-[#0F172B]">{value}</span>
     </div>

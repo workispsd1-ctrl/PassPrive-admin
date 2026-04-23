@@ -27,33 +27,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { PaymentDetails } from "@/app/dashboard/_components/StoreComponents/types";
+import {
+  fetchCategoryOptions,
+  getCategorySelectLabel,
+  getCategorySourceEmptyLabel,
+} from "@/lib/storeCategoryOptions";
 
 /* ---------------- CONSTANTS ---------------- */
 
 const inputClass =
   "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
-
-type StoreMoodCategoryRecord = {
-  title?: string;
-};
-
-function extractCategoryList(payload: unknown): StoreMoodCategoryRecord[] {
-  if (Array.isArray(payload)) return payload as StoreMoodCategoryRecord[];
-
-  const recordPayload =
-    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-
-  if (!recordPayload) return [];
-
-  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
-  for (const key of possibleKeys) {
-    if (Array.isArray(recordPayload[key])) {
-      return recordPayload[key] as StoreMoodCategoryRecord[];
-    }
-  }
-
-  return [];
-}
 
 const cleanObject = (obj: Record<string, unknown>) => {
   const out: Record<string, unknown> = {};
@@ -202,35 +185,18 @@ export default function StoreDetailPage() {
 
   useEffect(() => {
     const loadDropdownOptions = async () => {
+      const storeType = (store?.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT";
+
       try {
-        const { data, error } = await supabaseBrowser
-          .from("store_mood_categories")
-          .select("title")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true })
-          .order("title", { ascending: true });
-
-        if (error) throw error;
-
-        const categories = Array.from(
-          new Set(
-            extractCategoryList(data)
-              .map((item) => item?.title)
-              .filter(
-                (value): value is string => typeof value === "string" && value.trim().length > 0
-              )
-              .map((value) => value.trim())
-          )
-        ).sort((a, b) => a.localeCompare(b));
-
-        setCategoryOptions(categories);
+        setCategoryOptions(await fetchCategoryOptions(storeType));
       } catch {
         // Keep form usable even if dropdown options fail to load.
+        setCategoryOptions([]);
       }
     };
 
     void loadDropdownOptions();
-  }, []);
+  }, [store?.store_type]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -524,7 +490,9 @@ export default function StoreDetailPage() {
                   >
                     {selectedStoreCategories.length
                       ? `${selectedStoreCategories.length} categories selected`
-                      : "Select categories"}
+                      : getCategorySelectLabel(
+                          ((store.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT")
+                        )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -556,7 +524,9 @@ export default function StoreDetailPage() {
                     ))
                   ) : (
                     <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      No store mood categories found
+                      {getCategorySourceEmptyLabel(
+                        ((store.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT")
+                      )}
                     </div>
                   )}
                 </DropdownMenuContent>
@@ -570,7 +540,9 @@ export default function StoreDetailPage() {
               >
                 {selectedStoreCategories.length
                   ? `${selectedStoreCategories.length} categories selected`
-                  : "Select categories"}
+                  : getCategorySelectLabel(
+                      ((store.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT")
+                    )}
               </Button>
             )}
             {selectedStoreCategories.length > 0 && (

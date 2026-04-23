@@ -42,6 +42,7 @@ import DiscountsSection from "@/app/dashboard/_components/StoreComponents/sectio
 import PaymentSection from "@/app/dashboard/_components/StoreComponents/sections/PaymentSection";
 import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
 import { syncStoreCatalogueAdmin } from "@/lib/storeCatalogueAdmin";
+import { fetchCategoryOptions } from "@/lib/storeCategoryOptions";
 
 /* -------------------------------------------------------
   ✅ CONSTANTS
@@ -51,28 +52,6 @@ const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8000";
-
-type StoreMoodCategoryRecord = {
-  title?: string;
-};
-
-function extractCategoryList(payload: unknown): StoreMoodCategoryRecord[] {
-  if (Array.isArray(payload)) return payload as StoreMoodCategoryRecord[];
-
-  const recordPayload =
-    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-
-  if (!recordPayload) return [];
-
-  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
-  for (const key of possibleKeys) {
-    if (Array.isArray(recordPayload[key])) {
-      return recordPayload[key] as StoreMoodCategoryRecord[];
-    }
-  }
-
-  return [];
-}
 
 /* -------------------------------------------------------
   ✅ INDUSTRIAL HELPERS (safe ids + uploads)
@@ -286,34 +265,15 @@ function AddStorePageInner() {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const { data, error } = await supabaseBrowser
-          .from("store_mood_categories")
-          .select("title")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true })
-          .order("title", { ascending: true });
-
-        if (error) throw error;
-
-        const categories = Array.from(
-          new Set(
-            extractCategoryList(data)
-              .map((item) => item?.title)
-              .filter(
-                (value): value is string => typeof value === "string" && value.trim().length > 0
-              )
-              .map((value) => value.trim())
-          )
-        ).sort((a, b) => a.localeCompare(b));
-
-        setCategoryOptions(categories);
+        setCategoryOptions(await fetchCategoryOptions(form.store_type));
       } catch {
         // Keep form usable even if dropdown options fail to load.
+        setCategoryOptions([]);
       }
     };
 
     void loadOptions();
-  }, []);
+  }, [form.store_type]);
 
   /* ---------------------------------------------
      ✅ STORAGE UPLOAD HELPERS
