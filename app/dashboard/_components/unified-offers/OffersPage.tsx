@@ -227,16 +227,16 @@ export function UnifiedOffersPage() {
       )}
 
       <AlertDialog open={Boolean(deleteCandidate)} onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-slate-200 bg-white text-slate-900 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete offer?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-2xl font-semibold tracking-tight text-slate-900">Delete offer?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base leading-8 text-slate-700">
               This permanently removes {deleteCandidate?.title || "this offer"}. Use pause or archive if you only want to disable it safely.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteOffer} className="bg-rose-600 hover:bg-rose-700">Delete offer</AlertDialogAction>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="border-slate-300 bg-white text-slate-900 hover:bg-slate-50">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteOffer} className="bg-rose-600 text-white hover:bg-rose-700">Delete offer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
