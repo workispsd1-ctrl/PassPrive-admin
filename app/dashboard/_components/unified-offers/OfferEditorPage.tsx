@@ -73,6 +73,17 @@ export function UnifiedOfferEditorPage({
   offerId?: string;
   initialSourceType?: OfferSourceType;
 }) {
+  const resolveErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message.trim()) return error.message;
+    if (typeof error === "object" && error !== null) {
+      const record = error as Record<string, unknown>;
+      const parts = [record.message, record.details, record.hint]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+      if (parts.length > 0) return parts.join(" | ");
+    }
+    return fallback;
+  };
+
   const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
   const [loading, setLoading] = React.useState(Boolean(offerId));
@@ -151,7 +162,7 @@ export function UnifiedOfferEditorPage({
       showToast({ title: offerId ? "Offer updated" : "Offer created", description: offerId ? "Offer saved successfully." : "Offer created. You can now manage nested rules." });
       if (!offerId && savedOffer.id) router.replace(`/dashboard/unified-offers/${savedOffer.id}`);
     } catch (error) {
-      showToast({ title: "Failed to save offer", description: error instanceof Error ? error.message : "Please try again.", type: "error" });
+      showToast({ title: "Failed to save offer", description: resolveErrorMessage(error, "Please try again."), type: "error" });
     } finally {
       setSaving(false);
     }

@@ -98,6 +98,7 @@ export type OfferRecord = {
   ribbon_text?: string | null;
   logo_url?: string | null;
   offer_type?: OfferType;
+  Discount_value?: number | null;
   benefit_value?: number | null;
   benefit_percent?: number | null;
   max_discount_amount?: number | null;
@@ -129,6 +130,7 @@ export type OfferFormValues = {
   logo_url: string;
   logo_file: File | null;
   offer_type: OfferType;
+  Discount_value: string;
   benefit_value: string;
   benefit_percent: string;
   max_discount_amount: string;
@@ -330,6 +332,7 @@ export function createEmptyOfferForm(sourceType: OfferSourceType = "PLATFORM"): 
     logo_url: "",
     logo_file: null,
     offer_type: "PERCENT_DISCOUNT",
+    Discount_value: "1",
     benefit_value: "",
     benefit_percent: "",
     max_discount_amount: "",
@@ -352,6 +355,8 @@ export function offerToForm(record: OfferRecord | null): OfferFormValues {
   const base = createEmptyOfferForm(sourceType);
   if (!record) return base;
 
+  const discountValueFromRecord = record.Discount_value;
+
   return {
     source_type: sourceType,
     title: record.title || "",
@@ -363,6 +368,7 @@ export function offerToForm(record: OfferRecord | null): OfferFormValues {
     logo_url: record.logo_url || "",
     logo_file: null,
     offer_type: (record.offer_type || base.offer_type) as OfferType,
+    Discount_value: discountValueFromRecord?.toString() || "1",
     benefit_value: record.benefit_value?.toString() || "",
     benefit_percent: record.benefit_percent?.toString() || "",
     max_discount_amount: record.max_discount_amount?.toString() || "",
@@ -386,6 +392,8 @@ export function offerToForm(record: OfferRecord | null): OfferFormValues {
 
 export function buildOfferPayload(form: OfferFormValues) {
   const safeTrim = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const discountValue = numberOrNull(form.Discount_value);
+  const resolvedDiscountValue = discountValue ?? 1;
 
   const terms = safeTrim(form.terms_and_conditions)
     .split("\n")
@@ -419,8 +427,15 @@ export function buildOfferPayload(form: OfferFormValues) {
   if (safeTrim(form.badge_kind)) payload.badge_kind = safeTrim(form.badge_kind);
   if (safeTrim(form.ribbon_text)) payload.ribbon_text = safeTrim(form.ribbon_text);
   if (safeTrim(form.logo_url)) payload.logo_url = safeTrim(form.logo_url);
-  if (numberOrNull(form.benefit_value) !== null) payload.benefit_value = numberOrNull(form.benefit_value);
-  if (numberOrNull(form.benefit_percent) !== null) payload.benefit_percent = numberOrNull(form.benefit_percent);
+  payload.Discount_value = resolvedDiscountValue;
+  if (form.offer_type === "PERCENT_DISCOUNT") {
+    payload.benefit_percent = resolvedDiscountValue;
+    payload.benefit_value = null;
+  } else {
+    payload.benefit_value = resolvedDiscountValue;
+    payload.benefit_percent = null;
+  }
+
   if (numberOrNull(form.max_discount_amount) !== null) payload.max_discount_amount = numberOrNull(form.max_discount_amount);
   if (numberOrNull(form.min_bill_amount) !== null) payload.min_bill_amount = numberOrNull(form.min_bill_amount);
   if (form.starts_at) payload.starts_at = toStartDateWithCurrentTimeIsoString(form.starts_at);
@@ -436,9 +451,12 @@ export function buildOfferPayload(form: OfferFormValues) {
 
 export function validateOfferForm(form: OfferFormValues) {
   const safeTrim = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const discountValue = numberOrNull(form.Discount_value);
 
   if (!safeTrim(form.title)) return "Title is required.";
   if (!safeTrim(form.priority) || numberOrNull(form.priority) === null) return "Priority must be numeric.";
+  if (discountValue === null) return "Discount value is required.";
+  if (discountValue <= 0) return "Discount value must be greater than 0.";
   if (form.source_type === "BANK" && !safeTrim(form.sponsor_name)) return "Bank offers require a sponsor name.";
   return null;
 }
@@ -507,16 +525,40 @@ export async function saveOfferDirect(offerId: string | undefined, form: OfferFo
     updated_by: userId,
   };
 
-  if (!offerId) {
-    if (userId) payload.created_by = userId;
-    const { data, error } = await supabaseBrowser.from("offers").insert(payload).select("*").single();
-    if (error) throw error;
-    return data as OfferRecord;
-  }
+  const runSave = async (nextPayload: Record<string, unknown>) => {
+    if (!offerId) {
+      const createPayload = { ...nextPayload };
+      if (userId) createPayload.created_by = userId;
+      const { data, error } = await supabaseBrowser.from("offers").insert(createPayload).select("*").single();
+      if (error) throw error;
+      return data as OfferRecord;
+    }
 
-  const { data, error } = await supabaseBrowser.from("offers").update(payload).eq("id", offerId).select("*").single();
-  if (error) throw error;
-  return data as OfferRecord;
+    const { data, error } = await supabaseBrowser
+      .from("offers")
+      .update(nextPayload)
+      .eq("id", offerId)
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
+
+    if (data) {
+      return data as OfferRecord;
+    }
+
+    const { data: refreshed, error: refreshError } = await supabaseBrowser
+      .from("offers")
+      .select("*")
+      .eq("id", offerId)
+      .maybeSingle();
+
+    if (refreshError) throw refreshError;
+    if (refreshed) return refreshed as OfferRecord;
+
+    throw new Error("Offer update affected 0 rows. Backend policy is blocking updates on public.offers for this user.");
+  };
+
+  return runSave(payload);
 }
 
 export async function deleteOfferDirect(offerId: string) {
