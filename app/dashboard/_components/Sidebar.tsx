@@ -4,7 +4,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeftRight, LayoutGrid } from "lucide-react";
+import { ArrowLeftRight, BookOpen, HelpCircle, Inbox, Info, LayoutGrid } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -134,6 +134,26 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       title: "Transactions",
       href: "/dashboard/transactions",
       icon: ArrowLeftRight,
+    },
+    {
+      title: "Support Inbox",
+      href: "/dashboard/support-inbox",
+      icon: Inbox,
+    },
+    {
+      title: "FAQ",
+      href: "/dashboard/faq",
+      icon: HelpCircle,
+    },
+    {
+      title: "Help Topics",
+      href: "/dashboard/help-center",
+      icon: BookOpen,
+    },
+    {
+      title: "About",
+      href: "/dashboard/about",
+      icon: Info,
     },
     //{ title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
     //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },

@@ -40,6 +40,14 @@ const SignInPage = () => {
         email,
         password,
       });
+      if (error) {
+        console.error("Supabase signInWithPassword error:", {
+          status: error.status,
+          code: error.code,
+          name: error.name,
+          message: error.message,
+        });
+      }
       if (error || !data.session) {
         throw new Error(error?.message || "Invalid credentials");
       }
