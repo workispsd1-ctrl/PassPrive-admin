@@ -79,6 +79,7 @@ export type RestaurantFlatRecord = {
   ad_ends_at: string | null;
   ad_badge_text: string | null;
   booking_terms: string[] | null;
+  on_boarded: boolean;
   cuisines: string[];
   facilities: string[];
   highlights: string[];
@@ -439,6 +440,7 @@ export function normalizeRestaurantRecord({
     created_at: asString(restaurant?.created_at),
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
+    on_boarded: restaurant?.on_boarded === true,
     ad_priority: asNumber(restaurant?.ad_priority),
     ad_starts_at: toDateTimeLocal(restaurant?.ad_starts_at),
     ad_ends_at: toDateTimeLocal(restaurant?.ad_ends_at),
@@ -697,6 +699,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     cancellation_cutoff_minutes: cancellationCutoff,
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
     cover_charge_amount: coverChargeAmount,
+    on_boarded: Boolean(input.on_boarded),
     is_advertised: Boolean(input.is_advertised),
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
@@ -716,6 +719,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     cancellation_available: Boolean(input.cancellation_available),
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
     is_advertised: Boolean(input.is_advertised),
+    on_boarded: Boolean(input.on_boarded),
   };
 
   const optionalValues: Record<string, unknown> = {

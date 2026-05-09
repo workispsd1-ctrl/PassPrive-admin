@@ -178,6 +178,7 @@ export default function AddRestaurantPage() {
     latitude: "",
     longitude: "",
     is_pure_veg: false,
+    on_boarded: false,
     booking_enabled: true,
     avg_duration_minutes: "90",
     max_bookings_per_slot: "",
@@ -331,6 +332,7 @@ export default function AddRestaurantPage() {
         is_active: true,
         owner_user_id: partner.id,
         is_pure_veg: form.is_pure_veg,
+        on_boarded: form.on_boarded,
         booking_enabled: form.booking_enabled,
         avg_duration_minutes: form.avg_duration_minutes ? Number(form.avg_duration_minutes) : 90,
         max_bookings_per_slot: form.max_bookings_per_slot ? Number(form.max_bookings_per_slot) : undefined,
@@ -445,6 +447,8 @@ export default function AddRestaurantPage() {
         <Textarea className={inputClass} name="full_address" placeholder="Full address" onChange={handleChange} />
         <Textarea className={inputClass} name="description" placeholder="Description" onChange={handleChange} />
       </section>
+
+      
 
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Restaurant Partner Login</h2>
@@ -598,12 +602,20 @@ export default function AddRestaurantPage() {
         </div>
       </section>
 
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">System</h2>
+        <div className="grid grid-cols-1 gap-4">
+          <ToggleField label="Onboarded" checked={form.on_boarded} onCheckedChange={(value) => setForm((previous) => ({ ...previous, on_boarded: value }))} />
+        </div>
+      </section>
+
       <div className="flex justify-end gap-3 pt-6">
         <Button variant="outline" onClick={() => router.back()} disabled={loading}>Cancel</Button>
         <Button onClick={handleSubmit} disabled={loading} className="bg-[#DA3224] hover:bg-[#c92b20] text-white">
           {loading ? "Saving..." : "Save Restaurant"}
         </Button>
       </div>
+      
     </div>
   );
 }
