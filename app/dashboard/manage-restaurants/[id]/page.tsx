@@ -14,6 +14,7 @@ import { useSelector } from "react-redux";
 
 import { RootState } from "@/store/store";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { getTokenClient } from "@/lib/getTokenClient";
 import { showToast } from "@/hooks/useToast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -156,6 +157,9 @@ export default function RestaurantDetailPage() {
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [creatingCredentials, setCreatingCredentials] = useState(false);
+  const [credentialEmail, setCredentialEmail] = useState("");
+  const [credentialPassword, setCredentialPassword] = useState("");
 
   const [foodImagesToAdd, setFoodImagesToAdd] = useState<File[]>([]);
   const [ambienceImagesToAdd, setAmbienceImagesToAdd] = useState<File[]>([]);
@@ -328,6 +332,90 @@ export default function RestaurantDetailPage() {
     }
   };
 
+  const handleCreateCredentials = async () => {
+    if (!restaurant) return;
+
+    const email = credentialEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      showToast({
+        type: "error",
+        title: "Valid email is required",
+      });
+      return;
+    }
+
+    if (!credentialPassword || credentialPassword.length < 6) {
+      showToast({
+        type: "error",
+        title: "Password must be at least 6 characters",
+      });
+      return;
+    }
+
+    setCreatingCredentials(true);
+    try {
+      const token = await getTokenClient();
+      if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+
+      const response = await fetch("/api/admin-users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          password: credentialPassword,
+          full_name: restaurant.name,
+          phone: restaurant.phone || undefined,
+          role: "restaurantpartner",
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to create credentials");
+      }
+
+      const userId = payload?.user?.id;
+      if (!userId) {
+        throw new Error("User created, but missing id");
+      }
+
+      const { error: updateError } = await supabaseBrowser
+        .from("restaurants")
+        .update({
+          owner_user_id: userId,
+          created_creds: true,
+          on_boarded: true,
+        })
+        .eq("id", restaurant.id);
+
+      if (updateError) throw updateError;
+
+      const refreshed = await fetchRestaurantDetail(restaurant.id);
+      setRestaurant(cloneRestaurant(refreshed));
+      setRestaurantOriginal(cloneRestaurant(refreshed));
+      setCredentialEmail("");
+      setCredentialPassword("");
+
+      showToast({
+        type: "success",
+        title: "Credentials created",
+        description: "Partner user created and restaurant marked as onboarded.",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create credentials";
+      showToast({
+        type: "error",
+        title: "Create credentials failed",
+        description: message,
+      });
+    } finally {
+      setCreatingCredentials(false);
+    }
+  };
+
   if (!restaurant) return <div className="p-6">Loading...</div>;
 
   return (
@@ -365,6 +453,39 @@ export default function RestaurantDetailPage() {
             </Field>
           )}
         </Grid>
+        {!restaurant.created_creds && (
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-amber-900">Create Partner Credentials</h3>
+            <p className="text-xs text-amber-800">
+              This restaurant is not onboarded yet. Create credentials to add user records in auth and public users.
+            </p>
+            <Grid>
+              <Field label="Partner Email">
+                <Input
+                  className={inputClass}
+                  type="email"
+                  value={credentialEmail}
+                  onChange={(e) => setCredentialEmail(e.target.value)}
+                  placeholder="partner@example.com"
+                />
+              </Field>
+              <Field label="Partner Password">
+                <Input
+                  className={inputClass}
+                  type="password"
+                  value={credentialPassword}
+                  onChange={(e) => setCredentialPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                />
+              </Field>
+            </Grid>
+            <div>
+              <Button onClick={handleCreateCredentials} disabled={creatingCredentials}>
+                {creatingCredentials ? "Creating..." : "Create Credentials"}
+              </Button>
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section title="Basic Information">

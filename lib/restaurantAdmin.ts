@@ -80,6 +80,7 @@ export type RestaurantFlatRecord = {
   ad_badge_text: string | null;
   booking_terms: string[] | null;
   on_boarded: boolean;
+  created_creds: boolean;
   cuisines: string[];
   facilities: string[];
   highlights: string[];
@@ -441,6 +442,7 @@ export function normalizeRestaurantRecord({
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
     on_boarded: restaurant?.on_boarded === true,
+    created_creds: restaurant?.created_creds === true,
     ad_priority: asNumber(restaurant?.ad_priority),
     ad_starts_at: toDateTimeLocal(restaurant?.ad_starts_at),
     ad_ends_at: toDateTimeLocal(restaurant?.ad_ends_at),
