@@ -29,14 +29,14 @@ import { toast } from "sonner";
 import Link from "next/link";
 interface User {
   id: string;
-  display_name?: string;
+  display_name?: string | null;
   email: string;
-  phone?: string;
-  status?: string;
-  subscription?: string;
-  created_at: string;
+  phone?: string | null;
+  status?: string | null;
+  subscription?: string | null;
+  created_at?: string | null;
   user_subscription?: UserSubscription[];
-  full_name?: string;
+  full_name?: string | null;
   last_opened?: string | null;
   membership?: string | null;
   membership_tier?: string | null;
@@ -246,14 +246,14 @@ export const UserTable = ({
                   <td className="py-3 px-6 text-[#5b6473]">
                     {(user.user_subscription?.length ?? 0) > 0
                       ? formatStartDateIST(
-                          user.user_subscription[0]?.start_date ??
-                            user.user_subscription[0]?.created_at
+                          user.user_subscription?.[0]?.start_date ??
+                            user.user_subscription?.[0]?.created_at
                         )
                       : formatStartDateIST(user.membership_started)}
                   </td>
                   <td className="py-3 px-6 text-[#5b6473]">
                     {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
-                    {displayValidTill(user.created_at, user.created_at)}
+                    {displayValidTill(user.created_at || "", user.created_at || "")}
                   </td>
                   <td className="py-4 px-6 text-[#5b6473]">
                     {formatToIndia(user.last_opened)}

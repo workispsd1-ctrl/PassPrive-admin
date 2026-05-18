@@ -20,9 +20,11 @@ export const TARGET_TYPES = [
   "STORE",
   "RESTAURANT",
   "CITY",
+  "AREA",
   "CATEGORY",
   "SUBCATEGORY",
   "TAG",
+  "PLAN",
 ] as const;
 export const CONDITION_TYPES = [
   "MIN_BILL_AMOUNT",

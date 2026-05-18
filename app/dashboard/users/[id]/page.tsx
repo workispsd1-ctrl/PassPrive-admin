@@ -52,7 +52,7 @@ function UserSubscriptionsPage() {
       try {
         const { data, error } = await supabaseBrowser
           .from("users")
-          .select("full_name, membership, membership_tier, role, user_subscription(*)", {
+          .select("id, full_name, membership, membership_tier, role, user_subscription(*)", {
             count: "exact",
           })
           .eq("id", userId)
