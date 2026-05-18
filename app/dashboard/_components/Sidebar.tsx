@@ -160,6 +160,111 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     if (error) return console.error("Sign-out failed:", error.message);
     router.push("/");
   }
+  const menuItems: MenuItem[] = [
+    { title: "Dashboard", href: "/dashboard", icon: LayoutGrid },
+    {
+      title: "Restaurants Management",
+      href: "/dashboard/manage-restaurants",
+      iconSrc: "/restaurant_menu.png",
+    },
+    {
+      title: "Stores Management",
+      href: "/dashboard/manage-stores",
+      iconSrc: "/storefront.png",
+    },
+    //{
+      //title: "Corporate Management",
+      //href: "/dashboard/manage-corporates",
+      //iconSrc: "/corporatemangement.png",
+    //},
+    {
+      title: "Restaurant In Your PassPrive",
+      href: "/dashboard/in-your-passprive",
+      iconSrc: "/restaurant.png",
+    },
+    {
+      title: "Store In Your PassPrive",
+      href: "/dashboard/store-in-your-passprive",
+      iconSrc: "/store_mall_directory (1).png",
+    },
+    {
+      title: "Store Campaign",
+      href: "/dashboard/store-campaign",
+      iconSrc: "/campaign.png",
+    },
+    {
+      title: "Editorial Collections",
+      href: "/dashboard/editorial-collections",
+      iconSrc: "/highlight.png",
+    },
+    {
+      title: "Restaurant Mood Categories",
+      href: "/dashboard/mood-categories",
+      iconSrc: "/menu.png",
+    },
+    {
+      title: "Store Mood Categories",
+      href: "/dashboard/store-mood-categories",
+      iconSrc: "/menu.png",
+    },
+    {
+      title: "Service Categories",
+      href: "/dashboard/service-categories",
+      iconSrc: "/menu.png",
+    },
+    { title: "Home Banners", href: "/dashboard/offers", iconSrc: "/bankoffers.png" },
+    { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/bankoffers.png" },
+    // { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
+    { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
+
+    {
+      title: "Admin Management",
+      href: "/dashboard/admin",
+      iconSrc: "/admin_panel_settings.png",
+    },
+
+    //{
+      //title: "Manage Subscription",
+      //href: "/dashboard/subscription",
+      //icon: CreditCard,
+    //},
+
+    //{ title: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+    {
+      title: "Subscriptions",
+      href: "/dashboard/subscription-plans",
+      iconSrc: "/subscriptions.png",
+    },
+
+    //{ title: "Promo Code", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
+    {
+      title: "Transactions",
+      href: "/dashboard/transactions",
+      icon: ArrowLeftRight,
+    },
+    {
+      title: "Support Inbox",
+      href: "/dashboard/support-inbox",
+      icon: Inbox,
+    },
+    {
+      title: "FAQ",
+      href: "/dashboard/faq",
+      icon: HelpCircle,
+    },
+    {
+      title: "Help Topics",
+      href: "/dashboard/help-center",
+      icon: BookOpen,
+    },
+    {
+      title: "About",
+      href: "/dashboard/about",
+      icon: Info,
+    },
+    //{ title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
+    //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
+  ];
 
   return (
     <aside
