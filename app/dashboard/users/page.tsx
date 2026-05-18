@@ -310,7 +310,6 @@ function UsersPage() {
         </DialogContent>
       </Dialog>
       </div>
-      </div>
     </>
   );
 }

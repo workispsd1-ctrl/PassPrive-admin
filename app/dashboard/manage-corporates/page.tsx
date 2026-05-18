@@ -558,7 +558,6 @@ export default function CorporatePage() {
         </DialogContent>
       </Dialog>
       </div>
-      </div>
     </>
   );
 }
