@@ -17,8 +17,6 @@ import {
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import {
-  DAY_NAMES,
-  DayHours,
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
   buildRestaurantInsertPayload,
@@ -28,6 +26,11 @@ import {
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
+const OFFER_TYPE_OPTIONS = [
+  { value: "percentage", label: "Percentage" },
+  { value: "flat", label: "Flat" },
+  { value: "cover_discount", label: "Cover discount" },
+] as const;
 const PARTNER_ROLE = "restaurantpartner" as const;
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -95,13 +98,6 @@ function commaSeparatedToArray(value: string) {
     .filter(Boolean);
 }
 
-function emptyOpeningHours() {
-  return DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-    accumulator[day] = { open: "", close: "", closed: false };
-    return accumulator;
-  }, {});
-}
-
 function defaultOffer(): RestaurantOfferInput {
   return {
     title: "",
@@ -115,6 +111,13 @@ function defaultOffer(): RestaurantOfferInput {
     is_active: true,
     metadata: null,
   };
+}
+
+function offerAmountLabel(offerType?: string | null) {
+  const normalizedType = offerType?.toLowerCase();
+  if (normalizedType === "percentage" || normalizedType === "percent") return "Discount percentage";
+  if (normalizedType === "cover_discount") return "Cover discount amount";
+  return "Flat amount";
 }
 
 function defaultSubscription(): RestaurantSubscriptionInput {
@@ -175,6 +178,7 @@ export default function AddRestaurantPage() {
     latitude: "",
     longitude: "",
     is_pure_veg: false,
+    on_boarded: false,
     booking_enabled: true,
     avg_duration_minutes: "90",
     max_bookings_per_slot: "",
@@ -192,8 +196,6 @@ export default function AddRestaurantPage() {
     ad_starts_at: "",
     ad_ends_at: "",
   });
-
-  const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(emptyOpeningHours());
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -330,6 +332,7 @@ export default function AddRestaurantPage() {
         is_active: true,
         owner_user_id: partner.id,
         is_pure_veg: form.is_pure_veg,
+        on_boarded: form.on_boarded,
         booking_enabled: form.booking_enabled,
         avg_duration_minutes: form.avg_duration_minutes ? Number(form.avg_duration_minutes) : 90,
         max_bookings_per_slot: form.max_bookings_per_slot ? Number(form.max_bookings_per_slot) : undefined,
@@ -379,26 +382,26 @@ export default function AddRestaurantPage() {
 
       const coverImage = foodUrls[0] || ambienceUrls[0] || menuUrls[0] || null;
 
-      const { error: coverError } = await supabaseBrowser
-        .from("restaurants")
-        .update({ cover_image: coverImage })
-        .eq("id", restaurant.id);
+      const [coverResult] = await Promise.all([
+        supabaseBrowser
+          .from("restaurants")
+          .update({ cover_image: coverImage })
+          .eq("id", restaurant.id),
+        replaceRestaurantRelations(restaurant.id, {
+          cuisines: commaSeparatedToArray(form.cuisines),
+          facilities: commaSeparatedToArray(form.facilities),
+          highlights: commaSeparatedToArray(form.highlights),
+          worth_visit: commaSeparatedToArray(form.worth_visit),
+          mood_tags: selectedMoodTags,
+          food_images: foodUrls,
+          ambience_images: ambienceUrls,
+          menu: menuUrls,
+          offers,
+          subscription: subscriptionEnabled ? subscription : null,
+        }),
+      ]);
 
-      if (coverError) throw coverError;
-
-      await replaceRestaurantRelations(restaurant.id, {
-        cuisines: commaSeparatedToArray(form.cuisines),
-        facilities: commaSeparatedToArray(form.facilities),
-        highlights: commaSeparatedToArray(form.highlights),
-        worth_visit: commaSeparatedToArray(form.worth_visit),
-        mood_tags: selectedMoodTags,
-        food_images: foodUrls,
-        ambience_images: ambienceUrls,
-        menu: menuUrls,
-        opening_hours: openingHours,
-        offers,
-        subscription: subscriptionEnabled ? subscription : null,
-      });
+      if (coverResult.error) throw coverResult.error;
 
       showToast({
         type: "success",
@@ -444,6 +447,8 @@ export default function AddRestaurantPage() {
         <Textarea className={inputClass} name="full_address" placeholder="Full address" onChange={handleChange} />
         <Textarea className={inputClass} name="description" placeholder="Description" onChange={handleChange} />
       </section>
+
+      
 
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Restaurant Partner Login</h2>
@@ -547,8 +552,15 @@ export default function AddRestaurantPage() {
           <div key={index} className="grid grid-cols-2 gap-4 rounded-md border border-gray-200 p-4">
             <Input className={inputClass} placeholder="Title" value={offer.title} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, title: e.target.value } : entry)))} />
             <Input className={inputClass} placeholder="Badge text" value={offer.badge_text || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, badge_text: e.target.value } : entry)))} />
-            <Input className={inputClass} placeholder="Offer type" value={offer.offer_type || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, offer_type: e.target.value } : entry)))} />
-            <Input type="number" className={inputClass} placeholder="Discount value" value={offer.discount_value ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)))} />
+            <select className={`${inputClass} rounded-md px-3 py-2`} value={offer.offer_type || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, offer_type: e.target.value } : entry)))}>
+              <option value="">Select offer type</option>
+              {OFFER_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Input type="number" className={inputClass} placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)))} />
             <Input type="number" className={inputClass} placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)))} />
             <ToggleField label="Active" checked={offer.is_active !== false} onCheckedChange={(value) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, is_active: value } : entry)))} />
             <Input type="datetime-local" className={inputClass} value={offer.start_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)))} />
@@ -590,45 +602,11 @@ export default function AddRestaurantPage() {
         </div>
       </section>
 
-      <section className="space-y-4 py-8">
-        <h2 className="text-sm font-medium uppercase text-muted-foreground">Opening Hours</h2>
-        {DAY_NAMES.map((day) => (
-          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{day}</span>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={openingHours[day].closed}
-                  onChange={(e) =>
-                    setOpeningHours((previous) => ({
-                      ...previous,
-                      [day]: {
-                        ...previous[day],
-                        closed: e.target.checked,
-                        open: e.target.checked ? "" : previous[day].open,
-                        close: e.target.checked ? "" : previous[day].close,
-                      },
-                    }))
-                  }
-                />
-                Closed
-              </label>
-            </div>
-            {!openingHours[day].closed && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select className="border rounded-md px-3 py-2 text-sm bg-white" value={openingHours[day].open || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], open: e.target.value } }))}>
-                  <option value="">Open</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-open-${time}`} value={time}>{time}</option>)}
-                </select>
-                <select className="border rounded-md px-3 py-2 text-sm bg-white" value={openingHours[day].close || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], close: e.target.value } }))}>
-                  <option value="">Close</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-close-${time}`} value={time}>{time}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">System</h2>
+        <div className="grid grid-cols-1 gap-4">
+          <ToggleField label="Onboarded" checked={form.on_boarded} onCheckedChange={(value) => setForm((previous) => ({ ...previous, on_boarded: value }))} />
+        </div>
       </section>
 
       <div className="flex justify-end gap-3 pt-6">
@@ -637,6 +615,7 @@ export default function AddRestaurantPage() {
           {loading ? "Saving..." : "Save Restaurant"}
         </Button>
       </div>
+      
     </div>
   );
 }

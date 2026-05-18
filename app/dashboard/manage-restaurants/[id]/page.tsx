@@ -14,6 +14,7 @@ import { useSelector } from "react-redux";
 
 import { RootState } from "@/store/store";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { getTokenClient } from "@/lib/getTokenClient";
 import { showToast } from "@/hooks/useToast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,8 +27,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  DAY_NAMES,
-  DayHours,
   RestaurantFlatRecord,
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
@@ -40,6 +39,11 @@ import {
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
+const OFFER_TYPE_OPTIONS = [
+  { value: "percentage", label: "Percentage" },
+  { value: "flat", label: "Flat" },
+  { value: "cover_discount", label: "Cover discount" },
+] as const;
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -59,13 +63,6 @@ const FACILITY_OPTIONS = [
 ];
 
 type MoodCategoryRecord = { title?: string };
-
-function emptyOpeningHours() {
-  return DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-    accumulator[day] = { open: "", close: "", closed: false };
-    return accumulator;
-  }, {});
-}
 
 function extractCategoryList(payload: unknown): MoodCategoryRecord[] {
   if (Array.isArray(payload)) return payload as MoodCategoryRecord[];
@@ -112,6 +109,13 @@ function defaultOffer(): RestaurantOfferInput {
   };
 }
 
+function offerAmountLabel(offerType?: string | null) {
+  const normalizedType = offerType?.toLowerCase();
+  if (normalizedType === "percentage" || normalizedType === "percent") return "Discount percentage";
+  if (normalizedType === "cover_discount") return "Cover discount amount";
+  return "Flat amount";
+}
+
 function defaultSubscription(): RestaurantSubscriptionInput {
   return {
     plan_code: "",
@@ -136,7 +140,6 @@ function cloneRestaurant(record: RestaurantFlatRecord): RestaurantFlatRecord {
     food_images: [...record.food_images],
     ambience_images: [...record.ambience_images],
     menu: [...record.menu],
-    opening_hours: JSON.parse(JSON.stringify(record.opening_hours || emptyOpeningHours())),
     offers: record.offers.map((offer) => ({ ...offer })),
     offer: record.offer ? { ...record.offer } : null,
     subscription: record.subscription ? { ...record.subscription } : null,
@@ -151,10 +154,12 @@ export default function RestaurantDetailPage() {
 
   const [restaurant, setRestaurant] = useState<RestaurantFlatRecord | null>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<RestaurantFlatRecord | null>(null);
-  const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(emptyOpeningHours());
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [creatingCredentials, setCreatingCredentials] = useState(false);
+  const [credentialEmail, setCredentialEmail] = useState("");
+  const [credentialPassword, setCredentialPassword] = useState("");
 
   const [foodImagesToAdd, setFoodImagesToAdd] = useState<File[]>([]);
   const [ambienceImagesToAdd, setAmbienceImagesToAdd] = useState<File[]>([]);
@@ -169,12 +174,6 @@ export default function RestaurantDetailPage() {
         const data = await fetchRestaurantDetail(id);
         setRestaurant(cloneRestaurant(data));
         setRestaurantOriginal(cloneRestaurant(data));
-        setOpeningHours(
-          DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-            accumulator[day] = data.opening_hours?.[day] || { open: "", close: "", closed: false };
-            return accumulator;
-          }, {})
-        );
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Failed to load restaurant";
         showToast({
@@ -223,16 +222,6 @@ export default function RestaurantDetailPage() {
   const handleCancel = () => {
     if (!restaurantOriginal) return;
     setRestaurant(cloneRestaurant(restaurantOriginal));
-    setOpeningHours(
-      DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-        accumulator[day] = restaurantOriginal.opening_hours?.[day] || {
-          open: "",
-          close: "",
-          closed: false,
-        };
-        return accumulator;
-      }, {})
-    );
     setFoodImagesToAdd([]);
     setAmbienceImagesToAdd([]);
     setMenuImagesToAdd([]);
@@ -244,6 +233,31 @@ export default function RestaurantDetailPage() {
 
   const handleSave = async () => {
     if (!restaurant) return;
+
+    if (
+      restaurant.modification_available &&
+      (!restaurant.modification_cutoff_minutes || restaurant.modification_cutoff_minutes <= 0)
+    ) {
+      showToast({
+        type: "error",
+        title: "Invalid modification cutoff",
+        description: "Set Modification Cutoff to a value greater than 0.",
+      });
+      return;
+    }
+
+    if (
+      restaurant.cancellation_available &&
+      (!restaurant.cancellation_cutoff_minutes || restaurant.cancellation_cutoff_minutes <= 0)
+    ) {
+      showToast({
+        type: "error",
+        title: "Invalid cancellation cutoff",
+        description: "Set Cancellation Cutoff to a value greater than 0.",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -286,7 +300,6 @@ export default function RestaurantDetailPage() {
         food_images: finalFoodImages,
         ambience_images: finalAmbienceImages,
         menu: finalMenuImages,
-        opening_hours: openingHours,
         offers: restaurant.offers,
         subscription: restaurant.subscription,
       });
@@ -294,12 +307,6 @@ export default function RestaurantDetailPage() {
       const refreshed = await fetchRestaurantDetail(restaurant.id);
       setRestaurant(cloneRestaurant(refreshed));
       setRestaurantOriginal(cloneRestaurant(refreshed));
-      setOpeningHours(
-        DAY_NAMES.reduce<Record<string, DayHours>>((accumulator, day) => {
-          accumulator[day] = refreshed.opening_hours?.[day] || { open: "", close: "", closed: false };
-          return accumulator;
-        }, {})
-      );
       setFoodImagesToAdd([]);
       setAmbienceImagesToAdd([]);
       setMenuImagesToAdd([]);
@@ -309,7 +316,12 @@ export default function RestaurantDetailPage() {
       setEditMode(false);
       showToast({ type: "success", title: "Restaurant updated" });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to save restaurant";
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : "Failed to save restaurant";
       showToast({
         type: "error",
         title: "Failed to save restaurant",
@@ -317,6 +329,90 @@ export default function RestaurantDetailPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateCredentials = async () => {
+    if (!restaurant) return;
+
+    const email = credentialEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      showToast({
+        type: "error",
+        title: "Valid email is required",
+      });
+      return;
+    }
+
+    if (!credentialPassword || credentialPassword.length < 6) {
+      showToast({
+        type: "error",
+        title: "Password must be at least 6 characters",
+      });
+      return;
+    }
+
+    setCreatingCredentials(true);
+    try {
+      const token = await getTokenClient();
+      if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+
+      const response = await fetch("/api/admin-users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email,
+          password: credentialPassword,
+          full_name: restaurant.name,
+          phone: restaurant.phone || undefined,
+          role: "restaurantpartner",
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to create credentials");
+      }
+
+      const userId = payload?.user?.id;
+      if (!userId) {
+        throw new Error("User created, but missing id");
+      }
+
+      const { error: updateError } = await supabaseBrowser
+        .from("restaurants")
+        .update({
+          owner_user_id: userId,
+          created_creds: true,
+          on_boarded: true,
+        })
+        .eq("id", restaurant.id);
+
+      if (updateError) throw updateError;
+
+      const refreshed = await fetchRestaurantDetail(restaurant.id);
+      setRestaurant(cloneRestaurant(refreshed));
+      setRestaurantOriginal(cloneRestaurant(refreshed));
+      setCredentialEmail("");
+      setCredentialPassword("");
+
+      showToast({
+        type: "success",
+        title: "Credentials created",
+        description: "Partner user created and restaurant marked as onboarded.",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create credentials";
+      showToast({
+        type: "error",
+        title: "Create credentials failed",
+        description: message,
+      });
+    } finally {
+      setCreatingCredentials(false);
     }
   };
 
@@ -350,12 +446,46 @@ export default function RestaurantDetailPage() {
       <Section title="System">
         <Grid>
           <ToggleField label="Active" checked={restaurant.is_active} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_active: value })} />
+          <ToggleField label="Onboarded" checked={restaurant.on_boarded} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, on_boarded: value })} />
           {isAdmin && (
             <Field label="Owner User ID">
               <Input className={inputClass} disabled={!editMode} value={restaurant.owner_user_id ?? ""} onChange={(e) => setRestaurant({ ...restaurant, owner_user_id: e.target.value || null })} />
             </Field>
           )}
         </Grid>
+        {!restaurant.created_creds && (
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-amber-900">Create Partner Credentials</h3>
+            <p className="text-xs text-amber-800">
+              This restaurant is not onboarded yet. Create credentials to add user records in auth and public users.
+            </p>
+            <Grid>
+              <Field label="Partner Email">
+                <Input
+                  className={inputClass}
+                  type="email"
+                  value={credentialEmail}
+                  onChange={(e) => setCredentialEmail(e.target.value)}
+                  placeholder="partner@example.com"
+                />
+              </Field>
+              <Field label="Partner Password">
+                <Input
+                  className={inputClass}
+                  type="password"
+                  value={credentialPassword}
+                  onChange={(e) => setCredentialPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                />
+              </Field>
+            </Grid>
+            <div>
+              <Button onClick={handleCreateCredentials} disabled={creatingCredentials}>
+                {creatingCredentials ? "Creating..." : "Create Credentials"}
+              </Button>
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section title="Basic Information">
@@ -480,15 +610,15 @@ export default function RestaurantDetailPage() {
           <Field label="Advance Booking Days">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.advance_booking_days ?? ""} onChange={(e) => setRestaurant({ ...restaurant, advance_booking_days: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <ToggleField label="Modification Available" checked={restaurant.modification_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, modification_available: value })} />
+          <ToggleField label="Modification Available" checked={restaurant.modification_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, modification_available: value, modification_cutoff_minutes: value ? restaurant.modification_cutoff_minutes : null })} />
           <Field label="Modification Cutoff">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.modification_cutoff_minutes ?? ""} onChange={(e) => setRestaurant({ ...restaurant, modification_cutoff_minutes: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <ToggleField label="Cancellation Available" checked={restaurant.cancellation_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cancellation_available: value })} />
+          <ToggleField label="Cancellation Available" checked={restaurant.cancellation_available} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cancellation_available: value, cancellation_cutoff_minutes: value ? restaurant.cancellation_cutoff_minutes : null })} />
           <Field label="Cancellation Cutoff">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.cancellation_cutoff_minutes ?? ""} onChange={(e) => setRestaurant({ ...restaurant, cancellation_cutoff_minutes: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <ToggleField label="Cover Charge Enabled" checked={restaurant.cover_charge_enabled} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cover_charge_enabled: value })} />
+          <ToggleField label="Cover Charge Enabled" checked={restaurant.cover_charge_enabled} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, cover_charge_enabled: value, cover_charge_amount: value ? restaurant.cover_charge_amount : null })} />
           <Field label="Cover Charge Amount">
             <Input className={inputClass} type="number" step="0.01" disabled={!editMode} value={restaurant.cover_charge_amount ?? ""} onChange={(e) => setRestaurant({ ...restaurant, cover_charge_amount: e.target.value ? Number(e.target.value) : null })} />
           </Field>
@@ -496,32 +626,6 @@ export default function RestaurantDetailPage() {
         <Field label="Booking Terms">
           <Textarea className={inputClass} disabled={!editMode} value={bookingTermsToTextarea(restaurant.booking_terms)} onChange={(e) => setRestaurant({ ...restaurant, booking_terms: bookingTermsToPayload(e.target.value) || [] })} />
         </Field>
-      </Section>
-
-      <Section title="Opening Hours">
-        {DAY_NAMES.map((day) => (
-          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{day}</span>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input type="checkbox" disabled={!editMode} checked={!!openingHours[day]?.closed} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], closed: e.target.checked, open: e.target.checked ? "" : previous[day].open, close: e.target.checked ? "" : previous[day].close } }))} />
-                Closed
-              </label>
-            </div>
-            {!openingHours[day]?.closed && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select disabled={!editMode} className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100" value={openingHours[day]?.open || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], open: e.target.value } }))}>
-                  <option value="">Open</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-open-${time}`} value={time}>{time}</option>)}
-                </select>
-                <select disabled={!editMode} className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100" value={openingHours[day]?.close || ""} onChange={(e) => setOpeningHours((previous) => ({ ...previous, [day]: { ...previous[day], close: e.target.value } }))}>
-                  <option value="">Close</option>
-                  {HOUR_OPTIONS.map((time) => <option key={`${day}-close-${time}`} value={time}>{time}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
       </Section>
 
       <Section title="Media">
@@ -535,8 +639,15 @@ export default function RestaurantDetailPage() {
           <div key={index} className="grid grid-cols-2 gap-4 rounded-md border border-gray-200 p-4 mb-4">
             <Input className={inputClass} disabled={!editMode} placeholder="Title" value={offer.title} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, title: e.target.value } : entry)) })} />
             <Input className={inputClass} disabled={!editMode} placeholder="Badge text" value={offer.badge_text || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, badge_text: e.target.value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} placeholder="Offer type" value={offer.offer_type || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, offer_type: e.target.value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="number" placeholder="Discount value" value={offer.discount_value ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)) })} />
+            <select className={`${inputClass} rounded-md px-3 py-2`} disabled={!editMode} value={offer.offer_type || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, offer_type: e.target.value } : entry)) })}>
+              <option value="">Select offer type</option>
+              {OFFER_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Input className={inputClass} disabled={!editMode} type="number" placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)) })} />
             <Input className={inputClass} disabled={!editMode} type="number" placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)) })} />
             <ToggleField label="Active" checked={offer.is_active !== false} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, is_active: value } : entry)) })} />
             <Input className={inputClass} disabled={!editMode} type="datetime-local" value={offer.start_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)) })} />
@@ -616,7 +727,7 @@ const Grid = ({ children }: { children: ReactNode }) => (
 const ReadOnly = ({ label, value }: { label: string; value: unknown }) => (
   <div>
     <label className="text-xs text-gray-500 uppercase">{label}</label>
-    <div className="text-sm font-medium">{value ?? "-"}</div>
+    <div className="text-sm font-medium">{typeof value === "string" || typeof value === "number" ? value : value == null ? "-" : String(value)}</div>
   </div>
 );
 

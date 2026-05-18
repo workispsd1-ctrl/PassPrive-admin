@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSkeleton } from "@/components/userComponents/LoadingSkeleton";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
@@ -19,12 +18,25 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import PhoneInput from "react-phone-input-2";
 import { showToast } from "@/hooks/useToast";
 import { exportToExcel } from "@/lib/exportToExcel";
-import { Plus, Download, Users } from "lucide-react";
 
 type Seminar = {
   fullname: string;
   email: string;
   phone: string;
+};
+
+type UserRow = {
+  id: string;
+  full_name?: string | null;
+  email: string;
+  phone?: string | null;
+  role: string;
+  created_at?: string | null;
+  last_opened?: string | null;
+  membership?: string | null;
+  membership_tier?: string | null;
+  membership_started?: string | null;
+  membership_expiry?: string | null;
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -40,20 +52,19 @@ function useDebounced<T>(value: T, ms = 350) {
 
 function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [planFilter, setPlanFilter] = useState("");   // optional, if you store plan on users.subscription
-  const [statusFilter, setStatusFilter] = useState(""); // optional, if you store status on users.status
+  const [planFilter, setPlanFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newUser, setNewUser] = useState<Seminar>({ fullname: "", email: "", phone: "" });
 
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [limit, setLimit] = useState(ITEMS_PER_PAGE);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [deleteRefresh, setDeleteRefresh] = useState<any>(null);
+  const [deleteRefresh, setDeleteRefresh] = useState<number | null>(null);
 
   const debouncedSearch = useDebounced(searchTerm, 350);
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
@@ -65,35 +76,42 @@ function UsersPage() {
       try {
         let query = supabaseBrowser
           .from("users")
-          .select("*", { count: "exact" })
+          .select(
+            "id, full_name, email, phone, role, created_at, last_opened, membership, membership_tier, membership_started, membership_expiry",
+            { count: "exact" }
+          )
           .eq("role", "user")
           .order("created_at", { ascending: false })
           .range((page - 1) * limit, page * limit - 1);
 
         if (debouncedSearch) {
           query = query.or(
-            `email.ilike.%${debouncedSearch}%,display_name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
+            `email.ilike.%${debouncedSearch}%,full_name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
           );
         }
 
-        // These two are optional—only apply if your users table actually has those columns.
-        if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
-        if (planFilter && planFilter !== "all") query = query.eq("subscription", planFilter);
+        if (planFilter && planFilter !== "all") {
+          if (planFilter.toLowerCase() === "free") {
+            query = query.eq("membership_tier", "none");
+          } else {
+            query = query.eq("membership_tier", planFilter);
+          }
+        }
 
         const { data, error, count } = await query;
         if (error) throw error;
 
-        setUsers(data || []);
+        setUsers((data as UserRow[]) || []);
         setTotal(count || 0);
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
-        setError(err?.message || "Failed to fetch users");
+        setError(err instanceof Error ? err.message : "Failed to fetch users");
       } finally {
         setLoading(false);
       }
     };
     fetchUsers();
-  }, [page, limit, debouncedSearch, planFilter, statusFilter, deleteRefresh]);
+  }, [page, limit, debouncedSearch, planFilter, deleteRefresh]);
 
   const handleExportFile = async () => {
     try {
@@ -104,7 +122,7 @@ function UsersPage() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       await exportToExcel(data || [], "users");
-    } catch (err) {
+    } catch {
       showToast({ title: "Error", description: "Export failed." });
     }
   };
@@ -119,8 +137,6 @@ function UsersPage() {
           onSearchChange={setSearchTerm}
           planFilter={planFilter}
           onPlanFilterChange={setPlanFilter}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
           placeholder="Search by name, email, or phone no..."
 
         />
@@ -182,7 +198,7 @@ function UsersPage() {
               <PhoneInput
                 country="in"
                 value={newUser.phone}
-                onChange={(val: any) => {
+                onChange={(val: string) => {
                   const finalVal = val.startsWith("+") ? val : `+${val}`;
                   setNewUser({ ...newUser, phone: finalVal });
                 }}

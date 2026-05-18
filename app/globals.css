@@ -1,2 +1,17 @@
 @import "tailwindcss";
 
+html,
+body {
+	min-height: 100%;
+}
+
+body {
+	background: #eef0fb;
+	line-height: 1.5;
+}
+
+::selection {
+	background: rgba(88, 0, 171, 0.16);
+	color: #1d293d;
+}
+

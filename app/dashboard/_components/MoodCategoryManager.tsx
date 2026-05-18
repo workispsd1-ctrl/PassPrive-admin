@@ -2,24 +2,14 @@
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  ArrowUpDown,
-  Loader2,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Search,
-  Tags,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+import { Loader2, Pencil, Plus, RefreshCw, Search, Tags, Trash2, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showToast } from "@/hooks/useToast";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -31,21 +21,27 @@ type MoodCategoryRecord = {
   key: string;
   slug: string;
   title: string;
-  image_url?: string | null;
-  sort_order: number;
+  light_theme_image_url?: string | null;
+  light_theme_image_path?: string | null;
+  dark_theme_image_url?: string | null;
+  dark_theme_image_path?: string | null;
   updated_at?: string;
 };
 
 type MoodCategoryForm = {
   title: string;
-  image_url: string;
-  sort_order: string;
+  light_theme_image_url: string;
+  light_theme_image_path: string;
+  dark_theme_image_url: string;
+  dark_theme_image_path: string;
 };
 
 const initialForm: MoodCategoryForm = {
   title: "",
-  image_url: "",
-  sort_order: "100",
+  light_theme_image_url: "",
+  light_theme_image_path: "",
+  dark_theme_image_url: "",
+  dark_theme_image_path: "",
 };
 
 function slugify(value: string) {
@@ -69,90 +65,51 @@ function extractErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function extractCategoryList(payload: unknown): MoodCategoryRecord[] {
-  if (Array.isArray(payload)) return payload as MoodCategoryRecord[];
-
-  const recordPayload =
-    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-
-  if (!recordPayload) return [];
-
-  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
-  for (const key of possibleKeys) {
-    if (Array.isArray(recordPayload[key])) {
-      return recordPayload[key] as MoodCategoryRecord[];
-    }
-  }
-
-  return [];
-}
-
-function extractCategory(payload: unknown): MoodCategoryRecord | null {
-  if (!payload || typeof payload !== "object") return null;
-  if ("id" in (payload as Record<string, unknown>)) return payload as MoodCategoryRecord;
-
-  const recordPayload = payload as Record<string, unknown>;
-  const possibleKeys = ["data", "item", "category", "moodCategory"];
-  for (const key of possibleKeys) {
-    const value = recordPayload[key];
-    if (value && typeof value === "object" && "id" in (value as Record<string, unknown>)) {
-      return value as MoodCategoryRecord;
-    }
-  }
-
-  return null;
-}
-
-async function parseResponse(response: Response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return response.text();
-}
-
-async function getErrorFromResponse(response: Response, fallback: string) {
-  const payload = await parseResponse(response).catch(() => null);
-
-  if (typeof payload === "string" && payload.trim()) return payload;
-
-  if (payload && typeof payload === "object") {
-    const recordPayload = payload as Record<string, unknown>;
-    const possibleKeys = ["message", "error", "detail"];
-    for (const key of possibleKeys) {
-      const value = recordPayload[key];
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-
-  return fallback;
-}
-
 function formatDate(value?: string) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  return new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 }
 
 type Props = {
   title: string;
   description: string;
   apiPath: string;
+  supabaseTable?: string;
+  storageBucket?: string;
+  storageFolder?: string;
 };
 
-export default function MoodCategoryManager({ title, description, apiPath }: Props) {
+function buildStoragePath(folder: string, fileName: string) {
+  const extension = fileName.split(".").pop() || "jpg";
+  const random = Math.random().toString(36).slice(2, 9);
+  return `${folder}/${Date.now()}-${random}.${extension}`;
+}
+
+export default function MoodCategoryManager({
+  title,
+  description,
+  apiPath,
+  supabaseTable,
+  storageBucket,
+  storageFolder = "mood-categories",
+}: Props) {
   const [categories, setCategories] = useState<MoodCategoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [form, setForm] = useState<MoodCategoryForm>(initialForm);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState("");
-  const [removeImage, setRemoveImage] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const [lightFile, setLightFile] = useState<File | null>(null);
+  const [darkFile, setDarkFile] = useState<File | null>(null);
+  const [lightPreview, setLightPreview] = useState("");
+  const [darkPreview, setDarkPreview] = useState("");
+  const [removeLight, setRemoveLight] = useState(false);
+  const [removeDark, setRemoveDark] = useState(false);
+
+  const lightRef = useRef<HTMLInputElement | null>(null);
+  const darkRef = useRef<HTMLInputElement | null>(null);
 
   const filteredCategories = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -165,28 +122,31 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}${apiPath}`, {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, `Failed to load ${title.toLowerCase()}.`));
+      if (supabaseTable) {
+        const { data, error } = await supabaseBrowser
+          .from(supabaseTable)
+          .select("id,key,slug,title,light_theme_image_url,light_theme_image_path,dark_theme_image_url,dark_theme_image_path,updated_at")
+          .order("title", { ascending: true });
+        if (error) throw error;
+        setCategories((data as MoodCategoryRecord[] | null) || []);
+        return;
       }
 
-      const payload = await parseResponse(response);
-      setCategories(extractCategoryList(payload));
+      const response = await fetch(`${API_BASE}${apiPath}`, { method: "GET", cache: "no-store" });
+      if (!response.ok) throw new Error("Failed to load categories.");
+      const payload = (await response.json()) as MoodCategoryRecord[] | { items?: MoodCategoryRecord[] };
+      setCategories(Array.isArray(payload) ? payload : payload.items || []);
     } catch (error: unknown) {
       showToast({
         type: "error",
         title: `Failed to load ${title.toLowerCase()}`,
-        description: extractErrorMessage(error, "Unable to fetch categories from backend."),
+        description: extractErrorMessage(error, "Unable to fetch categories."),
       });
       setCategories([]);
     } finally {
       setLoading(false);
     }
-  }, [apiPath, title]);
+  }, [apiPath, supabaseTable, title]);
 
   useEffect(() => {
     void loadCategories();
@@ -194,151 +154,144 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
   useEffect(() => {
     return () => {
-      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+      if (lightPreview.startsWith("blob:")) URL.revokeObjectURL(lightPreview);
+      if (darkPreview.startsWith("blob:")) URL.revokeObjectURL(darkPreview);
     };
-  }, [imagePreview]);
-
-  const totalCategories = categories.length;
-  const hasActiveEdit = Boolean(editingId);
-  const currentImageState = imageFile ? "Local upload" : form.image_url ? "Uploaded image" : "Not set";
+  }, [darkPreview, lightPreview]);
 
   function resetForm() {
-    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    if (lightPreview.startsWith("blob:")) URL.revokeObjectURL(lightPreview);
+    if (darkPreview.startsWith("blob:")) URL.revokeObjectURL(darkPreview);
     setEditingId(null);
     setForm(initialForm);
-    setImageFile(null);
-    setImagePreview("");
-    setRemoveImage(false);
-    if (fileRef.current) fileRef.current.value = "";
+    setLightFile(null);
+    setDarkFile(null);
+    setLightPreview("");
+    setDarkPreview("");
+    setRemoveLight(false);
+    setRemoveDark(false);
+    if (lightRef.current) lightRef.current.value = "";
+    if (darkRef.current) darkRef.current.value = "";
   }
 
   function populateForm(category: MoodCategoryRecord) {
-    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
     setEditingId(category.id);
     setForm({
       title: category.title || "",
-      image_url: category.image_url || "",
-      sort_order: String(category.sort_order ?? 100),
+      light_theme_image_url: category.light_theme_image_url || "",
+      light_theme_image_path: category.light_theme_image_path || "",
+      dark_theme_image_url: category.dark_theme_image_url || "",
+      dark_theme_image_path: category.dark_theme_image_path || "",
     });
-    setImageFile(null);
-    setImagePreview(category.image_url || "");
-    setRemoveImage(false);
-    if (fileRef.current) fileRef.current.value = "";
+    setLightFile(null);
+    setDarkFile(null);
+    setLightPreview(category.light_theme_image_url || "");
+    setDarkPreview(category.dark_theme_image_url || "");
+    setRemoveLight(false);
+    setRemoveDark(false);
+    if (lightRef.current) lightRef.current.value = "";
+    if (darkRef.current) darkRef.current.value = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function startEdit(id: string) {
-    const listCategory = categories.find((item) => item.id === id);
-    if (listCategory) populateForm(listCategory);
-
-    try {
-      setLoadingEditId(id);
-      const response = await fetch(`${API_BASE}${apiPath}/${id}`, {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to load category details."));
-      }
-
-      const payload = await parseResponse(response);
-      const category = extractCategory(payload);
-      if (!category) throw new Error("Category payload is invalid.");
-      populateForm(category);
-    } catch (error: unknown) {
-      showToast({
-        type: "error",
-        title: "Failed to load category details",
-        description: extractErrorMessage(error, "Could not load the selected category."),
-      });
-    } finally {
-      setLoadingEditId(null);
-    }
-  }
-
-  function handleImagePick(event: ChangeEvent<HTMLInputElement>) {
+  function handlePick(event: ChangeEvent<HTMLInputElement>, variant: "light" | "dark") {
     const file = event.target.files?.[0] || null;
-    setImageFile(file);
-    setRemoveImage(false);
-    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-    if (!file) {
-      setImagePreview(form.image_url || "");
+    if (variant === "light") {
+      setLightFile(file);
+      setRemoveLight(false);
+      if (lightPreview.startsWith("blob:")) URL.revokeObjectURL(lightPreview);
+      setLightPreview(file ? URL.createObjectURL(file) : form.light_theme_image_url || "");
       return;
     }
-    setImagePreview(URL.createObjectURL(file));
+    setDarkFile(file);
+    setRemoveDark(false);
+    if (darkPreview.startsWith("blob:")) URL.revokeObjectURL(darkPreview);
+    setDarkPreview(file ? URL.createObjectURL(file) : form.dark_theme_image_url || "");
   }
 
-  function clearImage() {
-    if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-    setImageFile(null);
-    setImagePreview("");
-    setRemoveImage(true);
-    setForm((current) => ({ ...current, image_url: "" }));
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  function validateForm() {
-    if (!form.title.trim()) return "Title is required.";
-    const sortOrder = Number(form.sort_order);
-    if (!Number.isFinite(sortOrder)) return "Sort order must be a valid number.";
-    if (!keyify(form.title)) return "Title must contain letters or numbers to generate a key.";
-    if (!slugify(form.title)) return "Title must contain letters or numbers to generate a slug.";
-    return null;
+  function clearVariant(variant: "light" | "dark") {
+    if (variant === "light") {
+      if (lightPreview.startsWith("blob:")) URL.revokeObjectURL(lightPreview);
+      setLightFile(null);
+      setLightPreview("");
+      setRemoveLight(true);
+      setForm((current) => ({ ...current, light_theme_image_url: "", light_theme_image_path: "" }));
+      if (lightRef.current) lightRef.current.value = "";
+      return;
+    }
+    if (darkPreview.startsWith("blob:")) URL.revokeObjectURL(darkPreview);
+    setDarkFile(null);
+    setDarkPreview("");
+    setRemoveDark(true);
+    setForm((current) => ({ ...current, dark_theme_image_url: "", dark_theme_image_path: "" }));
+    if (darkRef.current) darkRef.current.value = "";
   }
 
   async function saveCategory() {
-    const validationError = validateForm();
-    if (validationError) {
-      showToast({ type: "error", title: validationError });
+    if (!form.title.trim()) {
+      showToast({ type: "error", title: "Title is required." });
       return;
     }
 
-    const payload = {
-      key: keyify(form.title),
-      slug: slugify(form.title),
-      title: form.title.trim(),
-      subtitle: null,
-      description: null,
-      badge_text: null,
-      image_url: form.image_url.trim() || null,
-      sort_order: Number(form.sort_order || 100),
-      is_active: true,
-      selection_type: "MULTI" as const,
-      metadata: {},
-      remove_image: removeImage,
-    };
-
     try {
       setSaving(true);
-      const method = editingId ? "PUT" : "POST";
-      const endpoint = editingId ? `${API_BASE}${apiPath}/${editingId}` : `${API_BASE}${apiPath}`;
-
-      let response: Response;
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("key", payload.key);
-        formData.append("slug", payload.slug);
-        formData.append("title", payload.title);
-        formData.append("image_url", payload.image_url ?? "");
-        formData.append("sort_order", String(payload.sort_order));
-        formData.append("remove_image", String(payload.remove_image));
-        formData.append("image", imageFile);
-
-        response = await fetch(endpoint, {
-          method,
-          body: formData,
-        });
-      } else {
-        response = await fetch(endpoint, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      if (!supabaseTable) {
+        throw new Error("This screen currently requires Supabase table binding.");
       }
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save category."));
+      let nextLightUrl = form.light_theme_image_url || null;
+      let nextLightPath = form.light_theme_image_path || null;
+      let nextDarkUrl = form.dark_theme_image_url || null;
+      let nextDarkPath = form.dark_theme_image_path || null;
+
+      if (storageBucket && removeLight && form.light_theme_image_path) {
+        await supabaseBrowser.storage.from(storageBucket).remove([form.light_theme_image_path]);
+        nextLightUrl = null;
+        nextLightPath = null;
+      }
+      if (storageBucket && removeDark && form.dark_theme_image_path) {
+        await supabaseBrowser.storage.from(storageBucket).remove([form.dark_theme_image_path]);
+        nextDarkUrl = null;
+        nextDarkPath = null;
+      }
+
+      if (storageBucket && lightFile) {
+        const path = buildStoragePath(storageFolder, lightFile.name);
+        const { error: uploadError } = await supabaseBrowser.storage.from(storageBucket).upload(path, lightFile);
+        if (uploadError) throw uploadError;
+        const { data } = supabaseBrowser.storage.from(storageBucket).getPublicUrl(path);
+        nextLightUrl = data.publicUrl;
+        nextLightPath = path;
+      }
+
+      if (storageBucket && darkFile) {
+        const path = buildStoragePath(storageFolder, darkFile.name);
+        const { error: uploadError } = await supabaseBrowser.storage.from(storageBucket).upload(path, darkFile);
+        if (uploadError) throw uploadError;
+        const { data } = supabaseBrowser.storage.from(storageBucket).getPublicUrl(path);
+        nextDarkUrl = data.publicUrl;
+        nextDarkPath = path;
+      }
+
+      const record = {
+        key: keyify(form.title),
+        slug: slugify(form.title),
+        title: form.title.trim(),
+        light_theme_image_url: nextLightUrl,
+        light_theme_image_path: nextLightPath,
+        dark_theme_image_url: nextDarkUrl,
+        dark_theme_image_path: nextDarkPath,
+        sort_order: 100,
+        is_active: true,
+        selection_type: "MULTI" as const,
+      };
+
+      if (editingId) {
+        const { error } = await supabaseBrowser.from(supabaseTable).update(record).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseBrowser.from(supabaseTable).insert(record);
+        if (error) throw error;
       }
 
       showToast({ title: editingId ? "Category updated" : "Category created" });
@@ -348,7 +301,7 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
       showToast({
         type: "error",
         title: "Failed to save category",
-        description: extractErrorMessage(error, "Please verify the backend route payload handling."),
+        description: extractErrorMessage(error, "Save operation failed."),
       });
     } finally {
       setSaving(false);
@@ -362,14 +315,15 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
 
     try {
       setDeletingId(id);
-      const response = await fetch(`${API_BASE}${apiPath}/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete category."));
+      if (!supabaseTable) throw new Error("Delete unsupported for this route.");
+      if (storageBucket && category.light_theme_image_path) {
+        await supabaseBrowser.storage.from(storageBucket).remove([category.light_theme_image_path]).catch(() => undefined);
       }
-
+      if (storageBucket && category.dark_theme_image_path) {
+        await supabaseBrowser.storage.from(storageBucket).remove([category.dark_theme_image_path]).catch(() => undefined);
+      }
+      const { error } = await supabaseBrowser.from(supabaseTable).delete().eq("id", id);
+      if (error) throw error;
       if (editingId === id) resetForm();
       setCategories((current) => current.filter((item) => item.id !== id));
       showToast({ title: "Category deleted" });
@@ -387,60 +341,30 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        <Card
-          className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
-          style={{
-            background:
-              "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
-          }}
-        >
-          <CardContent className="space-y-4 px-4 py-4 sm:px-5">
-            <div className="flex flex-wrap justify-end gap-3">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => void loadCategories()}
-                  disabled={loading}
-                  className="h-10 rounded-2xl border-slate-200 bg-white px-5 text-sm"
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                  Refresh
-                </Button>
-                <Button
-                  onClick={resetForm}
-                  className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  New category
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {[
-                { label: "Total categories", value: totalCategories },
-                { label: "Editing", value: hasActiveEdit ? form.title || "Draft" : "None" },
-                { label: "Image source", value: currentImageState },
-              ].map((card) => (
-                <Card key={card.label} className="border-white/70 bg-white/80 shadow-sm backdrop-blur">
-                  <CardContent className="p-4">
-                    <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{card.label}</div>
-                    <div className="mt-2 text-2xl font-semibold text-slate-900">{card.value}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => void loadCategories()} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button onClick={resetForm}>
+              <Plus className="mr-2 h-4 w-4" />
+              New category
+            </Button>
           </CardContent>
         </Card>
 
-        <div className="grid gap-7 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <Card className="h-fit border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <CardTitle className="text-lg">{editingId ? "Edit category" : "New category"}</CardTitle>
-              <CardDescription>Only the essentials are editable. Key and slug are generated automatically.</CardDescription>
+        <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+          <Card>
+            <CardHeader>
+              <CardTitle>{editingId ? "Edit category" : "New category"}</CardTitle>
+              <CardDescription>Only title + light image + dark image.</CardDescription>
             </CardHeader>
-
-            <CardContent className="space-y-6 pt-6">
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -448,184 +372,138 @@ export default function MoodCategoryManager({ title, description, apiPath }: Pro
                   value={form.title}
                   onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                   placeholder="Weekend unwind"
-                  className="h-11 border-slate-300 bg-white"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="sort_order">Sort order</Label>
-                <div className="relative">
-                  <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    id="sort_order"
-                    type="number"
-                    value={form.sort_order}
-                    onChange={(event) => setForm((current) => ({ ...current, sort_order: event.target.value }))}
-                    className="h-11 border-slate-300 bg-white pl-9"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">Category image</p>
-                  <p className="text-xs text-slate-500">Upload the image shown on the category card.</p>
-                </div>
-
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                  {imagePreview ? (
-                    <div className="relative aspect-[4/3] w-full">
-                      <Image
-                        src={imagePreview}
-                        alt={`${title} preview`}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex aspect-[4/3] items-center justify-center text-sm text-slate-400">
-                      Preview unavailable
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-3">
-                  <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} className="justify-start bg-white">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload image
-                  </Button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImagePick}
-                  />
-                  {(imagePreview || form.image_url) ? (
-                    <Button type="button" variant="ghost" onClick={clearImage} className="justify-start text-slate-600">
-                      <X className="mr-2 h-4 w-4" />
-                      Remove image
+              {[
+                {
+                  key: "light",
+                  label: "Light Theme Image",
+                  preview: lightPreview,
+                  pick: () => lightRef.current?.click(),
+                  clear: () => clearVariant("light"),
+                  ref: lightRef,
+                  change: (event: ChangeEvent<HTMLInputElement>) => handlePick(event, "light"),
+                },
+                {
+                  key: "dark",
+                  label: "Dark Theme Image",
+                  preview: darkPreview,
+                  pick: () => darkRef.current?.click(),
+                  clear: () => clearVariant("dark"),
+                  ref: darkRef,
+                  change: (event: ChangeEvent<HTMLInputElement>) => handlePick(event, "dark"),
+                },
+              ].map((item) => (
+                <div key={item.key} className="space-y-2">
+                  <Label>{item.label}</Label>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    {item.preview ? (
+                      <div className="relative aspect-[16/9] w-full">
+                        <Image src={item.preview} alt={item.label} fill className="object-contain p-2" unoptimized />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-[16/9] items-center justify-center text-sm text-slate-400">Preview unavailable</div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={item.pick}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload
                     </Button>
-                  ) : null}
+                    {item.preview ? (
+                      <Button type="button" variant="ghost" onClick={item.clear}>
+                        <X className="mr-2 h-4 w-4" />
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                  <input ref={item.ref} type="file" accept="image/*" className="hidden" onChange={item.change} />
                 </div>
-              </div>
+              ))}
 
-              <div className="flex gap-3 border-t border-slate-100 pt-4">
-                <Button
-                  className="flex-1 bg-[#5800AB] text-white hover:bg-[#4a0090]"
-                  onClick={() => void saveCategory()}
-                  disabled={saving}
-                >
+              <div className="flex gap-2">
+                <Button onClick={() => void saveCategory()} disabled={saving} className="flex-1">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {editingId ? "Save changes" : "Create category"}
                 </Button>
-                <Button type="button" variant="outline" onClick={resetForm} disabled={saving} className="bg-white">
+                <Button variant="outline" onClick={resetForm} disabled={saving}>
                   Reset
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/90 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-lg">Category list</CardTitle>
-                  <CardDescription>Search, review, and update existing categories.</CardDescription>
+                  <CardTitle>Category list</CardTitle>
+                  <CardDescription>Search and manage categories.</CardDescription>
                 </div>
                 <div className="relative w-full lg:max-w-sm">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search by title, key, or slug"
-                    className="h-11 border-slate-300 bg-white pl-9"
-                  />
+                  <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by title, key, or slug" className="pl-9" />
                 </div>
               </div>
             </CardHeader>
-
-            <CardContent className="p-0">
+            <CardContent>
               {loading ? (
-                <div className="flex h-64 items-center justify-center text-slate-500">
+                <div className="flex h-48 items-center justify-center text-slate-500">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Loading categories...
                 </div>
               ) : filteredCategories.length === 0 ? (
-                <div className="px-6 py-16 text-center text-slate-500">No categories found.</div>
+                <div className="py-12 text-center text-slate-500">No categories found.</div>
               ) : (
-                <div className="space-y-4 p-4 sm:p-6">
+                <div className="space-y-3">
                   {filteredCategories.map((category) => (
-                    <div key={category.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm transition hover:border-slate-300 hover:bg-white">
+                    <div key={category.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex min-w-0 items-start gap-4">
-                          <div className="relative h-18 w-18 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                            {category.image_url ? (
-                              <Image
-                                src={category.image_url}
-                                alt={category.title}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-slate-400">
-                                <Tags className="h-4 w-4" />
-                              </div>
-                            )}
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold text-slate-900">{category.title}</p>
+                          <p className="mt-1 font-mono text-xs text-slate-600">{category.slug}</p>
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                            <span>Key: {category.key}</span>
+                            <span>Updated: {formatDate(category.updated_at)}</span>
                           </div>
-
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="truncate text-base font-semibold text-slate-900">{category.title}</p>
-                              <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-medium text-cyan-700">
-                                Sort {category.sort_order}
-                              </span>
+                          <div className="mt-3 grid grid-cols-2 gap-3 max-w-md">
+                            <div className="rounded-lg border border-slate-200 bg-white p-2">
+                              <p className="mb-1 text-[11px] text-slate-500">Light</p>
+                              <div className="relative h-14 w-full overflow-hidden rounded bg-slate-50">
+                                {category.light_theme_image_url ? (
+                                  <Image src={category.light_theme_image_url} alt={`${category.title} light`} fill className="object-contain p-1" unoptimized />
+                                ) : (
+                                  <div className="flex h-full items-center justify-center text-slate-400"><Tags className="h-3.5 w-3.5" /></div>
+                                )}
+                              </div>
                             </div>
-                            <p className="mt-1 font-mono text-xs text-slate-600">{category.slug}</p>
-                            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500">
-                              <span>Key: {category.key}</span>
-                              <span>Updated: {formatDate(category.updated_at)}</span>
-                              <span className="truncate">ID: {category.id}</span>
+                            <div className="rounded-lg border border-slate-200 bg-white p-2">
+                              <p className="mb-1 text-[11px] text-slate-500">Dark</p>
+                              <div className="relative h-14 w-full overflow-hidden rounded bg-slate-50">
+                                {category.dark_theme_image_url ? (
+                                  <Image src={category.dark_theme_image_url} alt={`${category.title} dark`} fill className="object-contain p-1" unoptimized />
+                                ) : (
+                                  <div className="flex h-full items-center justify-center text-slate-400"><Tags className="h-3.5 w-3.5" /></div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 flex-wrap gap-2">
-                          <Button
-                            variant={editingId === category.id ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => void startEdit(category.id)}
-                            className={editingId === category.id ? "bg-[#5800AB] text-white hover:bg-[#4a0090]" : "bg-white"}
-                            disabled={loadingEditId === category.id}
-                          >
-                            {loadingEditId === category.id ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Pencil className="mr-2 h-4 w-4" />
-                            )}
+                        <div className="flex shrink-0 gap-2">
+                          <Button variant={editingId === category.id ? "default" : "outline"} onClick={() => populateForm(category)}>
+                            <Pencil className="mr-2 h-4 w-4" />
                             {editingId === category.id ? "Editing" : "Edit"}
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => void deleteCategory(category.id)}
-                            disabled={deletingId === category.id}
-                          >
-                            {deletingId === category.id ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="mr-2 h-4 w-4" />
-                            )}
+                          <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => void deleteCategory(category.id)} disabled={deletingId === category.id}>
+                            {deletingId === category.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                             Delete
                           </Button>
                         </div>
                       </div>
                     </div>
                   ))}
-
                 </div>
               )}
             </CardContent>

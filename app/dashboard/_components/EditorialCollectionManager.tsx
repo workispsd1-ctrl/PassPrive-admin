@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Plus, Search, Trash2, type LucideIcon } from "lucide-react";
@@ -30,11 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/hooks/useToast";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type CollectionContentType = "LIST" | "GUIDE" | "HOTLIST" | "ARTICLE";
 type CollectionEntityType = "STORE" | "RESTAURANT" | "BOTH";
@@ -115,40 +111,6 @@ type Props = {
   icon: LucideIcon;
 };
 
-function extractCollections(payload: unknown): EditorialCollection[] {
-  if (Array.isArray(payload)) return payload as EditorialCollection[];
-
-  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-  if (!record) return [];
-
-  for (const key of ["collections", "data", "items", "results"]) {
-    if (Array.isArray(record[key])) return record[key] as EditorialCollection[];
-  }
-
-  return [];
-}
-
-async function parseResponse(response: Response) {
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) return response.json();
-  return response.text();
-}
-
-async function getErrorFromResponse(response: Response, fallback: string) {
-  const payload = await parseResponse(response).catch(() => null);
-  if (typeof payload === "string" && payload.trim()) return payload;
-
-  if (payload && typeof payload === "object") {
-    const record = payload as Record<string, unknown>;
-    for (const key of ["message", "error", "detail"]) {
-      const value = record[key];
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-
-  return fallback;
-}
-
 function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Date(value).toLocaleString("en-IN", {
@@ -182,8 +144,101 @@ function toIsoOrNull(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve(result);
+        return;
+      }
+      reject(new Error("Unable to read the selected image."));
+    };
+    reader.onerror = () => reject(new Error("Unable to read the selected image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function ImageUploadField({
+  id,
+  label,
+  value,
+  uploadedValue,
+  placeholder,
+  helpText,
+  onUpload,
+  onClearUpload,
+  onUrlChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  uploadedValue: string;
+  placeholder: string;
+  helpText: string;
+  onUpload: (value: string) => void;
+  onClearUpload: () => void;
+  onUrlChange: (value: string) => void;
+}) {
+  const activeValue = uploadedValue || value.trim();
+  const activeSource = uploadedValue ? "Uploaded from computer" : value.trim() ? "Image URL" : "No image selected";
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      onUpload(dataUrl);
+      event.target.value = "";
+    } catch (error: unknown) {
+      showToast({
+        type: "error",
+        title: `Failed to load ${label.toLowerCase()}`,
+        description: error instanceof Error ? error.message : "Try another image file.",
+      });
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            {activeValue ? (
+              <img src={activeValue} alt={`${label} preview`} className="h-full w-full object-cover" />
+            ) : (
+              <div className="px-2 text-center text-[10px] font-medium uppercase tracking-wide text-slate-400">Preview</div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">{activeSource}</p>
+            <p className="mt-1 text-xs text-slate-500">{helpText}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Input type="file" accept="image/*" onChange={handleFileChange} />
+          {uploadedValue ? (
+            <Button type="button" variant="outline" className="w-fit" onClick={onClearUpload}>
+              Clear uploaded image
+            </Button>
+          ) : null}
+          <Input
+            id={id}
+            value={value}
+            onChange={(event) => onUrlChange(event.target.value)}
+            placeholder={placeholder}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EditorialCollectionManager({
-  apiPath,
   basePath,
   pageTitle,
   description,
@@ -191,7 +246,6 @@ export default function EditorialCollectionManager({
   emptyTitle,
   emptyDescription,
   detailLabel,
-  icon: _icon,
 }: Props) {
   const [collections, setCollections] = useState<EditorialCollection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,6 +254,8 @@ export default function EditorialCollectionManager({
   const [editingCollection, setEditingCollection] = useState<EditorialCollection | null>(null);
   const [deletingCollection, setDeletingCollection] = useState<EditorialCollection | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
+  const [coverImageUploadUrl, setCoverImageUploadUrl] = useState("");
+  const [sourceImageUploadUrl, setSourceImageUploadUrl] = useState("");
   const [query, setQuery] = useState("");
 
   const filteredCollections = useMemo(() => {
@@ -222,17 +278,37 @@ export default function EditorialCollectionManager({
   const loadCollections = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}${apiPath}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      const [{ data: collectionRows, error: collectionError }, { data: itemRows, error: itemError }] =
+        await Promise.all([
+          supabaseBrowser
+            .from("editorial_collections")
+            .select(
+              "id,slug,title,subtitle,description,cover_image_url,badge_text,source_name,source_url,content_type,entity_type,city,area,sort_order,is_featured,is_active,starts_at,ends_at,updated_at"
+            )
+            .order("sort_order", { ascending: true }),
+          supabaseBrowser.from("editorial_collection_items").select("collection_id"),
+        ]);
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to load collections."));
-      }
+      if (collectionError) throw collectionError;
+      if (itemError) throw itemError;
 
-      const payload = await parseResponse(response);
-      setCollections(extractCollections(payload));
+      const countsByCollection = (
+        ((itemRows as Array<{ collection_id: string }> | null) || [])
+      ).reduce((accumulator, row) => {
+        const collectionId = typeof row.collection_id === "string" ? row.collection_id : null;
+        if (!collectionId) return accumulator;
+        accumulator.set(collectionId, (accumulator.get(collectionId) || 0) + 1);
+        return accumulator;
+      }, new Map<string, number>());
+
+      const nextCollections = ((collectionRows as EditorialCollection[] | null) || []).map(
+        (collection) => ({
+          ...collection,
+          item_count: countsByCollection.get(collection.id) || 0,
+        })
+      );
+
+      setCollections(nextCollections);
     } catch (error: unknown) {
       showToast({
         type: "error",
@@ -243,7 +319,7 @@ export default function EditorialCollectionManager({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, pageTitle]);
+  }, [pageTitle]);
 
   useEffect(() => {
     void loadCollections();
@@ -252,11 +328,15 @@ export default function EditorialCollectionManager({
   function openCreateDialog() {
     setEditingCollection(null);
     setForm(initialForm);
+    setCoverImageUploadUrl("");
+    setSourceImageUploadUrl("");
     setDialogOpen(true);
   }
 
   function openEditDialog(collection: EditorialCollection) {
     setEditingCollection(collection);
+    setCoverImageUploadUrl("");
+    setSourceImageUploadUrl("");
     setForm({
       slug: collection.slug || "",
       title: collection.title || "",
@@ -319,10 +399,10 @@ export default function EditorialCollectionManager({
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || null,
       description: form.description.trim() || null,
-      cover_image_url: form.cover_image_url.trim() || null,
+      cover_image_url: coverImageUploadUrl || form.cover_image_url.trim() || null,
       badge_text: form.badge_text.trim() || null,
       source_name: form.source_name.trim() || "PassPrive",
-      source_url: form.source_url.trim() || null,
+      source_url: sourceImageUploadUrl || form.source_url.trim() || null,
       content_type: form.content_type,
       entity_type: form.entity_type,
       city: form.city.trim() || null,
@@ -330,30 +410,33 @@ export default function EditorialCollectionManager({
       sort_order: sortOrder,
       is_featured: form.is_featured,
       is_active: form.is_active,
-      starts_at: startsAtIso,
       ends_at: endsAtIso,
     };
 
     try {
       setSaving(true);
-      const endpoint = editingCollection ? `${API_BASE}${apiPath}/${editingCollection.id}` : `${API_BASE}${apiPath}`;
+      const record = {
+        ...payload,
+        ...(startsAtIso ? { starts_at: startsAtIso } : editingCollection?.starts_at ? { starts_at: editingCollection.starts_at } : {}),
+      };
 
-      const response = await fetch(endpoint, {
-        method: editingCollection ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save collection."));
+      if (editingCollection) {
+        const { error } = await supabaseBrowser
+          .from("editorial_collections")
+          .update(record)
+          .eq("id", editingCollection.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseBrowser.from("editorial_collections").insert(record);
+        if (error) throw error;
       }
 
       showToast({ title: editingCollection ? "Collection updated" : "Collection created" });
       setDialogOpen(false);
       setEditingCollection(null);
       setForm(initialForm);
+      setCoverImageUploadUrl("");
+      setSourceImageUploadUrl("");
       await loadCollections();
     } catch (error: unknown) {
       showToast({
@@ -371,28 +454,13 @@ export default function EditorialCollectionManager({
 
     try {
       setSaving(true);
-      let deletionMode: "hard" | "soft" = "hard";
-      let response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
-        method: "DELETE",
-      });
+      const { error } = await supabaseBrowser
+        .from("editorial_collections")
+        .delete()
+        .eq("id", deletingCollection.id);
+      if (error) throw error;
 
-      // Fallback to soft-delete when backend does not expose hard delete.
-      if ([404, 405, 501].includes(response.status)) {
-        deletionMode = "soft";
-        response = await fetch(`${API_BASE}${apiPath}/${deletingCollection.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ is_active: false }),
-        });
-      }
-
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete collection."));
-      }
-
-      showToast({ title: deletionMode === "hard" ? "Collection deleted" : "Collection deactivated" });
+      showToast({ title: "Collection deleted" });
       setDeletingCollection(null);
       await loadCollections();
     } catch (error: unknown) {
@@ -575,15 +643,23 @@ export default function EditorialCollectionManager({
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="collection-cover-image">Cover image URL</Label>
-                <Input
-                  id="collection-cover-image"
-                  value={form.cover_image_url}
-                  onChange={(event) => setForm((current) => ({ ...current, cover_image_url: event.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
+              <ImageUploadField
+                id="collection-cover-image"
+                label="Cover image"
+                value={form.cover_image_url}
+                uploadedValue={coverImageUploadUrl}
+                placeholder="Paste a cover image URL if you are not uploading a file"
+                helpText="Upload from your computer or paste an image URL. The uploaded image takes priority until you clear it."
+                onUpload={(value) => {
+                  setCoverImageUploadUrl(value);
+                  setForm((current) => ({ ...current, cover_image_url: "" }));
+                }}
+                onClearUpload={() => setCoverImageUploadUrl("")}
+                onUrlChange={(value) => {
+                  setCoverImageUploadUrl("");
+                  setForm((current) => ({ ...current, cover_image_url: value }));
+                }}
+              />
 
               <div className="grid gap-2">
                 <Label htmlFor="collection-badge">Badge text</Label>
@@ -607,15 +683,23 @@ export default function EditorialCollectionManager({
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="collection-source-url">Source URL</Label>
-                <Input
-                  id="collection-source-url"
-                  value={form.source_url}
-                  onChange={(event) => setForm((current) => ({ ...current, source_url: event.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
+              <ImageUploadField
+                id="collection-source-url"
+                label="Source image"
+                value={form.source_url}
+                uploadedValue={sourceImageUploadUrl}
+                placeholder="Paste a source image URL if you are not uploading a file"
+                helpText="Use this for a source logo or source artwork. Upload from your computer or paste an image URL."
+                onUpload={(value) => {
+                  setSourceImageUploadUrl(value);
+                  setForm((current) => ({ ...current, source_url: "" }));
+                }}
+                onClearUpload={() => setSourceImageUploadUrl("")}
+                onUrlChange={(value) => {
+                  setSourceImageUploadUrl("");
+                  setForm((current) => ({ ...current, source_url: value }));
+                }}
+              />
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

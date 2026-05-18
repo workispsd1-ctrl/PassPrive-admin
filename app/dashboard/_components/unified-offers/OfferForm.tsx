@@ -109,6 +109,15 @@ export function OfferForm({ value, onChange, planOptions }: Props) {
           />
           <TextField label="Priority" type="number" value={value.priority} onChange={(e) => update("priority", e.target.value)} />
           <TextField label="Currency code" value={value.currency_code} onChange={(e) => update("currency_code", e.target.value.toUpperCase())} />
+          <TextField
+            label="Discount value"
+            type="number"
+            min={1}
+            step="0.01"
+            value={value.Discount_value}
+            onChange={(e) => update("Discount_value", e.target.value)}
+            hint="Required. Must be greater than 0."
+          />
           <TextField label="Min bill amount" type="number" value={value.min_bill_amount} onChange={(e) => update("min_bill_amount", e.target.value)} />
           <TextField label="Max discount amount" type="number" value={value.max_discount_amount} onChange={(e) => update("max_discount_amount", e.target.value)} />
         </div>

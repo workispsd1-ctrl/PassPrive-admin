@@ -10,13 +10,18 @@ import {
   PAYMENT_FLOWS,
   PAYMENT_INSTRUMENT_TYPES,
   TARGET_TYPES,
-  apiDelete,
-  apiGet,
-  apiPost,
-  apiPut,
+  createOfferBinDirect,
+  createOfferConditionDirect,
+  createOfferPaymentRuleDirect,
+  createOfferTargetDirect,
+  deleteOfferBinDirect,
+  deleteOfferConditionDirect,
+  deleteOfferPaymentRuleDirect,
+  deleteOfferTargetDirect,
   getTargetLabel,
   numberOrNull,
   parseJsonInput,
+  saveOfferUsageLimitDirect,
   type CardNetwork,
   type EntityOption,
   type OfferBinRecord,
@@ -66,17 +71,17 @@ export function OfferTargetsEditor({
     }
 
     const payload: Record<string, unknown> = { target_type: draftType };
-    if (draftType === "STORE") payload.store_id = draftValue;
-    if (draftType === "RESTAURANT") payload.restaurant_id = draftValue;
+    if (draftType === "STORE" || draftType === "RESTAURANT") payload.target_entity_id = draftValue;
     if (draftType === "CITY") payload.city = draftValue;
+    if (draftType === "AREA") payload.area = draftValue;
     if (draftType === "CATEGORY") payload.category = draftValue;
     if (draftType === "SUBCATEGORY") payload.subcategory = draftValue;
     if (draftType === "TAG") payload.tag = draftValue;
+    if (draftType === "PLAN") payload.plan_code = draftValue;
 
     try {
       setSaving(true);
-      const response = await apiPost(`/api/offers/${offerId}/targets`, payload);
-      const created = (response as { item?: OfferTargetRecord }).item || (response as OfferTargetRecord);
+      const created = await createOfferTargetDirect(offerId, payload);
       onChange([...targets, created]);
       setDraftType("ALL");
       setDraftValue("");
@@ -90,7 +95,7 @@ export function OfferTargetsEditor({
 
   async function removeTarget(targetId: string) {
     try {
-      await apiDelete(`/api/offers/${offerId}/targets/${targetId}`);
+      await deleteOfferTargetDirect(targetId);
       onChange(targets.filter((item) => item.id !== targetId));
       showToast({ title: "Target removed", description: "Target deleted successfully." });
     } catch (error) {
@@ -168,14 +173,13 @@ export function OfferConditionsEditor({
     const parsedJson = parseJsonInput<unknown>(draft.condition_value);
     const conditionValue = parsedJson ?? numberOrNull(draft.condition_value) ?? draft.condition_value;
     try {
-      const response = await apiPost(`/api/offers/${offerId}/conditions`, {
+      const created = await createOfferConditionDirect(offerId, {
         condition_type: draft.condition_type,
         operator: draft.operator,
         condition_value: conditionValue,
         is_required: draft.is_required,
         sort_order: numberOrNull(draft.sort_order) ?? 1,
       });
-      const created = (response as { item?: OfferConditionRecord }).item || (response as OfferConditionRecord);
       onChange([...conditions, created]);
       setDraft({ condition_type: "MIN_BILL_AMOUNT", operator: "GTE", condition_value: "", is_required: true, sort_order: "1" });
       showToast({ title: "Condition added", description: "Condition saved successfully." });
@@ -186,7 +190,7 @@ export function OfferConditionsEditor({
 
   async function removeCondition(id: string) {
     try {
-      await apiDelete(`/api/offers/${offerId}/conditions/${id}`);
+      await deleteOfferConditionDirect(id);
       onChange(conditions.filter((item) => item.id !== id));
       showToast({ title: "Condition removed", description: "Condition deleted successfully." });
     } catch (error) {
@@ -248,14 +252,14 @@ export function OfferPaymentRulesEditor({
 
   async function saveRule() {
     try {
-      const response = await apiPost(`/api/offers/${offerId}/payment-rules`, {
-        payment_flow: draft.payment_flow,
+      const created = await createOfferPaymentRuleDirect(offerId, {
         payment_instrument_type: draft.payment_instrument_type,
         card_network: draft.card_network,
         issuer_bank_name: draft.issuer_bank_name.trim() || null,
+        requires_coupon_code: Boolean(draft.coupon_code.trim()),
         coupon_code: draft.coupon_code.trim() || null,
+        requires_saved_card: false,
       });
-      const created = (response as { item?: OfferPaymentRuleRecord }).item || (response as OfferPaymentRuleRecord);
       onChange([...rules, created]);
       setDraft({
         payment_flow: "ANY",
@@ -272,7 +276,7 @@ export function OfferPaymentRulesEditor({
 
   async function removeRule(id: string) {
     try {
-      await apiDelete(`/api/offers/${offerId}/payment-rules/${id}`);
+      await deleteOfferPaymentRuleDirect(id);
       onChange(rules.filter((item) => item.id !== id));
       showToast({ title: "Payment rule removed", description: "Rule deleted successfully." });
     } catch (error) {
@@ -297,7 +301,7 @@ export function OfferPaymentRulesEditor({
             <div key={rule.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <div>
                 <p className="text-sm font-semibold text-slate-900">
-                  {rule.payment_flow || "ANY"} • {rule.payment_instrument_type || "Instrument"} • {rule.card_network || "ANY"}
+                  {rule.payment_instrument_type || "Instrument"} • {rule.card_network || "ANY"}
                 </p>
                 <p className="text-sm text-slate-600">{rule.issuer_bank_name || "Any issuer"}{rule.coupon_code ? ` • ${rule.coupon_code}` : ""}</p>
               </div>
@@ -335,12 +339,14 @@ export function OfferBinsEditor({
     }
 
     try {
-      const response = await apiPost(`/api/offers/${offerId}/bins`, {
+      const created = await createOfferBinDirect(offerId, {
         bin: draft.bin.trim(),
+        bin_length: draft.bin.trim().length,
+        card_type: "ANY",
         card_network: draft.card_network,
         issuer_bank_name: draft.issuer_bank_name.trim() || null,
+        is_active: true,
       });
-      const created = (response as { item?: OfferBinRecord }).item || (response as OfferBinRecord);
       onChange([...bins, created]);
       setDraft({ bin: "", card_network: "ANY", issuer_bank_name: "" });
       showToast({ title: "BIN added", description: "BIN rule saved successfully." });
@@ -351,7 +357,7 @@ export function OfferBinsEditor({
 
   async function removeBin(id: string) {
     try {
-      await apiDelete(`/api/offers/${offerId}/bins/${id}`);
+      await deleteOfferBinDirect(id);
       onChange(bins.filter((item) => item.id !== id));
       showToast({ title: "BIN removed", description: "BIN rule deleted successfully." });
     } catch (error) {
@@ -410,13 +416,7 @@ export function OfferUsageLimitsEditor({
 }) {
   async function saveUsageLimit() {
     try {
-      await apiPut(`/api/offers/${offerId}/usage-limit`, {
-        total_redemption_limit: numberOrNull(value.total_redemption_limit),
-        per_user_redemption_limit: numberOrNull(value.per_user_redemption_limit),
-        per_store_redemption_limit: numberOrNull(value.per_store_redemption_limit),
-        per_restaurant_redemption_limit: numberOrNull(value.per_restaurant_redemption_limit),
-        per_day_redemption_limit: numberOrNull(value.per_day_redemption_limit),
-      });
+      await saveOfferUsageLimitDirect(offerId, value);
       showToast({ title: "Usage limits saved", description: "Usage limits updated successfully." });
     } catch (error) {
       showToast({ title: "Failed to save usage limits", description: error instanceof Error ? error.message : "Please try again.", type: "error" });
@@ -457,26 +457,20 @@ export function OfferApplicabilityTester({
   const options = entityType === "store" ? storeOptions : restaurantOptions;
 
   async function runTest() {
-    if (!entityId) {
-      showToast({ title: "Choose an entity", description: "Select a store or restaurant first.", type: "error" });
-      return;
-    }
-
-    try {
-      const endpoint = entityType === "store" ? `/api/offers/applicable/store/${entityId}` : `/api/offers/applicable/restaurant/${entityId}`;
-      const payload = await apiGet(endpoint, {
-        bill_amount: billAmount || undefined,
-        payment_flow: paymentFlow,
-        payment_instrument_type: paymentInstrumentType,
-        card_network: cardNetwork,
-        issuer_bank_name: issuerBankName || undefined,
-        bin: bin || undefined,
-      });
-      setResults((Array.isArray(payload) ? payload : ((payload as { items?: OfferRecord[] }).items || [])) as OfferRecord[]);
-      showToast({ title: "Applicability checked", description: "Preview results updated." });
-    } catch (error) {
-      showToast({ title: "Applicability test failed", description: error instanceof Error ? error.message : "Please try again.", type: "error" });
-    }
+    void entityType;
+    void entityId;
+    void billAmount;
+    void paymentFlow;
+    void paymentInstrumentType;
+    void cardNetwork;
+    void issuerBankName;
+    void bin;
+    setResults([]);
+    showToast({
+      title: "Preview unavailable",
+      description: "Applicability preview is not wired yet in frontend-only mode.",
+      type: "warning",
+    });
   }
 
   return (
@@ -507,7 +501,7 @@ export function OfferApplicabilityTester({
       </PrimaryButton>
 
       {results.length === 0 ? (
-        <EmptyState title="No preview results yet" description="Run the tester to see applicable offers returned by the backend." />
+        <EmptyState title="Preview unavailable" description="Applicability testing needs a dedicated frontend rule evaluator or SQL function. Base offer CRUD now runs directly from Supabase." />
       ) : (
         <Table className="rounded-2xl border border-slate-200 bg-white">
           <TableHeader>

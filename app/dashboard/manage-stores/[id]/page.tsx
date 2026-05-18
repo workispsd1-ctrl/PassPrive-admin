@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, X } from "lucide-react";
 
@@ -11,146 +11,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
+  buildStorePayload,
+  deleteStoreImages,
+  fetchStoreDetail,
+  replaceStoreRelations,
+  type StoreFlatRecord,
+  type StoreOfferInput,
+  upsertStorePaymentDetails,
+  uploadStoreImages,
+} from "@/lib/storeAdmin";
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useStoreCatalogue } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreCatalogue";
-import CatalogueSection from "@/app/dashboard/_components/StoreComponents/sections/CatalogueSection";
-import type { CatalogueCategoryDraft, OpenSection } from "@/app/dashboard/_components/StoreComponents/types";
-import { fetchStoreCatalogueAdmin, syncStoreCatalogueAdmin } from "@/lib/storeCatalogueAdmin";
+import type { PaymentDetails } from "@/app/dashboard/_components/StoreComponents/types";
+import {
+  fetchCategoryOptions,
+  getCategorySelectLabel,
+  getCategorySourceEmptyLabel,
+} from "@/lib/storeCategoryOptions";
 
 /* ---------------- CONSTANTS ---------------- */
 
 const inputClass =
   "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:8000";
-
-type StoreMoodCategoryRecord = {
-  title?: string;
-};
-
-function extractCategoryList(payload: unknown): StoreMoodCategoryRecord[] {
-  if (Array.isArray(payload)) return payload as StoreMoodCategoryRecord[];
-
-  const recordPayload =
-    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-
-  if (!recordPayload) return [];
-
-  const possibleKeys = ["data", "items", "results", "categories", "moodCategories"];
-  for (const key of possibleKeys) {
-    if (Array.isArray(recordPayload[key])) {
-      return recordPayload[key] as StoreMoodCategoryRecord[];
-    }
-  }
-
-  return [];
-}
-
-const DAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
-
-const HOUR_OPTIONS = Array.from(
-  { length: 24 },
-  (_, hour) => `${String(hour).padStart(2, "0")}:00`
-);
-
-type DayHours = {
-  open: string;
-  close: string;
-  closed: boolean;
-};
-
-const emptyWeek = () =>
-  DAYS.reduce((acc, day) => {
-    acc[day] = { open: "", close: "", closed: false };
-    return acc;
-  }, {} as Record<string, DayHours>);
-
-const normalizeDayLabel = (day: string) => {
-  if (!day) return "";
-  const lowered = day.toLowerCase();
-  const match = DAYS.find((d) => d.toLowerCase() === lowered);
-  return match || "";
-};
-
-/* ---------------- HOURS UTILS ---------------- */
-
-const parseHours = (raw: any) => {
-  const week = emptyWeek();
-
-  if (Array.isArray(raw)) {
-    for (const item of raw) {
-      const day = normalizeDayLabel(item?.day || "");
-      if (!day || !week[day]) continue;
-
-      const closed = !!item?.closed;
-      const slot0 = Array.isArray(item?.slots) ? item.slots[0] : null;
-
-      week[day] = {
-        closed,
-        open: closed ? "" : (slot0?.open || ""),
-        close: closed ? "" : (slot0?.close || ""),
-      };
-    }
-
-    return week;
-  }
-
-  if (raw && typeof raw === "object") {
-    for (const [dayKey, value] of Object.entries(raw)) {
-      const day = normalizeDayLabel(dayKey);
-      if (!day || !week[day]) continue;
-
-      if (typeof value === "string" && value.includes("-")) {
-        const [open, close] = value.split("-").map((x) => x.trim());
-        week[day] = { open: open || "", close: close || "", closed: false };
-        continue;
-      }
-
-      if (value && typeof value === "object") {
-        const obj = value as { open?: string; close?: string; closed?: boolean };
-        const closed = !!obj.closed;
-        week[day] = {
-          closed,
-          open: closed ? "" : (obj.open || ""),
-          close: closed ? "" : (obj.close || ""),
-        };
-      }
-    }
-  }
-
-  return week;
-};
-
-const serializeHours = (week: Record<string, DayHours>) => {
-  return DAYS.map((day) => {
-    const d = week[day] || { open: "", close: "", closed: false };
-    const closed = !!d.closed || (!d.open && !d.close);
-
-    return {
-      day,
-      closed,
-      slots: closed ? [] : [{ open: d.open, close: d.close }],
-    };
-  });
-};
-
-const cleanObject = (obj: Record<string, any>) => {
-  const out: Record<string, any> = {};
+const cleanObject = (obj: Record<string, unknown>) => {
+  const out: Record<string, unknown> = {};
   Object.entries(obj).forEach(([k, v]) => {
     if (v === undefined || v === null) return;
     if (typeof v === "string" && v.trim() === "") return;
@@ -159,43 +48,58 @@ const cleanObject = (obj: Record<string, any>) => {
   return out;
 };
 
-const validateCatalogueForStoreType = (
-  categories: CatalogueCategoryDraft[],
-  storeType: "PRODUCT" | "SERVICE"
-) => {
-  const enabledCategories = categories.filter((category) => category.enabled);
+const emptyPaymentDetails = (): PaymentDetails => ({
+  legal_business_name: "",
+  display_name_on_invoice: "",
+  payout_method: "BANK_TRANSFER",
+  beneficiary_name: "",
+  bank_name: "",
+  account_number: "",
+  ifsc: "",
+  iban: "",
+  swift: "",
+  payout_upi_id: "",
+  settlement_cycle: "T+1",
+  commission_percent: "",
+  currency: "MUR",
+  tax_id_label: "VAT",
+  tax_id_value: "",
+  billing_email: "",
+  billing_phone: "",
+  kyc_status: "NOT_STARTED",
+  notes: "",
+});
 
-  for (const category of enabledCategories) {
-    if (!category.title.trim()) {
-      return `${storeType === "SERVICE" ? "Service" : "Catalogue"} category title is required.`;
-    }
-
-    for (const item of category.items) {
-      const hasMeaningfulContent =
-        item.title.trim() ||
-        item.description?.trim() ||
-        item.price.trim() ||
-        item.imageUrl?.trim() ||
-        item.imageFile;
-
-      if (!hasMeaningfulContent) continue;
-
-      if (!item.title.trim()) {
-        return `Each ${storeType === "SERVICE" ? "service" : "catalogue"} item needs a title.`;
-      }
-
-      if (item.is_billable && !item.price.trim()) {
-        return `Price is required for billable item "${item.title}".`;
-      }
-
-      if (item.supports_slot_booking && !item.duration_minutes.trim()) {
-        return `Duration is required for slot-bookable item "${item.title}".`;
-      }
-    }
-  }
-
-  return null;
-};
+const normalizePaymentState = (
+  payment: StoreFlatRecord["payment_details"]
+): PaymentDetails => ({
+  legal_business_name: payment?.legal_business_name || "",
+  display_name_on_invoice: payment?.display_name_on_invoice || "",
+  payout_method:
+    (payment?.payout_method as PaymentDetails["payout_method"] | undefined) || "BANK_TRANSFER",
+  beneficiary_name: payment?.beneficiary_name || "",
+  bank_name: payment?.bank_name || "",
+  account_number: payment?.account_number || "",
+  ifsc: payment?.ifsc || "",
+  iban: payment?.iban || "",
+  swift: payment?.swift || "",
+  payout_upi_id: payment?.payout_upi_id || "",
+  settlement_cycle:
+    (payment?.settlement_cycle as PaymentDetails["settlement_cycle"] | undefined) || "T+1",
+  commission_percent:
+    payment?.commission_percent === null || payment?.commission_percent === undefined
+      ? ""
+      : String(payment.commission_percent),
+  currency: payment?.currency || "MUR",
+  tax_id_label:
+    (payment?.tax_id_label as PaymentDetails["tax_id_label"] | undefined) || "VAT",
+  tax_id_value: payment?.tax_id_value || "",
+  billing_email: payment?.billing_email || "",
+  billing_phone: payment?.billing_phone || "",
+  kyc_status:
+    (payment?.kyc_status as PaymentDetails["kyc_status"] | undefined) || "NOT_STARTED",
+  notes: payment?.notes || "",
+});
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -203,20 +107,13 @@ export default function StoreDetailPage() {
   const { id } = useParams();
   const router = useRouter();
 
-  const [store, setStore] = useState<any>(null);
-  const [storeOriginal, setStoreOriginal] = useState<any>(null);
-  const [catalogueOriginal, setCatalogueOriginal] = useState<CatalogueCategoryDraft[]>([]);
-  const [catalogueOpenSection, setCatalogueOpenSection] = useState<OpenSection>("catalogue");
+  const [store, setStore] = useState<StoreFlatRecord | null>(null);
+  const [storeOriginal, setStoreOriginal] = useState<StoreFlatRecord | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
 
-  const [openingHours, setOpeningHours] = useState<Record<string, DayHours>>(
-    emptyWeek()
-  );
-  const [openingHoursOriginal, setOpeningHoursOriginal] =
-    useState<Record<string, DayHours>>(emptyWeek());
-
-  // ✅ week include/exclude (same as restaurants)
-  const [weekEnabled, setWeekEnabled] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [payment, setPayment] = useState<PaymentDetails>(emptyPaymentDetails());
+  const [paymentOriginal, setPaymentOriginal] = useState<PaymentDetails>(emptyPaymentDetails());
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -228,11 +125,6 @@ export default function StoreDetailPage() {
   const [logoToDelete, setLogoToDelete] = useState(false);
   const [coverToDelete, setCoverToDelete] = useState(false);
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
-  const hasLoadedCatalogueRef = useRef(false);
-  const catalogueApi = useStoreCatalogue(
-    (fn) => fn(),
-    (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
-  );
 
   const headerLocation = useMemo(() => {
     if (!store) return "";
@@ -260,286 +152,59 @@ export default function StoreDetailPage() {
     return selectedStoreCategories.length ? selectedStoreCategories.join(", ") : null;
   }, [store, categoryOptions, selectedStoreCategories]);
 
+  const applyStoreState = (data: StoreFlatRecord) => {
+    setStore(data);
+    setStoreOriginal(data);
+    const normalizedPayment = normalizePaymentState(data.payment_details);
+    setPayment(normalizedPayment);
+    setPaymentOriginal(normalizedPayment);
+  };
+
   // Function to refresh store data (can be called manually)
   const refreshStoreData = async () => {
     try {
-      const { data, error } = await supabaseBrowser
-        .from("stores")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) {
-        showToast({
-          type: "error",
-          title: "Failed to load store",
-          description: error.message,
-        });
-        console.error("❌ Fetch error:", error);
-        return;
-      }
-
-      console.log("✅ Store data fetched from Supabase:", {
-        id: data.id,
-        name: data.name,
-        cover_image_url: data.cover_image_url,
-        cover_media_url: data.cover_media_url,
-        cover_media_type: data.cover_media_type,
-        logo_url: data.logo_url,
-        gallery_urls: data.gallery_urls,
+      const data = await fetchStoreDetail(String(id));
+      applyStoreState(data);
+    } catch (err: unknown) {
+      showToast({
+        type: "error",
+        title: "Failed to load store",
+        description: err instanceof Error ? err.message : "Unable to load store details.",
       });
-
-      setStore(data);
-      setStoreOriginal(data);
-
-      const parsed = parseHours(data.hours);
-      setOpeningHours(parsed);
-      setOpeningHoursOriginal(parsed);
-
-      const hasArrayHours = Array.isArray(data.hours) && data.hours.length > 0;
-      const hasObjectHours =
-        !!data.hours &&
-        typeof data.hours === "object" &&
-        !Array.isArray(data.hours) &&
-        Object.keys(data.hours).length > 0;
-      setWeekEnabled(hasArrayHours || hasObjectHours);
-    } catch (err) {
-      console.error("❌ Failed to refresh store:", err);
     }
   };
 
   useEffect(() => {
     if (id) {
-      refreshStoreData();
+      const timer = window.setTimeout(() => {
+        void refreshStoreData();
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [id]);
 
   useEffect(() => {
     const loadDropdownOptions = async () => {
+      const storeType = (store?.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT";
+
       try {
-        const moodResult = await fetch(`${API_BASE}/api/storemoodcategories`, {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        if (moodResult.ok) {
-          const payload = await moodResult.json().catch(() => null);
-          const categories = Array.from(
-            new Set(
-              extractCategoryList(payload)
-                .map((item) => item?.title)
-                .filter(
-                  (value): value is string =>
-                    typeof value === "string" && value.trim().length > 0
-                )
-                .map((value) => value.trim())
-            )
-          ).sort((a, b) => a.localeCompare(b));
-
-          setCategoryOptions(categories);
-        }
+        setCategoryOptions(await fetchCategoryOptions(storeType));
       } catch {
         // Keep form usable even if dropdown options fail to load.
+        setCategoryOptions([]);
       }
     };
 
     void loadDropdownOptions();
-  }, []);
+  }, [store?.store_type]);
 
   useEffect(() => {
-    const loadCatalogue = async () => {
-      if (!id || hasLoadedCatalogueRef.current) return;
-      hasLoadedCatalogueRef.current = true;
-
-      try {
-        const data = await fetchStoreCatalogueAdmin(String(id));
-        const mapped: CatalogueCategoryDraft[] = data.map((category) => ({
-          id: category.id || `cat_${Date.now()}`,
-          persistedId: category.id,
-          enabled: category.enabled,
-          title: category.title,
-          starting_from:
-            category.starting_from === null || category.starting_from === undefined
-              ? ""
-              : String(category.starting_from),
-          sort_order: String(category.sort_order ?? 0),
-          expanded: false,
-          items: category.items.map((item) => ({
-            id: item.id || `item_${Date.now()}`,
-            persistedId: item.id,
-            title: item.title,
-            price: item.price === null || item.price === undefined ? "" : String(item.price),
-            sku: item.sku || "",
-            description: item.description || "",
-            is_available: item.is_available,
-            sort_order: String(item.sort_order ?? 0),
-            item_type: item.item_type,
-            is_billable: item.is_billable,
-            duration_minutes:
-              item.duration_minutes === null || item.duration_minutes === undefined
-                ? ""
-                : String(item.duration_minutes),
-            supports_slot_booking: item.supports_slot_booking,
-            imageFile: null,
-            imageUrl: item.image_url || null,
-          })),
-        }));
-
-        catalogueApi.replaceCatalogue(mapped);
-        setCatalogueOriginal(mapped);
-      } catch (error: any) {
-        if (error?.response?.status === 404) {
-          // Keep edit page usable when catalogue API is unavailable in this environment.
-          catalogueApi.replaceCatalogue([]);
-          setCatalogueOriginal([]);
-          return;
-        }
-
-        showToast({
-          type: "error",
-          title: "Failed to load catalogue",
-          description: error.message,
-        });
-      }
-    };
-
-    void loadCatalogue();
-  }, [id]);
-
-  /* ---------------- IMAGE MANAGEMENT HELPERS ---------------- */
-
-  /**
-   * Extract storage path from Supabase public URL
-   * Example: https://xyz.supabase.co/storage/v1/object/public/stores/logo/123/abc.jpg
-   * Returns: logo/123/abc.jpg
-   */
-  const extractStoragePath = (url: string): string | null => {
-    try {
-      const match = url.match(/\/stores\/(.+)$/);
-      return match ? match[1] : null;
-    } catch {
-      return null;
-    }
-  };
-
-  /**
-   * Upload a single image to Supabase Storage
-   */
-  const uploadSingleImage = async (
-    storeId: string,
-    file: File,
-    type: "logo" | "cover" | "gallery"
-  ): Promise<string> => {
-    const ext = file.name.split(".").pop() || "jpg";
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).slice(2, 9);
-    const path = `${type}/${storeId}/${timestamp}-${random}.${ext}`;
-
-    const { error } = await supabaseBrowser.storage
-      .from("stores")
-      .upload(path, file);
-
-    if (error) throw error;
-
-    const { data } = supabaseBrowser.storage
-      .from("stores")
-      .getPublicUrl(path);
-
-    return data.publicUrl;
-  };
-
-  /**
-   * Upload multiple images to Supabase Storage
-   */
-  const uploadMultipleImages = async (
-    storeId: string,
-    files: File[],
-    type: "gallery"
-  ): Promise<string[]> => {
-    const urls: string[] = [];
-    const uploadedPaths: string[] = [];
-
-    try {
-      // Upload with concurrency limit of 3
-      const batchSize = 3;
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batch = files.slice(i, i + batchSize);
-        const batchPromises = batch.map(async (file) => {
-          const ext = file.name.split(".").pop() || "jpg";
-          const timestamp = Date.now();
-          const random = Math.random().toString(36).slice(2, 9);
-          const path = `${type}/${storeId}/${timestamp}-${random}.${ext}`;
-
-          const { error } = await supabaseBrowser.storage
-            .from("stores")
-            .upload(path, file);
-
-          if (error) throw error;
-
-          uploadedPaths.push(path);
-
-          const { data } = supabaseBrowser.storage
-            .from("stores")
-            .getPublicUrl(path);
-
-          return data.publicUrl;
-        });
-
-        const batchUrls = await Promise.all(batchPromises);
-        urls.push(...batchUrls);
-      }
-
-      return urls;
-    } catch (error) {
-      // Cleanup: delete successfully uploaded files
-      if (uploadedPaths.length > 0) {
-        await supabaseBrowser.storage
-          .from("stores")
-          .remove(uploadedPaths)
-          .catch(() => {}); // Silent fail on cleanup
-      }
-      throw error;
-    }
-  };
-
-  const uploadCatalogueImage = async (
-    storeId: string,
-    categoryId: string,
-    itemId: string,
-    file: File
-  ): Promise<string> => {
-    const ext = file.name.split(".").pop() || "jpg";
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).slice(2, 9);
-    const path = `catalogue/${storeId}/${categoryId}/${itemId}-${timestamp}-${random}.${ext}`;
-
-    const { error } = await supabaseBrowser.storage.from("stores").upload(path, file);
-    if (error) throw error;
-
-    const { data } = supabaseBrowser.storage.from("stores").getPublicUrl(path);
-    return data.publicUrl;
-  };
-
-  /**
-   * Delete images from Supabase Storage
-   */
-  const deleteImagesFromStorage = async (urls: string[]): Promise<void> => {
-    const paths = urls.map(extractStoragePath).filter(Boolean) as string[];
-    if (paths.length === 0) return;
-
-    const { error } = await supabaseBrowser.storage
-      .from("stores")
-      .remove(paths);
-
-    if (error) throw error;
-  };
+    setHasMounted(true);
+  }, []);
 
   const handleCancel = () => {
     setStore(storeOriginal);
-    setOpeningHours(openingHoursOriginal);
-    setWeekEnabled(Array.isArray(storeOriginal?.hours) && storeOriginal.hours.length > 0);
-    catalogueApi.replaceCatalogue(catalogueOriginal);
-    catalogueApi.clearDeletedTracking();
+    setPayment(paymentOriginal);
     // ✅ Reset image changes
     setLogoToAdd(null);
     setCoverToAdd(null);
@@ -555,97 +220,51 @@ export default function StoreDetailPage() {
       showToast({ type: "error", title: "Store name is required" });
       return;
     }
-
-    const catalogueValidationError = validateCatalogueForStoreType(
-      catalogueApi.catalogueCategories,
-      (store?.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"
-    );
-    if (catalogueValidationError) {
-      showToast({ type: "error", title: catalogueValidationError });
-      setCatalogueOpenSection("catalogue");
+    if (!payment.legal_business_name.trim()) {
+      showToast({
+        type: "error",
+        title: "Legal business name is required",
+        description: "Required for settlement & invoicing.",
+      });
       return;
     }
 
     setSaving(true);
 
     try {
-      // ✅ Step 1: Delete removed images from storage
       const urlsToDelete: string[] = [];
       if (logoToDelete && store.logo_url) urlsToDelete.push(store.logo_url);
-      if (coverToDelete && (store.cover_image_url || store.cover_media_url)) {
-        urlsToDelete.push(store.cover_image_url || store.cover_media_url);
+      if (coverToDelete) {
+        const coverUrlToDelete =
+          store.cover_media_type === "video" ? store.cover_media_url : store.cover_image_url;
+        if (coverUrlToDelete) urlsToDelete.push(coverUrlToDelete);
       }
       if (galleryToDelete.length > 0) urlsToDelete.push(...galleryToDelete);
 
       if (urlsToDelete.length > 0) {
-        try {
-          await deleteImagesFromStorage(urlsToDelete);
-        } catch (error: any) {
-          showToast({
-            type: "error",
-            title: "Failed to delete images",
-            description: error.message,
-          });
-          setSaving(false);
-          return;
-        }
+        await deleteStoreImages(urlsToDelete);
       }
 
-      // ✅ Step 2: Upload new images
-      let newLogoUrl: string | null = null;
-      let newCoverUrl: string | null = null;
-      let newGalleryUrls: string[] = [];
+      const [uploadedLogoUrls, uploadedCoverUrls, uploadedGalleryUrls] = await Promise.all([
+        logoToAdd ? uploadStoreImages(String(id), [logoToAdd], "logo") : Promise.resolve([]),
+        coverToAdd ? uploadStoreImages(String(id), [coverToAdd], "cover") : Promise.resolve([]),
+        galleryToAdd.length > 0
+          ? uploadStoreImages(String(id), galleryToAdd, "gallery")
+          : Promise.resolve([]),
+      ]);
 
-      try {
-        if (logoToAdd) {
-          newLogoUrl = await uploadSingleImage(id as string, logoToAdd, "logo");
-        }
-        if (coverToAdd) {
-          newCoverUrl = await uploadSingleImage(id as string, coverToAdd, "cover");
-        }
-        if (galleryToAdd.length > 0) {
-          newGalleryUrls = await uploadMultipleImages(id as string, galleryToAdd, "gallery");
-        }
-      } catch (error: any) {
-        showToast({
-          type: "error",
-          title: "Failed to upload images",
-          description: error.message,
-        });
-        setSaving(false);
-        return;
-      }
-
-      // ✅ Step 3: Determine final image URLs
-      const finalLogoUrl = logoToDelete ? newLogoUrl : (newLogoUrl || store.logo_url);
-      const finalCoverUrl = coverToDelete ? newCoverUrl : (newCoverUrl || store.cover_image_url);
+      const newLogoUrl = uploadedLogoUrls[0] ?? null;
+      const newCoverUrl = uploadedCoverUrls[0] ?? null;
+      const finalLogoUrl = logoToDelete ? newLogoUrl : newLogoUrl || store.logo_url;
+      const finalCoverUrl = coverToDelete ? newCoverUrl : newCoverUrl || store.cover_image_url;
       const finalGalleryUrls = [
         ...(store.gallery_urls || []).filter((url: string) => !galleryToDelete.includes(url)),
-        ...newGalleryUrls,
+        ...uploadedGalleryUrls,
       ];
 
-      // ✅ Determine cover media type (for consistency with add page)
-      const coverMediaType: "image" | "video" | null = finalCoverUrl ? "image" : null;
-
-      const tagsArray =
-        typeof store.tags === "string"
-          ? store.tags
-              .split(",")
-              .map((v: string) => v.trim())
-              .filter(Boolean)
-          : Array.isArray(store.tags)
-          ? store.tags
-          : [];
-
-      const lat =
-        store.lat !== "" && store.lat !== null && !Number.isNaN(Number(store.lat))
-          ? Number(store.lat)
-          : null;
-
-      const lng =
-        store.lng !== "" && store.lng !== null && !Number.isNaN(Number(store.lng))
-          ? Number(store.lng)
-          : null;
+      const tagsArray = Array.isArray(store.tags) ? store.tags : [];
+      const lat = typeof store.lat === "number" && !Number.isNaN(store.lat) ? store.lat : null;
+      const lng = typeof store.lng === "number" && !Number.isNaN(store.lng) ? store.lng : null;
 
       const social_links = cleanObject({
         instagram: store.instagram,
@@ -654,24 +273,19 @@ export default function StoreDetailPage() {
         maps: store.maps,
         website: store.website,
         ...(store.social_links || {}),
-      });
+      }) as Record<string, string | null | undefined>;
 
-      const payload: any = {
+      const basePayload = buildStorePayload({
+        id: String(id),
         name: store.name,
         store_type: store.store_type || "PRODUCT",
         description: store.description || null,
-
         category: categoryForSave,
         subcategory: store.subcategory || null,
-        tags: tagsArray,
-
         phone: store.phone || null,
         whatsapp: store.whatsapp || null,
         email: store.email || null,
         website: store.website || null,
-
-        social_links,
-
         location_name: store.location_name || null,
         address_line1: store.address_line1 || null,
         address_line2: store.address_line2 || null,
@@ -679,185 +293,99 @@ export default function StoreDetailPage() {
         region: store.region || null,
         country: store.country || "Mauritius",
         postal_code: store.postal_code || null,
-
         lat,
         lng,
         google_place_id: store.google_place_id || null,
-
-        // ✅ week enable/disable
-        hours: weekEnabled ? serializeHours(openingHours) : [],
-
         is_active: !!store.is_active,
         is_featured: !!store.is_featured,
-
-        // ✅ Updated images (matching add page structure)
         logo_url: finalLogoUrl || null,
-        cover_image_url: finalCoverUrl || null,
-        cover_media_url: finalCoverUrl || null, // Also set cover_media_url for consistency
-        cover_media_type: coverMediaType,
-        gallery_urls: finalGalleryUrls,
-      };
-
-      const { error } = await supabaseBrowser
-        .from("stores")
-        .update(payload)
-        .eq("id", id);
-
-      if (error) {
-        showToast({
-          type: "error",
-          title: "Update failed",
-          description: error.message,
-        });
-        setSaving(false);
-        return;
-      }
-
-      const categoriesPayload = await Promise.all(
-        catalogueApi.catalogueCategories
-          .filter((category) => category.enabled && category.title.trim())
-          .map(async (category, categoryIndex) => ({
-            id: category.persistedId,
-            clientId: category.id,
-            title: category.title.trim(),
-            starting_from: category.starting_from ? Number(category.starting_from) : null,
-            enabled: true,
-            sort_order: category.sort_order ? Number(category.sort_order) : categoryIndex,
-            items: (
-              await Promise.all(
-                category.items.map(async (item, itemIndex) => {
-                  const title = item.title.trim();
-                  const hasMeaningfulContent =
-                    title ||
-                    item.description?.trim() ||
-                    item.price.trim() ||
-                    item.imageUrl?.trim() ||
-                    item.imageFile;
-
-                  if (!hasMeaningfulContent) return null;
-
-                  let imageUrl = item.imageUrl?.trim() || null;
-                  if (item.imageFile) {
-                    imageUrl = await uploadCatalogueImage(
-                      String(id),
-                      category.persistedId || category.id,
-                      item.persistedId || item.id,
-                      item.imageFile
-                    );
-                  }
-
-                  return {
-                    id: item.persistedId,
-                    clientId: item.id,
-                    title,
-                    description: item.description?.trim() || null,
-                    price: item.price ? Number(item.price) : null,
-                    image_url: imageUrl,
-                    sku: item.sku?.trim() || null,
-                    sort_order: item.sort_order ? Number(item.sort_order) : itemIndex,
-                    is_available: !!item.is_available,
-                    item_type: item.item_type,
-                    is_billable: !!item.is_billable,
-                    duration_minutes: item.duration_minutes ? Number(item.duration_minutes) : null,
-                    supports_slot_booking: !!item.supports_slot_booking,
-                  };
-                })
-              )
-            ).filter(
-              (item): item is Exclude<typeof item, null> => item !== null
-            ),
-          }))
-      );
-
-      await syncStoreCatalogueAdmin({
-        storeId: String(id),
-        categories: categoriesPayload,
-        deletedCategoryIds: catalogueApi.deletedCategoryIds,
-        deletedItemIds: catalogueApi.deletedItemIds,
+        cover_image: finalCoverUrl || null,
       });
 
-      const refreshedCatalogue = await fetchStoreCatalogueAdmin(String(id));
-      const mappedCatalogue: CatalogueCategoryDraft[] = refreshedCatalogue.map((category) => ({
-        id: category.id || `cat_${Date.now()}`,
-        persistedId: category.id,
-        enabled: category.enabled,
-        title: category.title,
-        starting_from:
-          category.starting_from === null || category.starting_from === undefined
-            ? ""
-            : String(category.starting_from),
-        sort_order: String(category.sort_order ?? 0),
-        expanded: false,
-        items: category.items.map((item) => ({
-          id: item.id || `item_${Date.now()}`,
-          persistedId: item.id,
-          title: item.title,
-          price: item.price === null || item.price === undefined ? "" : String(item.price),
-          sku: item.sku || "",
-          description: item.description || "",
-          is_available: item.is_available,
-          sort_order: String(item.sort_order ?? 0),
-          item_type: item.item_type,
-          is_billable: item.is_billable,
-          duration_minutes:
-            item.duration_minutes === null || item.duration_minutes === undefined
-              ? ""
-              : String(item.duration_minutes),
-          supports_slot_booking: item.supports_slot_booking,
-          imageFile: null,
-          imageUrl: item.image_url || null,
-        })),
-      }));
+      const normalizedOffers: StoreOfferInput[] = (store.offers || [])
+        .filter((offer) => Boolean(offer?.title))
+        .map((offer) => ({
+          title: typeof offer.title === "string" ? offer.title : null,
+          description: typeof offer.description === "string" ? offer.description : null,
+          badge_text: typeof offer.badge_text === "string" ? offer.badge_text : null,
+          offer_type: typeof offer.offer_type === "string" ? offer.offer_type : null,
+          discount_value:
+            typeof offer.discount_value === "number" ? offer.discount_value : null,
+          min_spend: typeof offer.min_spend === "number" ? offer.min_spend : null,
+          start_at: typeof offer.start_at === "string" ? offer.start_at : null,
+          end_at: typeof offer.end_at === "string" ? offer.end_at : null,
+          is_active: typeof offer.is_active === "boolean" ? offer.is_active : true,
+          metadata:
+            offer.metadata && typeof offer.metadata === "object"
+              ? (offer.metadata as Record<string, unknown>)
+              : null,
+        }));
+      const normalizedPayment = {
+        legal_business_name: payment.legal_business_name.trim(),
+        display_name_on_invoice: payment.display_name_on_invoice?.trim() || null,
+        payout_method: payment.payout_method,
+        beneficiary_name: payment.beneficiary_name?.trim() || null,
+        bank_name: payment.bank_name?.trim() || null,
+        account_number: payment.account_number?.trim() || null,
+        ifsc: payment.ifsc?.trim() || null,
+        iban: payment.iban?.trim() || null,
+        swift: payment.swift?.trim() || null,
+        payout_upi_id: payment.payout_upi_id?.trim() || null,
+        settlement_cycle: payment.settlement_cycle,
+        commission_percent: payment.commission_percent
+          ? Number(payment.commission_percent)
+          : null,
+        currency: payment.currency || "MUR",
+        tax_id_label: payment.tax_id_label || null,
+        tax_id_value: payment.tax_id_value?.trim() || null,
+        billing_email: payment.billing_email?.trim() || null,
+        billing_phone: payment.billing_phone?.trim() || null,
+        kyc_status: payment.kyc_status,
+        notes: payment.notes?.trim() || null,
+      };
+
+      const { error: updateError } = await supabaseBrowser
+        .from("stores")
+        .update(basePayload)
+        .eq("id", String(id));
+
+      if (updateError) throw updateError;
+
+      await Promise.all([
+        replaceStoreRelations(String(id), {
+          tags: tagsArray,
+          social_links,
+          offers: normalizedOffers,
+          subscription: store.subscription || null,
+          gallery_urls: finalGalleryUrls,
+          logo_url: finalLogoUrl || null,
+          cover_image_url: finalCoverUrl || null,
+          cover_video_url:
+            store.cover_media_type === "video" && !coverToDelete
+              ? store.cover_media_url
+              : null,
+        }),
+        upsertStorePaymentDetails(String(id), normalizedPayment),
+      ]);
+
+      const refreshedStore = await fetchStoreDetail(String(id));
 
       showToast({ type: "success", title: "Store updated" });
       setEditMode(false);
-
-      // ✅ Refresh originals and reset image state
-      const merged = {
-        ...store,
-        ...payload,
-        tags: payload.tags,
-        hours: payload.hours,
-        social_links: payload.social_links,
-        lat: payload.lat,
-        lng: payload.lng,
-        logo_url: finalLogoUrl,
-        cover_image_url: finalCoverUrl,
-        cover_media_url: finalCoverUrl,
-        cover_media_type: coverMediaType,
-        gallery_urls: finalGalleryUrls,
-      };
-      setStore(merged);
-      setStoreOriginal(merged);
-      
-      // Log the saved cover image URL for debugging
-      console.log("✅ Store saved successfully. Cover Image URL:", finalCoverUrl);
-      console.log("✅ Cover Media URL:", finalCoverUrl);
-      console.log("✅ Cover Media Type:", coverMediaType);
-      
-      catalogueApi.replaceCatalogue(mappedCatalogue);
-      catalogueApi.clearDeletedTracking();
-      setCatalogueOriginal(mappedCatalogue);
-      setOpeningHoursOriginal(openingHours);
+      applyStoreState(refreshedStore);
       setLogoToAdd(null);
       setCoverToAdd(null);
       setGalleryToAdd([]);
       setLogoToDelete(false);
       setCoverToDelete(false);
-      
-      // Verify data was persisted by fetching fresh from Supabase
-      setTimeout(() => {
-        refreshStoreData();
-      }, 500);
       setGalleryToDelete([]);
-
-      setSaving(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       showToast({
         type: "error",
         title: "Failed to update store",
-        description: err.message,
+        description: err instanceof Error ? err.message : "Unable to update store.",
       });
+    } finally {
       setSaving(false);
     }
   };
@@ -951,53 +479,72 @@ export default function StoreDetailPage() {
           </Field>
 
           <Field label="Category">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!editMode}
-                  className="w-full justify-between bg-white border-gray-300"
+            {hasMounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!editMode}
+                    className="w-full justify-between bg-white border-gray-300"
+                  >
+                    {selectedStoreCategories.length
+                      ? `${selectedStoreCategories.length} categories selected`
+                      : getCategorySelectLabel(
+                          ((store.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT")
+                        )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  sideOffset={6}
+                  className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
                 >
-                  {selectedStoreCategories.length
-                    ? `${selectedStoreCategories.length} categories selected`
-                    : "Select categories"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                sideOffset={6}
-                className="z-[9999] w-[420px] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-md border border-gray-300 bg-white shadow-xl"
-              >
-                {categoryOptions.length ? (
-                  categoryOptions.map((category) => (
-                    <DropdownMenuCheckboxItem
-                      key={category}
-                      checked={selectedStoreCategories.includes(category)}
-                      onCheckedChange={(checked) => {
-                        const next =
-                          checked === true
-                            ? selectedStoreCategories.includes(category)
-                              ? selectedStoreCategories
-                              : [...selectedStoreCategories, category]
-                            : selectedStoreCategories.filter((item: string) => item !== category);
+                  {categoryOptions.length ? (
+                    categoryOptions.map((category) => (
+                      <DropdownMenuCheckboxItem
+                        key={category}
+                        checked={selectedStoreCategories.includes(category)}
+                        onCheckedChange={(checked) => {
+                          const next =
+                            checked === true
+                              ? selectedStoreCategories.includes(category)
+                                ? selectedStoreCategories
+                                : [...selectedStoreCategories, category]
+                              : selectedStoreCategories.filter((item: string) => item !== category);
 
-                        setStore({
-                          ...store,
-                          category: next.join(", "),
-                        });
-                      }}
-                    >
-                      {category}
-                    </DropdownMenuCheckboxItem>
-                  ))
-                ) : (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No store mood categories found
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                          setStore({
+                            ...store,
+                            category: next.join(", "),
+                          });
+                        }}
+                      >
+                        {category}
+                      </DropdownMenuCheckboxItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      {getCategorySourceEmptyLabel(
+                        ((store.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT")
+                      )}
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                disabled
+                className="w-full justify-between bg-white border-gray-300"
+              >
+                {selectedStoreCategories.length
+                  ? `${selectedStoreCategories.length} categories selected`
+                  : getCategorySelectLabel(
+                      ((store.store_type as "PRODUCT" | "SERVICE" | null) || "PRODUCT")
+                    )}
+              </Button>
+            )}
             {selectedStoreCategories.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {selectedStoreCategories.map((category: string) => (
@@ -1030,7 +577,15 @@ export default function StoreDetailPage() {
                   ? store.tags.join(", ")
                   : (store.tags ?? "")
               }
-              onChange={(e) => setStore({ ...store, tags: e.target.value })}
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  tags: e.target.value
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean),
+                })
+              }
             />
           </Field>
         </Grid>
@@ -1124,6 +679,239 @@ export default function StoreDetailPage() {
         </Grid>
       </Section>
 
+      <Section title="Payment & Settlement">
+        <Grid>
+          <Field label="Legal Business Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.legal_business_name}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, legal_business_name: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Invoice Display Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.display_name_on_invoice || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, display_name_on_invoice: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Payout Method">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.payout_method}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  payout_method: e.target.value as PaymentDetails["payout_method"],
+                }))
+              }
+            >
+              <option value="BANK_TRANSFER">BANK_TRANSFER</option>
+              <option value="UPI">UPI</option>
+              <option value="MANUAL">MANUAL</option>
+            </select>
+          </Field>
+
+          <Field label="Settlement Cycle">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.settlement_cycle}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  settlement_cycle: e.target.value as PaymentDetails["settlement_cycle"],
+                }))
+              }
+            >
+              <option value="T+0">T+0</option>
+              <option value="T+1">T+1</option>
+              <option value="T+2">T+2</option>
+              <option value="WEEKLY">WEEKLY</option>
+              <option value="MONTHLY">MONTHLY</option>
+            </select>
+          </Field>
+
+          <Field label="Beneficiary Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.beneficiary_name || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, beneficiary_name: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Bank Name">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.bank_name || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, bank_name: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Account Number">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.account_number || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, account_number: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="UPI ID">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.payout_upi_id || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, payout_upi_id: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="IFSC">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.ifsc || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, ifsc: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="IBAN">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.iban || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, iban: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="SWIFT">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.swift || ""}
+              onChange={(e) => setPayment((prev) => ({ ...prev, swift: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Commission Percent">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.commission_percent || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, commission_percent: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Currency">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.currency}
+              onChange={(e) => setPayment((prev) => ({ ...prev, currency: e.target.value }))}
+            />
+          </Field>
+
+          <Field label="Tax ID Label">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.tax_id_label || "VAT"}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  tax_id_label: e.target.value as PaymentDetails["tax_id_label"],
+                }))
+              }
+            >
+              <option value="VAT">VAT</option>
+              <option value="GST">GST</option>
+              <option value="BRN">BRN</option>
+              <option value="TIN">TIN</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </Field>
+
+          <Field label="Tax ID Value">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.tax_id_value || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, tax_id_value: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Billing Email">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.billing_email || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, billing_email: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="Billing Phone">
+            <Input
+              className={inputClass}
+              disabled={!editMode}
+              value={payment.billing_phone || ""}
+              onChange={(e) =>
+                setPayment((prev) => ({ ...prev, billing_phone: e.target.value }))
+              }
+            />
+          </Field>
+
+          <Field label="KYC Status">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={payment.kyc_status}
+              onChange={(e) =>
+                setPayment((prev) => ({
+                  ...prev,
+                  kyc_status: e.target.value as PaymentDetails["kyc_status"],
+                }))
+              }
+            >
+              <option value="NOT_STARTED">NOT_STARTED</option>
+              <option value="PENDING">PENDING</option>
+              <option value="VERIFIED">VERIFIED</option>
+            </select>
+          </Field>
+        </Grid>
+
+        <Field label="Notes">
+          <Textarea
+            className={inputClass}
+            disabled={!editMode}
+            value={payment.notes || ""}
+            onChange={(e) => setPayment((prev) => ({ ...prev, notes: e.target.value }))}
+          />
+        </Field>
+      </Section>
+
       {/* LOCATION */}
       <Section title="Location">
         <Grid>
@@ -1188,7 +976,12 @@ export default function StoreDetailPage() {
               className={inputClass}
               disabled={!editMode}
               value={store.lat ?? ""}
-              onChange={(e) => setStore({ ...store, lat: e.target.value })}
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  lat: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
             />
           </Field>
 
@@ -1197,7 +990,12 @@ export default function StoreDetailPage() {
               className={inputClass}
               disabled={!editMode}
               value={store.lng ?? ""}
-              onChange={(e) => setStore({ ...store, lng: e.target.value })}
+              onChange={(e) =>
+                setStore({
+                  ...store,
+                  lng: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
             />
           </Field>
 
@@ -1221,102 +1019,6 @@ export default function StoreDetailPage() {
             />
           </Field>
         </Grid>
-      </Section>
-
-      {/* ✅ WEEK ENABLE / DISABLE */}
-      <Section title="Weekly Schedule">
-        <div className="flex items-center gap-4">
-          <span className="text-sm">Enable opening hours for this week</span>
-          <Switch
-            checked={weekEnabled}
-            disabled={!editMode}
-            onCheckedChange={setWeekEnabled}
-            className="data-[state=unchecked]:bg-rose-500 data-[state=checked]:bg-blue-600"
-          />
-          <span
-            className={`text-sm font-medium ${weekEnabled ? "text-blue-700" : "text-rose-600"}`}
-          >
-            {weekEnabled ? "Open" : "Closed"}
-          </span>
-        </div>
-        {!weekEnabled && (
-          <p className="text-xs text-gray-500">
-            Week disabled: hours will be saved as empty (store closed for the week).
-          </p>
-        )}
-      </Section>
-
-      {/* OPENING HOURS */}
-      <Section title="Opening Hours">
-        {DAYS.map((day) => (
-          <div key={day} className="space-y-3 rounded-md border border-gray-200 p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{day}</span>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  disabled={!editMode || !weekEnabled}
-                  checked={!!openingHours[day]?.closed}
-                  onChange={(e) =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: {
-                        ...prev[day],
-                        closed: e.target.checked,
-                        open: e.target.checked ? "" : (prev[day]?.open || ""),
-                        close: e.target.checked ? "" : (prev[day]?.close || ""),
-                      },
-                    }))
-                  }
-                />
-                <span className="text-sm text-gray-600">Closed</span>
-              </div>
-            </div>
-
-            {!openingHours[day]?.closed && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select
-                  disabled={!editMode || !weekEnabled}
-                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-                  value={openingHours[day]?.open || ""}
-                  onChange={(e) =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: { ...prev[day], open: e.target.value },
-                    }))
-                  }
-                >
-                  <option value="">Open</option>
-                  {HOUR_OPTIONS.map((t) => (
-                    <option key={`${day}-open-${t}`} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  disabled={!editMode || !weekEnabled}
-                  className="border rounded-md px-3 py-2 text-sm bg-white disabled:bg-gray-100"
-                  value={openingHours[day]?.close || ""}
-                  onChange={(e) =>
-                    setOpeningHours((prev) => ({
-                      ...prev,
-                      [day]: { ...prev[day], close: e.target.value },
-                    }))
-                  }
-                >
-                  <option value="">Close</option>
-                  {HOUR_OPTIONS.map((t) => (
-                    <option key={`${day}-close-${t}`} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
       </Section>
 
       {/* IMAGES */}
@@ -1454,30 +1156,6 @@ export default function StoreDetailPage() {
         </div>
       </Section>
 
-      <CatalogueSection
-        openSection={catalogueOpenSection}
-        onToggle={(next) =>
-          setCatalogueOpenSection((current) => (current === next ? null : next))
-        }
-        preserveScroll={(fn) => fn()}
-        storeType={(store.store_type as "PRODUCT" | "SERVICE") || "PRODUCT"}
-        catalogueCategories={catalogueApi.catalogueCategories}
-        customCategoryTitle={catalogueApi.customCategoryTitle}
-        setCustomCategoryTitle={catalogueApi.setCustomCategoryTitle}
-        customCategoryStartingFrom={catalogueApi.customCategoryStartingFrom}
-        setCustomCategoryStartingFrom={catalogueApi.setCustomCategoryStartingFrom}
-        customCategorySortOrder={catalogueApi.customCategorySortOrder}
-        setCustomCategorySortOrder={catalogueApi.setCustomCategorySortOrder}
-        toggleCategoryEnabled={catalogueApi.toggleCategoryEnabled}
-        toggleCategoryExpanded={catalogueApi.toggleCategoryExpanded}
-        addCategory={catalogueApi.addCategory}
-        removeCategory={catalogueApi.removeCategory}
-        updateCategoryField={catalogueApi.updateCategoryField}
-        addItemToCategory={catalogueApi.addItemToCategory}
-        removeItemFromCategory={catalogueApi.removeItemFromCategory}
-        updateItem={catalogueApi.updateItem}
-      />
-
       {/* SYSTEM (Read Only) */}
       <Section title="System Info (Read Only)">
         <Grid>
@@ -1497,25 +1175,25 @@ export default function StoreDetailPage() {
 
 /* ---------------- HELPERS ---------------- */
 
-const Section = ({ title, children }: any) => (
+const Section = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="space-y-4">
     <h2 className="text-lg font-semibold">{title}</h2>
     {children}
   </section>
 );
 
-const Field = ({ label, children }: any) => (
+const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1">
     <label className="text-xs text-gray-500 uppercase">{label}</label>
     {children}
   </div>
 );
 
-const Grid = ({ children }: any) => (
+const Grid = ({ children }: { children: ReactNode }) => (
   <div className="grid grid-cols-2 gap-6">{children}</div>
 );
 
-const ReadOnly = ({ label, value }: any) => (
+const ReadOnly = ({ label, value }: { label: string; value: ReactNode }) => (
   <div>
     <label className="text-xs text-gray-500 uppercase">{label}</label>
     <div className="text-sm font-medium">{value ?? "-"}</div>
@@ -1537,28 +1215,30 @@ const EditableSingleImage = ({
   src: string | null;
   onDelete: () => void;
   disabled: boolean;
-}) => (
-  <div className="space-y-2">
-    <h3 className="text-sm font-medium">{title}</h3>
-    {src ? (
-      <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
-        <img src={src} className="w-full h-full object-cover" alt={title} />
-        {!disabled && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-            aria-label="Delete image"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
-    ) : (
-      <p className="text-sm text-gray-400">No image</p>
-    )}
-  </div>
-);
+}) => {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">{title}</h3>
+      {src ? (
+        <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
+          <img src={src} className="w-full h-full object-cover" alt={title} />
+          {!disabled && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+              aria-label="Delete image"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400">No image</p>
+      )}
+    </div>
+  );
+};
 
 /**
  * Single File Preview - shows preview of newly selected file with remove button
@@ -1600,32 +1280,34 @@ const EditableImageGrid = ({
   images: string[];
   onDelete: (url: string) => void;
   disabled: boolean;
-}) => (
-  <div className="space-y-2">
-    <h3 className="text-sm font-medium">{title}</h3>
-    <div className="grid grid-cols-4 gap-3">
-      {images?.length ? (
-        images.map((src: string, i: number) => (
-          <div key={i} className="relative h-32 rounded-md overflow-hidden border">
-            <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => onDelete(src)}
-                className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-                aria-label="Delete image"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        ))
-      ) : (
-        <p className="text-sm text-gray-400">No images</p>
-      )}
+}) => {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">{title}</h3>
+      <div className="grid grid-cols-4 gap-3">
+        {images?.length ? (
+          images.map((src: string, i: number) => (
+            <div key={i} className="relative h-32 rounded-md overflow-hidden border">
+              <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(src)}
+                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+                  aria-label="Delete image"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-400">No images</p>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * File Preview Grid - shows newly selected files with remove buttons

@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/hooks/useToast";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -61,6 +62,9 @@ const initialForm: CardFormState = {
   sort_order: "100",
 };
 
+const CARD_CACHE_TTL_MS = 30_000;
+const cardCache = new Map<string, { data: PassPriveCard[]; expiresAt: number }>();
+
 type PassPriveCardManagerProps = {
   apiPath: string;
   basePath: string;
@@ -73,6 +77,8 @@ type PassPriveCardManagerProps = {
   icon: LucideIcon;
   editIconSrc?: string;
   manageIconSrc?: string;
+  supabaseTable?: string;
+  supabaseItemsTable?: string;
 };
 
 function extractCards(payload: unknown): PassPriveCard[] {
@@ -127,14 +133,14 @@ export default function PassPriveCardManager({
   apiPath,
   basePath,
   pageTitle,
-  description,
   searchPlaceholder,
   emptyTitle,
   emptyDescription,
   detailLabel,
-  icon: Icon,
   editIconSrc,
   manageIconSrc,
+  supabaseTable,
+  supabaseItemsTable,
 }: PassPriveCardManagerProps) {
   const [cards, setCards] = useState<PassPriveCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -154,6 +160,52 @@ export default function PassPriveCardManager({
   const loadCards = useCallback(async () => {
     try {
       setLoading(true);
+      const cacheKey = supabaseTable ? `sb:${supabaseTable}:${supabaseItemsTable || ""}` : `api:${apiPath}`;
+      const cached = cardCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        setCards(cached.data);
+        setLoading(false);
+        return;
+      }
+
+      if (supabaseTable) {
+        const { data, error } = await supabaseBrowser
+          .from(supabaseTable)
+          .select("id,title,subtitle,city,is_active,sort_order,updated_at")
+          .order("sort_order", { ascending: true });
+
+        if (error) throw error;
+
+        let countsByCardId = new Map<string, number>();
+        if (supabaseItemsTable) {
+          const cardIds = (data || []).map((card) => String(card.id));
+          if (cardIds.length > 0) {
+            const { data: itemRows, error: itemsError } = await supabaseBrowser
+              .from(supabaseItemsTable)
+              .select("card_id")
+              .in("card_id", cardIds);
+
+            if (itemsError) throw itemsError;
+
+            countsByCardId = (itemRows || []).reduce((accumulator, row) => {
+              const cardId = typeof row.card_id === "string" ? row.card_id : null;
+              if (!cardId) return accumulator;
+              accumulator.set(cardId, (accumulator.get(cardId) || 0) + 1);
+              return accumulator;
+            }, new Map<string, number>());
+          }
+        }
+
+        const nextCards = ((data as PassPriveCard[] | null) || []).map((card) => ({
+            ...card,
+            item_count: countsByCardId.get(card.id) || 0,
+          }));
+
+        setCards(nextCards);
+        cardCache.set(cacheKey, { data: nextCards, expiresAt: Date.now() + CARD_CACHE_TTL_MS });
+        return;
+      }
+
       const response = await fetch(`${API_BASE}${apiPath}`, {
         method: "GET",
         cache: "no-store",
@@ -164,7 +216,9 @@ export default function PassPriveCardManager({
       }
 
       const payload = await parseResponse(response);
-      setCards(extractCards(payload));
+      const nextCards = extractCards(payload);
+      setCards(nextCards);
+      cardCache.set(cacheKey, { data: nextCards, expiresAt: Date.now() + CARD_CACHE_TTL_MS });
     } catch (error: unknown) {
       showToast({
         type: "error",
@@ -175,7 +229,7 @@ export default function PassPriveCardManager({
     } finally {
       setLoading(false);
     }
-  }, [apiPath, pageTitle]);
+  }, [apiPath, pageTitle, supabaseItemsTable, supabaseTable]);
 
   useEffect(() => {
     void loadCards();
@@ -225,21 +279,32 @@ export default function PassPriveCardManager({
 
     try {
       setSaving(true);
-      const endpoint = editingCard ? `${API_BASE}${apiPath}/${editingCard.id}` : `${API_BASE}${apiPath}`;
+      if (supabaseTable) {
+        const query = editingCard
+          ? supabaseBrowser.from(supabaseTable).update(payload).eq("id", editingCard.id)
+          : supabaseBrowser.from(supabaseTable).insert(payload);
 
-      const response = await fetch(endpoint, {
-        method: editingCard ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+        const { error } = await query;
+        if (error) throw error;
+      } else {
+        const endpoint = editingCard ? `${API_BASE}${apiPath}/${editingCard.id}` : `${API_BASE}${apiPath}`;
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to save card."));
+        const response = await fetch(endpoint, {
+          method: editingCard ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to save card."));
+        }
       }
 
       showToast({ title: editingCard ? "Card updated" : "Card created" });
+      const cacheKey = supabaseTable ? `sb:${supabaseTable}:${supabaseItemsTable || ""}` : `api:${apiPath}`;
+      cardCache.delete(cacheKey);
       setDialogOpen(false);
       setEditingCard(null);
       setForm(initialForm);
@@ -260,15 +325,27 @@ export default function PassPriveCardManager({
 
     try {
       setSaving(true);
-      const response = await fetch(`${API_BASE}${apiPath}/${deletingCard.id}`, {
-        method: "DELETE",
-      });
+      if (supabaseTable) {
+        if (supabaseItemsTable) {
+          const { error: itemsError } = await supabaseBrowser.from(supabaseItemsTable).delete().eq("card_id", deletingCard.id);
+          if (itemsError) throw itemsError;
+        }
 
-      if (!response.ok) {
-        throw new Error(await getErrorFromResponse(response, "Failed to delete card."));
+        const { error } = await supabaseBrowser.from(supabaseTable).delete().eq("id", deletingCard.id);
+        if (error) throw error;
+      } else {
+        const response = await fetch(`${API_BASE}${apiPath}/${deletingCard.id}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error(await getErrorFromResponse(response, "Failed to delete card."));
+        }
       }
 
       showToast({ title: "Card deleted" });
+      const cacheKey = supabaseTable ? `sb:${supabaseTable}:${supabaseItemsTable || ""}` : `api:${apiPath}`;
+      cardCache.delete(cacheKey);
       setDeletingCard(null);
       await loadCards();
     } catch (error: unknown) {
@@ -301,7 +378,7 @@ export default function PassPriveCardManager({
           background: "#FFFFFF4D",
         }}
       >
-        <div className="flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6">
+        <div className="flex-1 px-4 pb-8 pt-6 sm:px-5 lg:px-6 lg:pt-7">
           <Card
             className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
             style={{
@@ -309,13 +386,13 @@ export default function PassPriveCardManager({
                 "linear-gradient(310.35deg, rgba(255, 255, 255, 0.4) 4.07%, rgba(255, 255, 255, 0.3) 48.73%, rgba(255, 255, 255, 0.2) 100%)",
             }}
           >
-            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-4 py-4 sm:px-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <CardHeader className="space-y-5 border-b border-slate-100/90 bg-white/70 px-5 py-5 sm:px-6 sm:py-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <CardTitle className="text-[18px] leading-6 text-slate-900">Cards</CardTitle>
-                  <CardDescription className="mt-1 text-[12px] leading-5 text-slate-500">Create cards, adjust order, and open item management for each card.</CardDescription>
+                  <CardTitle className="text-[19px] leading-7 tracking-tight text-slate-900">Cards</CardTitle>
+                  <CardDescription className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-500">Create cards, adjust order, and open item management for each card.</CardDescription>
                 </div>
-                <Button className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreateDialog}>
+                <Button className="h-11 rounded-2xl bg-[#5800AB] px-6 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add new card
                 </Button>
@@ -327,12 +404,12 @@ export default function PassPriveCardManager({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={searchPlaceholder}
-                  className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
+                  className="h-11 rounded-2xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
                 />
               </div>
             </CardHeader>
 
-            <CardContent className="px-4 py-4 sm:px-5">
+            <CardContent className="px-5 py-6 sm:px-6 sm:py-6">
               {loading ? (
                 <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -344,38 +421,47 @@ export default function PassPriveCardManager({
                   <p className="mt-2 text-sm text-slate-500">{emptyDescription}</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {filteredCards.map((card) => (
                     <div
                       key={card.id}
-                      className="rounded-[14px] border border-slate-200/80 px-4 py-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
+                      className="rounded-2xl border border-slate-200/80 px-5 py-5 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
                       style={{
                         background:
                           "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
                       }}
                     >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="truncate text-[14px] font-semibold leading-5 text-slate-900">{card.title}</p>
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <p className="truncate text-[15px] font-semibold leading-6 text-slate-900">{card.title}</p>
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${card.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                               {card.is_active ? "Active" : "Inactive"}
                             </span>
                           </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-500">{card.subtitle || "No subtitle added yet."}</p>
-                          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
+                          <p className="mt-1.5 text-[13px] leading-6 text-slate-500">{card.subtitle || "No subtitle added yet."}</p>
+                          <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] leading-4 text-slate-400">
                             <span>Sort: {card.sort_order ?? 0}</span>
                             <span>Items: {itemCount(card)}</span>
                             <span>Updated: {formatDate(card.updated_at)}</span>
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                          <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(card)}>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+                          <Button variant="outline" className="h-10 rounded-xl border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(card)}>
                             {editIconSrc ? <Image src={editIconSrc} alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" /> : null}
                             Edit
                           </Button>
-                          <Button asChild variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
+                          <Button
+                            variant="destructive"
+                            className="h-10 rounded-xl bg-red-600 px-4 text-[13px] font-medium text-white hover:bg-red-700"
+                            onClick={() => setDeletingCard(card)}
+                            disabled={saving}
+                          >
+                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                          <Button asChild variant="outline" className="h-10 rounded-xl border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
                             <Link href={`${basePath}/${card.id}`}>
                               {manageIconSrc ? <Image src={manageIconSrc} alt="Manage" width={14} height={14} className="mr-2 h-3.5 w-3.5" /> : null}
                               {detailLabel}
@@ -464,7 +550,7 @@ export default function PassPriveCardManager({
       </Dialog>
 
       <AlertDialog open={Boolean(deletingCard)} onOpenChange={(open) => !open && setDeletingCard(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this card?</AlertDialogTitle>
             <AlertDialogDescription>

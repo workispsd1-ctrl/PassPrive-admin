@@ -1,6 +1,6 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-export const RESTAURANT_STORAGE_BUCKET = "restaurants";
+export const RESTAURANT_STORAGE_BUCKET = "restaurant";
 export const RESTAURANT_STORAGE_PREFIX = "restaurant";
 
 export const DAY_NAMES = [
@@ -79,6 +79,8 @@ export type RestaurantFlatRecord = {
   ad_ends_at: string | null;
   ad_badge_text: string | null;
   booking_terms: string[] | null;
+  on_boarded: boolean;
+  created_creds: boolean;
   cuisines: string[];
   facilities: string[];
   highlights: string[];
@@ -139,10 +141,35 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function toDateTimeLocal(value: unknown): string | null {
+  const raw = asString(value);
+  if (!raw) return null;
+
+  // Already in datetime-local format (or with seconds) from previous edits.
+  const directMatch = raw.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+  if (directMatch?.[1]) return directMatch[1];
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+  return local;
+}
+
 function asNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function asNumberFromKeys(row: DatabaseRow, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = asNumber(row?.[key]);
+    if (value !== null) return value;
+  }
+  return null;
 }
 
 function asBoolean(value: unknown, fallback = false): boolean {
@@ -225,8 +252,27 @@ function computeReviewSummary(reviews: DatabaseRow[]) {
 function dayNameFromValue(dayOfWeek: unknown): DayName | null {
   if (typeof dayOfWeek === "string") {
     const normalized = dayOfWeek.trim().toLowerCase();
+    const numericDay = Number(normalized);
+    if (Number.isFinite(numericDay)) {
+      if (numericDay >= 1 && numericDay <= 7) return DAY_NAMES[numericDay - 1];
+      if (numericDay === 0) return "Sunday";
+    }
     const match = DAY_NAMES.find((day) => day.toLowerCase() === normalized);
     if (match) return match;
+
+    const aliases: Record<string, DayName> = {
+      mon: "Monday",
+      tue: "Tuesday",
+      tues: "Tuesday",
+      wed: "Wednesday",
+      thu: "Thursday",
+      thur: "Thursday",
+      thurs: "Thursday",
+      fri: "Friday",
+      sat: "Saturday",
+      sun: "Sunday",
+    };
+    if (aliases[normalized]) return aliases[normalized];
   }
 
   if (typeof dayOfWeek === "number" && Number.isFinite(dayOfWeek)) {
@@ -245,6 +291,19 @@ function emptyOpeningHours(): Record<string, DayHours> {
   }, {});
 }
 
+function normalizeTimeForHourSlot(value: unknown): string {
+  const raw = asString(value);
+  if (!raw) return "";
+
+  // Supports DB time formats like HH:mm:ss or HH:mm.
+  const hhmmMatch = raw.match(/^(\d{2}):(\d{2})/);
+  if (hhmmMatch) return `${hhmmMatch[1]}:${hhmmMatch[2]}`;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return `${String(parsed.getHours()).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`;
+}
+
 function normalizeOpeningHours(rows: DatabaseRow[]): Record<string, DayHours> {
   const result = emptyOpeningHours();
 
@@ -253,8 +312,8 @@ function normalizeOpeningHours(rows: DatabaseRow[]): Record<string, DayHours> {
     if (!dayName) continue;
 
     const normalized: DayHours = {
-      open: asString(row?.open_time) ?? "",
-      close: asString(row?.close_time) ?? "",
+      open: normalizeTimeForHourSlot(row?.open_time),
+      close: normalizeTimeForHourSlot(row?.close_time),
       closed: Boolean(row?.is_closed),
     };
 
@@ -288,20 +347,30 @@ function mediaUrls(rows: DatabaseRow[], assetType: string): string[] {
 }
 
 function normalizeOfferRow(row: DatabaseRow): RestaurantOfferInput {
+  const metadata =
+    row?.metadata && typeof row.metadata === "object"
+      ? (row.metadata as Record<string, unknown>)
+      : null;
+  const uiOfferType = typeof metadata?.offer_type_ui === "string" ? metadata.offer_type_ui : null;
+  const normalizedOfferType = (() => {
+    const rawOfferType = asString(row?.offer_type);
+    if (rawOfferType === "PERCENTAGE" || rawOfferType === "PERCENT") return "percentage";
+    if (rawOfferType === "FLAT") return "flat";
+    if (rawOfferType === "CASHBACK") return "cover_discount";
+    return rawOfferType;
+  })();
+
   return {
     title: asString(row?.title) ?? "",
     description: asString(row?.description),
     badge_text: asString(row?.badge_text),
-    offer_type: asString(row?.offer_type),
+    offer_type: uiOfferType || normalizedOfferType,
     discount_value: asNumber(row?.discount_value),
     min_spend: asNumber(row?.min_spend),
-    start_at: asString(row?.start_at),
-    end_at: asString(row?.end_at),
+    start_at: toDateTimeLocal(row?.start_at),
+    end_at: toDateTimeLocal(row?.end_at),
     is_active: row?.is_active !== false,
-    metadata:
-      row?.metadata && typeof row.metadata === "object"
-        ? (row.metadata as Record<string, unknown>)
-        : null,
+    metadata,
   };
 }
 
@@ -324,8 +393,8 @@ function pickActiveSubscription(rows: DatabaseRow[]): RestaurantSubscriptionInpu
     time_slot_enabled: asBoolean(active?.time_slot_enabled),
     repeat_rewards_enabled: asBoolean(active?.repeat_rewards_enabled),
     dish_discounts_enabled: asBoolean(active?.dish_discounts_enabled),
-    starts_at: asString(active?.starts_at),
-    expires_at: asString(active?.expires_at),
+    starts_at: toDateTimeLocal(active?.starts_at),
+    expires_at: toDateTimeLocal(active?.expires_at),
   };
 }
 
@@ -341,6 +410,7 @@ export function normalizeRestaurantRecord({
   const normalizedSubscription = pickActiveSubscription(subscriptions);
   const normalizedOffers = sortByOrder(offers).map(normalizeOfferRow);
   const ratings = computeReviewSummary(reviews);
+  const restaurantRow = restaurant as DatabaseRow;
 
   return {
     id: String(restaurant?.id || ""),
@@ -360,20 +430,22 @@ export function normalizeRestaurantRecord({
     is_pure_veg: asBoolean(restaurant?.is_pure_veg),
     booking_enabled: restaurant?.booking_enabled !== false,
     avg_duration_minutes: asNumber(restaurant?.avg_duration_minutes),
-    max_bookings_per_slot: asNumber(restaurant?.max_bookings_per_slot),
+    max_bookings_per_slot: asNumberFromKeys(restaurantRow, ["max_bookings_per_slot", "max_booking_per_slot"]),
     advance_booking_days: asNumber(restaurant?.advance_booking_days),
     modification_available: asBoolean(restaurant?.modification_available),
-    modification_cutoff_minutes: asNumber(restaurant?.modification_cutoff_minutes),
+    modification_cutoff_minutes: asNumberFromKeys(restaurantRow, ["modification_cutoff_minutes", "modification_cutoff"]),
     cancellation_available: asBoolean(restaurant?.cancellation_available),
-    cancellation_cutoff_minutes: asNumber(restaurant?.cancellation_cutoff_minutes),
+    cancellation_cutoff_minutes: asNumberFromKeys(restaurantRow, ["cancellation_cutoff_minutes", "cancellation_cutoff"]),
     cover_charge_enabled: asBoolean(restaurant?.cover_charge_enabled),
-    cover_charge_amount: asNumber(restaurant?.cover_charge_amount),
+    cover_charge_amount: asNumberFromKeys(restaurantRow, ["cover_charge_amount", "cover_amount"]),
     created_at: asString(restaurant?.created_at),
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
+    on_boarded: restaurant?.on_boarded === true,
+    created_creds: restaurant?.created_creds === true,
     ad_priority: asNumber(restaurant?.ad_priority),
-    ad_starts_at: asString(restaurant?.ad_starts_at),
-    ad_ends_at: asString(restaurant?.ad_ends_at),
+    ad_starts_at: toDateTimeLocal(restaurant?.ad_starts_at),
+    ad_ends_at: toDateTimeLocal(restaurant?.ad_ends_at),
     ad_badge_text: asString(restaurant?.ad_badge_text),
     booking_terms: asStringArray(restaurant?.booking_terms),
     cuisines: tagValues(tags, "cuisine"),
@@ -517,7 +589,7 @@ export function extractStoragePath(publicUrl: string): string | null {
   const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
   if (objectPublicMatch?.[1]) return objectPublicMatch[1];
 
-  const bucketMatch = publicUrl.match(/\/restaurants\/(.+)$/);
+  const bucketMatch = publicUrl.match(/\/restaurant\/(.+)$/);
   return bucketMatch?.[1] ?? null;
 }
 
@@ -536,28 +608,35 @@ export async function uploadRestaurantImages(
   files: File[],
   assetType: "food" | "ambience" | "menu"
 ) {
-  const urls: string[] = [];
+  const urls: string[] = new Array(files.length).fill("");
   const uploadedPaths: string[] = [];
 
   try {
-    for (const file of files) {
-      const path = buildRestaurantStoragePath(restaurantId, assetType, file.name);
+    const batchSize = 3;
+    for (let index = 0; index < files.length; index += batchSize) {
+      const batch = files.slice(index, index + batchSize);
+      await Promise.all(
+        batch.map(async (file, batchIndex) => {
+          const fileIndex = index + batchIndex;
+          const path = buildRestaurantStoragePath(restaurantId, assetType, file.name);
 
-      const { error } = await supabaseBrowser.storage
-        .from(RESTAURANT_STORAGE_BUCKET)
-        .upload(path, file);
+          const { error } = await supabaseBrowser.storage
+            .from(RESTAURANT_STORAGE_BUCKET)
+            .upload(path, file);
 
-      if (error) throw error;
-      uploadedPaths.push(path);
+          if (error) throw error;
+          uploadedPaths.push(path);
 
-      const { data } = supabaseBrowser.storage
-        .from(RESTAURANT_STORAGE_BUCKET)
-        .getPublicUrl(path);
+          const { data } = supabaseBrowser.storage
+            .from(RESTAURANT_STORAGE_BUCKET)
+            .getPublicUrl(path);
 
-      urls.push(data.publicUrl);
+          urls[fileIndex] = data.publicUrl;
+        })
+      );
     }
 
-    return urls;
+    return urls.filter(Boolean);
   } catch (error) {
     if (uploadedPaths.length > 0) {
       const { error: cleanupError } = await supabaseBrowser.storage
@@ -587,6 +666,16 @@ export async function deleteRestaurantImages(publicUrls: string[]) {
 }
 
 export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>) {
+  const modificationCutoff = input.modification_available
+    ? asNumber(input.modification_cutoff_minutes)
+    : null;
+  const cancellationCutoff = input.cancellation_available
+    ? asNumber(input.cancellation_cutoff_minutes)
+    : null;
+  const coverChargeAmount = input.cover_charge_enabled
+    ? asNumber(input.cover_charge_amount)
+    : null;
+
   return {
     name: asString(input.name) ?? "",
     phone: asString(input.phone),
@@ -607,11 +696,12 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     max_bookings_per_slot: asNumber(input.max_bookings_per_slot),
     advance_booking_days: asNumber(input.advance_booking_days),
     modification_available: Boolean(input.modification_available),
-    modification_cutoff_minutes: asNumber(input.modification_cutoff_minutes),
+    modification_cutoff_minutes: modificationCutoff,
     cancellation_available: Boolean(input.cancellation_available),
-    cancellation_cutoff_minutes: asNumber(input.cancellation_cutoff_minutes),
+    cancellation_cutoff_minutes: cancellationCutoff,
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
-    cover_charge_amount: asNumber(input.cover_charge_amount),
+    cover_charge_amount: coverChargeAmount,
+    on_boarded: Boolean(input.on_boarded),
     is_advertised: Boolean(input.is_advertised),
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
@@ -631,6 +721,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     cancellation_available: Boolean(input.cancellation_available),
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
     is_advertised: Boolean(input.is_advertised),
+    on_boarded: Boolean(input.on_boarded),
   };
 
   const optionalValues: Record<string, unknown> = {
@@ -648,9 +739,9 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     avg_duration_minutes: asNumber(input.avg_duration_minutes),
     max_bookings_per_slot: asNumber(input.max_bookings_per_slot),
     advance_booking_days: asNumber(input.advance_booking_days),
-    modification_cutoff_minutes: asNumber(input.modification_cutoff_minutes),
-    cancellation_cutoff_minutes: asNumber(input.cancellation_cutoff_minutes),
-    cover_charge_amount: asNumber(input.cover_charge_amount),
+    modification_cutoff_minutes: input.modification_available ? asNumber(input.modification_cutoff_minutes) : null,
+    cancellation_cutoff_minutes: input.cancellation_available ? asNumber(input.cancellation_cutoff_minutes) : null,
+    cover_charge_amount: input.cover_charge_enabled ? asNumber(input.cover_charge_amount) : null,
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
@@ -763,13 +854,29 @@ function buildOfferRows(restaurantId: string, offers: RestaurantOfferInput[] | u
       title: asString(offer.title) ?? "",
       description: asString(offer.description),
       badge_text: asString(offer.badge_text),
-      offer_type: asString(offer.offer_type),
+      offer_type:
+        (() => {
+          const offerType = asString(offer.offer_type)?.toLowerCase();
+          if (offerType === "percentage" || offerType === "percent") return "percentage";
+          if (offerType === "flat") return "flat";
+          if (offerType === "cashback" || offerType === "cover_discount") return "cover_discount";
+          return offerType;
+        })(),
       discount_value: asNumber(offer.discount_value),
       min_spend: asNumber(offer.min_spend),
       start_at: asString(offer.start_at),
       end_at: asString(offer.end_at),
       is_active: offer.is_active !== false,
-      metadata: normalizeMetadata(offer.metadata),
+      metadata: (() => {
+        const metadata = { ...(normalizeMetadata(offer.metadata) || {}) };
+        const offerType = asString(offer.offer_type);
+        if (offerType && offerType.toLowerCase() === "cover_discount") {
+          metadata.offer_type_ui = "cover_discount";
+        } else {
+          delete metadata.offer_type_ui;
+        }
+        return metadata;
+      })(),
     }));
 }
 

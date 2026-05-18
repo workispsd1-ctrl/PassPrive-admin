@@ -6,8 +6,9 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/app/dashboard/_components/Modal";
 import PaginationBar from "@/app/dashboard/_components/Pagination";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
+import { deleteStoreImages, fetchStoreDetail } from "@/lib/storeAdmin";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 interface Store {
   id: string;
@@ -36,7 +37,7 @@ interface Props {
   limit: number;
   setPage: React.Dispatch<React.SetStateAction<number>>;
   setLimit: React.Dispatch<React.SetStateAction<number>>;
-  setRefresh: (v: any) => void;
+  setRefresh: (v: number) => void;
   onRowClick?: (id: string) => void;
 }
 
@@ -70,25 +71,52 @@ export const StoreTable = ({
     }
 
     setLoading(true);
+    try {
+      const existingStore = await fetchStoreDetail(confirmDelete.id).catch(() => null);
+      const urlsToDelete = Array.from(
+        new Set(
+          [
+            existingStore?.logo_url,
+            existingStore?.cover_image_url,
+            existingStore?.cover_media_type === "video" ? existingStore.cover_media_url : null,
+            ...(existingStore?.gallery_urls || []),
+          ].filter((value): value is string => Boolean(value))
+        )
+      );
 
-    const { error } = await supabaseBrowser
-      .from("stores")
-      .delete()
-      .eq("id", confirmDelete.id);
+      const token = await getTokenClient();
+      if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
 
-    if (error) {
+      const response = await fetch(`/api/stores/${confirmDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to delete store");
+      }
+
+      if (urlsToDelete.length > 0) {
+        await deleteStoreImages(urlsToDelete).catch((cleanupError) => {
+          console.error("[StoreTable] storage cleanup failed", cleanupError);
+        });
+      }
+
+      showToast({ type: "success", title: "Store deleted" });
+      setRefresh(Date.now());
+    } catch (error: unknown) {
       showToast({
         type: "error",
         title: "Delete failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Failed to delete store",
       });
-    } else {
-      showToast({ type: "success", title: "Store deleted" });
-      setRefresh(Date.now());
+    } finally {
+      setLoading(false);
+      setConfirmDelete(null);
     }
-
-    setLoading(false);
-    setConfirmDelete(null);
   };
 
   const formatLocation = (s: Store) => {

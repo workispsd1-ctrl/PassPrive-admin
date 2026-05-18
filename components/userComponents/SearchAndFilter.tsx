@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,11 @@ type SearchAndFilterProps = SearchOnlyProps | FullProps;
 
 export const SearchAndFilter = (props: SearchAndFilterProps) => {
   const isSearchOnly = props.variant === "search-only";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-center">
@@ -45,7 +51,7 @@ export const SearchAndFilter = (props: SearchAndFilterProps) => {
         />
       </div>
 
-      {!isSearchOnly && (
+      {!isSearchOnly && mounted && (
         <Select
           value={(props as FullProps).planFilter}
           onValueChange={(props as FullProps).onPlanFilterChange}

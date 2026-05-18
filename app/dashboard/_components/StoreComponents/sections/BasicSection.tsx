@@ -14,6 +14,10 @@ import {
 import { Section, Label } from "../ui";
 import { ICON_INDIGO, inputClass } from "../constants";
 import type { OpenSection, StoreFormState } from "../types";
+import {
+  getCategorySelectLabel,
+  getCategorySourceEmptyLabel,
+} from "@/lib/storeCategoryOptions";
 
 export default function BasicSection({
   openSection,
@@ -94,7 +98,7 @@ export default function BasicSection({
               >
                 {selectedCategories.length
                   ? `${selectedCategories.length} categories selected`
-                  : "Select categories"}
+                  : getCategorySelectLabel(form.store_type)}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -126,7 +130,7 @@ export default function BasicSection({
                 ))
               ) : (
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No store mood categories found
+                  {getCategorySourceEmptyLabel(form.store_type)}
                 </div>
               )}
             </DropdownMenuContent>

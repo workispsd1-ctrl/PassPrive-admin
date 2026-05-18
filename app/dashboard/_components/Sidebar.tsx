@@ -4,7 +4,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeftRight, LayoutGrid } from "lucide-react";
+import { ArrowLeftRight, BookOpen, HelpCircle, Inbox, Info, LayoutGrid } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -100,9 +100,14 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       href: "/dashboard/store-mood-categories",
       iconSrc: "/menu.png",
     },
+    {
+      title: "Service Categories",
+      href: "/dashboard/service-categories",
+      iconSrc: "/menu.png",
+    },
     { title: "Home Banners", href: "/dashboard/offers", iconSrc: "/bankoffers.png" },
     { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/bankoffers.png" },
-    { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
+    // { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
     { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
 
     {
@@ -129,6 +134,26 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       title: "Transactions",
       href: "/dashboard/transactions",
       icon: ArrowLeftRight,
+    },
+    {
+      title: "Support Inbox",
+      href: "/dashboard/support-inbox",
+      icon: Inbox,
+    },
+    {
+      title: "FAQ",
+      href: "/dashboard/faq",
+      icon: HelpCircle,
+    },
+    {
+      title: "Help Topics",
+      href: "/dashboard/help-center",
+      icon: BookOpen,
+    },
+    {
+      title: "About",
+      href: "/dashboard/about",
+      icon: Info,
     },
     //{ title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
     //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },

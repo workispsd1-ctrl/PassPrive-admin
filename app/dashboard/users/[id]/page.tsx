@@ -25,8 +25,9 @@ interface Subscription {
 
 interface UserSubscription {
     id: string;
-    display_name: string;
-    subscription: string;
+  full_name: string;
+  membership: string | null;
+  membership_tier: string | null;
     user_subscription: Subscription[]
 }
 
@@ -51,20 +52,19 @@ function UserSubscriptionsPage() {
       try {
         const { data, error } = await supabaseBrowser
           .from("users")
-          .select("*, user_subscription(*)", {
+          .select("full_name, membership, membership_tier, role, user_subscription(*)", {
             count: "exact",
           })
           .eq("id", userId)
           .eq("role", "user")
-          .order("created_at", { ascending: false })
-          .range((page - 1) * limit, page * limit - 1);
+          .single();
 
           if (error) {
             setError(error.message);
             throw new Error(error.message);
         }
-        setSubscriptions(data[0]);
-        setTotal(data.reduce((total, user) => total + user.user_subscription.length, 0));
+        setSubscriptions(data);
+        setTotal(data?.user_subscription?.length || 0);
       } catch (err) {
         console.error("Error fetching subscriptions:", err);
         setError("Failed to load previous subscriptions.");
@@ -89,7 +89,7 @@ function UserSubscriptionsPage() {
         </button>
         <h1 className="text-md font-semibold">
 
-          <span className="text-blue-600">{subscriptions?.display_name}</span>
+          <span className="text-blue-600">{subscriptions?.full_name || "User"}</span>
         </h1>
       </div>
 
@@ -150,7 +150,7 @@ function UserSubscriptionsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                {subscriptions.user_subscription.length === 0 ? (
+                {(subscriptions.user_subscription?.length || 0) === 0 ? (
                     <tr>
                         <td colSpan={8} className="p-6 text-center text-gray-600">
                             No previous subscriptions found for this user.
@@ -160,7 +160,7 @@ function UserSubscriptionsPage() {
                     subscriptions.user_subscription.map((sub) => (
                       <tr key={sub.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {subscriptions.subscription}
+                          {subscriptions.membership_tier || subscriptions.membership || "none"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {displayValidTill(sub?.start_date)}

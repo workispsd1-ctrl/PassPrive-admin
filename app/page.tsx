@@ -22,7 +22,9 @@ export default function Index() {
     checkUser();
   }, [router]);
 
-  return <div className="flex justify-center items-center mt-20">
-    <Loader />
-  </div>;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#eef0fb] px-4 py-8">
+      <Loader />
+    </div>
+  );
 }
