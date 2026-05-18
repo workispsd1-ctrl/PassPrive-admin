@@ -47,6 +47,7 @@ type MenuGroup = {
 };
 
 const sidebarLabelClass =
+<<<<<<< HEAD
   "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap";
 
 const sidebarSmallLabelClass =
@@ -54,6 +55,15 @@ const sidebarSmallLabelClass =
 
 const sidebarMutedLabelClass =
   "text-[15px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
+=======
+  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+
+const sidebarSmallLabelClass =
+  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+
+const sidebarMutedLabelClass =
+  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+>>>>>>> cfde9a1c1c988e04943993c507aa1e65d4864f66
 
 const topLevelItems: MenuItem[] = [
   { title: "Dashboard", href: "/dashboard", iconSrc: "/Dashboard.png", exact: true },
@@ -62,7 +72,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/request_quote.png" },
   { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
-  { title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
+  //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
   { title: "Support Inbox", href: "/dashboard/support-inbox", icon: Inbox },
   { title: "FAQ", href: "/dashboard/faq", icon: HelpCircle },
@@ -78,7 +88,7 @@ const groups: MenuGroup[] = [
     items: [
       { title: "Restaurant Management", href: "/dashboard/manage-restaurants", iconSrc: "/restaurant_menu.png" },
       { title: "Store Management", href: "/dashboard/manage-stores", iconSrc: "/storefront.png" },
-      { title: "Corporate Management", href: "/dashboard/manage-corporates", iconSrc: "/corporatemangement.png" },
+      //{ title: "Corporate Management", href: "/dashboard/manage-corporates", iconSrc: "/corporatemangement.png" },
       { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
       { title: "Admin Management", href: "/dashboard/admin", iconSrc: "/admin_panel_settings.png" },
     ],
@@ -307,7 +317,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "flex h-10 items-center rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                        "flex h-10 items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
                           ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
@@ -326,7 +336,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <item.icon className={iconClassName(active, collapsed)} />
                       ) : null}
 
-                      {!collapsed && <span className={sidebarLabelClass}>{item.title}</span>}
+                      {!collapsed && <span className={cn(sidebarLabelClass, active && "text-white")}>{item.title}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -352,10 +362,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           }))
                         }
                         className={cn(
-                          "flex h-10 w-full items-center rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                          "flex h-10 w-full items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                           collapsed ? "justify-center px-0" : "justify-between gap-3",
                           groupActive
-                            ? "bg-[#F7F2FF] text-[#5E1CC3]"
+                            ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
                             : "text-[#000000] hover:bg-[#F7F2FF]"
                         )}
                       >
@@ -367,7 +377,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             height={18}
                             className={iconClassName(groupActive, collapsed)}
                           />
-                          {!collapsed && <span className={sidebarLabelClass}>{group.title}</span>}
+                          {!collapsed && <span className={cn(sidebarLabelClass, groupActive && "text-white")}>{group.title}</span>}
                         </span>
 
                         {!collapsed && (
@@ -398,7 +408,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                               <Link
                                 href={item.href}
                                 className={cn(
-                                  "flex h-9 items-center rounded-[10px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                                  "flex h-9 items-center rounded-[10px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                                   active
                                     ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.16)]"
                                     : "text-[#000000] hover:bg-[#F7F2FF]"
@@ -414,7 +424,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                                     active ? "brightness-0 invert" : "brightness-0 opacity-80"
                                   )}
                                 />
-                                <span className={cn(sidebarSmallLabelClass, collapsed && "hidden")}>{item.title}</span>
+                                <span className={cn(sidebarSmallLabelClass, active && "text-white", collapsed && "hidden")}>{item.title}</span>
                               </Link>
                             </TooltipTrigger>
                             {collapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -436,7 +446,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "flex h-10 items-center rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                        "flex h-10 items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
                           ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
@@ -455,7 +465,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <item.icon className={iconClassName(active, collapsed)} />
                       ) : null}
 
-                      {!collapsed && <span className={sidebarLabelClass}>{item.title}</span>}
+                      {!collapsed && <span className={cn(sidebarLabelClass, active && "text-white")}>{item.title}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -490,7 +500,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <Button
             variant="ghost"
-            className="h-10 w-full justify-start rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] text-[#F85B7E] hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
+            className="h-10 w-full justify-start rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] text-[#F85B7E] hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
             onClick={handleLogout}
           >
             <Image
@@ -507,3 +517,4 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     </aside>
   );
 }
+//redeploying

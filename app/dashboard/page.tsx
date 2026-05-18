@@ -390,7 +390,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KPI
               iconSrc="/dashboardusers.png"
               label="Total Users"
@@ -406,11 +406,11 @@ export default function AdminDashboard() {
               label="Stores"
               value={stats.totalStores}
             />
-            <KPI
+            {/* <KPI
               iconSrc="/qr_code_scanner.png"
               label="Active Subs"
               value={stats.activeSubscribers}
-            />
+            /> */}
             <KPI
               iconSrc="/attach_money.png"
               label="Revenue (MUR)"
@@ -661,8 +661,8 @@ function KPI({
   value: React.ReactNode;
 }) {
   return (
-    <div className="h-[90px] rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#5800AB] bg-[#FFFFFF] px-4 py-3 shadow-sm">
-      <div className="flex h-full items-center gap-5">
+    <div className="h-[90px]  rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#5800AB] bg-[#FFFFFF] px-4 py-3 shadow-sm">
+      <div className="flex h-full items-center gap-3">
         <Image
           src={iconSrc}
           alt={label}
