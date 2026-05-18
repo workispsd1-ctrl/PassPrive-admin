@@ -252,8 +252,7 @@ export const UserTable = ({
                       : formatStartDateIST(user.membership_started)}
                   </td>
                   <td className="py-3 px-6 text-[#5b6473]">
-                    {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
-                    {displayValidTill(user.created_at || "", user.created_at || "")}
+                    {user.created_at ? displayValidTill(user.created_at, user.created_at) : "-"}
                   </td>
                   <td className="py-4 px-6 text-[#5b6473]">
                     {formatToIndia(user.last_opened)}
