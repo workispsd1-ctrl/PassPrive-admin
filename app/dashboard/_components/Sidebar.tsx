@@ -65,11 +65,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       href: "/dashboard/manage-stores",
       iconSrc: "/storefront.png",
     },
-    {
-      title: "Corporate Management",
-      href: "/dashboard/manage-corporates",
-      iconSrc: "/corporatemangement.png",
-    },
+   // {
+      //title: "Corporate Management",
+      //href: "/dashboard/manage-corporates",
+      //iconSrc: "/corporatemangement.png",
+    //},
     {
       title: "Restaurant In Your PassPrive",
       href: "/dashboard/in-your-passprive",
@@ -129,7 +129,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       iconSrc: "/subscriptions.png",
     },
 
-    { title: "Promo Code", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
+    //{ title: "Promo Code", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
     {
       title: "Transactions",
       href: "/dashboard/transactions",
