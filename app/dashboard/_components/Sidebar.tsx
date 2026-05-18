@@ -47,7 +47,6 @@ type MenuGroup = {
 };
 
 const sidebarLabelClass =
-<<<<<<< HEAD
   "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap";
 
 const sidebarSmallLabelClass =
@@ -55,15 +54,6 @@ const sidebarSmallLabelClass =
 
 const sidebarMutedLabelClass =
   "text-[15px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
-=======
-  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
-
-const sidebarSmallLabelClass =
-  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
-
-const sidebarMutedLabelClass =
-  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
->>>>>>> cfde9a1c1c988e04943993c507aa1e65d4864f66
 
 const topLevelItems: MenuItem[] = [
   { title: "Dashboard", href: "/dashboard", iconSrc: "/Dashboard.png", exact: true },

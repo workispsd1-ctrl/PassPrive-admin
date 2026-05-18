@@ -259,28 +259,12 @@ export const UserTable = ({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer p-0 h-auto hover:bg-transparent"
-                        onClick={() => {
-                          setIsConfirmOpen(true);
-                          setRowData(user);
-                        }}
-                      >
-                        <Image
-                          src="/delete.png"
-                          alt="Delete"
-                          width={16}
-                          height={16}
-                          className="w-4 h-4"
-                        />
-                      </Button>
                       <button
                         onClick={() => {
                           handleUserDetails(user);
                         }}
                         className="cursor-pointer p-0"
+                        title="View"
                       >
                         <Image
                           src="/view.png"
@@ -290,8 +274,9 @@ export const UserTable = ({
                           className="w-4 h-4"
                         />
                       </button>
+
                       <Link href={`/dashboard/users/${user.id}/edit`}>
-                        <button className="cursor-pointer p-0">
+                        <button className="cursor-pointer p-0" title="Edit">
                           <Image
                             src="/edit.png"
                             alt="Edit"
@@ -301,6 +286,25 @@ export const UserTable = ({
                           />
                         </button>
                       </Link>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer p-0 h-auto hover:bg-transparent"
+                        onClick={() => {
+                          setIsConfirmOpen(true);
+                          setRowData(user);
+                        }}
+                        title="Delete"
+                      >
+                        <Image
+                          src="/delete.png"
+                          alt="Delete"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
+                      </Button>
                     </div>
                   </td>
                 </tr>

@@ -789,7 +789,7 @@ export default function BankOffersPage() {
 
   return (
     <div className="min-h-full bg-white">
-      <div className="mx-auto max-w-[1360px] px-4 py-4 sm:px-5 lg:px-6">
+      <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-5 lg:px-6">
         {editingId ? (
           <div className="mb-4 flex justify-end">
             <Button
@@ -802,9 +802,9 @@ export default function BankOffersPage() {
             </Button>
           </div>
         ) : null}
-        <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[900px_1fr]">
           {/* Left Sidebar - Form */}
-          <div className="space-y-6">
+          <div className="space-y-6 pl-0">
             {/* Main Form Card */}
             <SectionCard
               icon={BadgePercent}
