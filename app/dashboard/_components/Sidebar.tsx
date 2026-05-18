@@ -47,13 +47,13 @@ type MenuGroup = {
 };
 
 const sidebarLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
 
 const sidebarSmallLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
 
 const sidebarMutedLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+  "text-[14px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
 
 const topLevelItems: MenuItem[] = [
   { title: "Dashboard", href: "/dashboard", iconSrc: "/Dashboard.png", exact: true },
@@ -307,7 +307,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "flex h-10 items-center rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                        "flex h-10 items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
                           ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
@@ -326,7 +326,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <item.icon className={iconClassName(active, collapsed)} />
                       ) : null}
 
-                      {!collapsed && <span className={sidebarLabelClass}>{item.title}</span>}
+                      {!collapsed && <span className={cn(sidebarLabelClass, active && "text-white")}>{item.title}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -352,10 +352,10 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           }))
                         }
                         className={cn(
-                          "flex h-10 w-full items-center rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                          "flex h-10 w-full items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                           collapsed ? "justify-center px-0" : "justify-between gap-3",
                           groupActive
-                            ? "bg-[#F7F2FF] text-[#5E1CC3]"
+                            ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
                             : "text-[#000000] hover:bg-[#F7F2FF]"
                         )}
                       >
@@ -367,7 +367,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             height={18}
                             className={iconClassName(groupActive, collapsed)}
                           />
-                          {!collapsed && <span className={sidebarLabelClass}>{group.title}</span>}
+                          {!collapsed && <span className={cn(sidebarLabelClass, groupActive && "text-white")}>{group.title}</span>}
                         </span>
 
                         {!collapsed && (
@@ -398,7 +398,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                               <Link
                                 href={item.href}
                                 className={cn(
-                                  "flex h-9 items-center rounded-[10px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                                  "flex h-9 items-center rounded-[10px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                                   active
                                     ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.16)]"
                                     : "text-[#000000] hover:bg-[#F7F2FF]"
@@ -414,7 +414,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                                     active ? "brightness-0 invert" : "brightness-0 opacity-80"
                                   )}
                                 />
-                                <span className={cn(sidebarSmallLabelClass, collapsed && "hidden")}>{item.title}</span>
+                                <span className={cn(sidebarSmallLabelClass, active && "text-white", collapsed && "hidden")}>{item.title}</span>
                               </Link>
                             </TooltipTrigger>
                             {collapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -436,7 +436,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "flex h-10 items-center rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] transition-all duration-200",
+                        "flex h-10 items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
                           ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
@@ -455,7 +455,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <item.icon className={iconClassName(active, collapsed)} />
                       ) : null}
 
-                      {!collapsed && <span className={sidebarLabelClass}>{item.title}</span>}
+                      {!collapsed && <span className={cn(sidebarLabelClass, active && "text-white")}>{item.title}</span>}
                     </Link>
                   </TooltipTrigger>
                   {collapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -490,7 +490,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <Button
             variant="ghost"
-            className="h-10 w-full justify-start rounded-[12px] px-4 text-[18px] leading-[28px] font-normal tracking-[0px] text-[#F85B7E] hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
+            className="h-10 w-full justify-start rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] text-[#F85B7E] hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
             onClick={handleLogout}
           >
             <Image
