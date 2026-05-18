@@ -62,7 +62,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/request_quote.png" },
   { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
-  { title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
+  //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
   { title: "Support Inbox", href: "/dashboard/support-inbox", icon: Inbox },
   { title: "FAQ", href: "/dashboard/faq", icon: HelpCircle },
@@ -78,7 +78,7 @@ const groups: MenuGroup[] = [
     items: [
       { title: "Restaurant Management", href: "/dashboard/manage-restaurants", iconSrc: "/restaurant_menu.png" },
       { title: "Store Management", href: "/dashboard/manage-stores", iconSrc: "/storefront.png" },
-      { title: "Corporate Management", href: "/dashboard/manage-corporates", iconSrc: "/corporatemangement.png" },
+      //{ title: "Corporate Management", href: "/dashboard/manage-corporates", iconSrc: "/corporatemangement.png" },
       { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
       { title: "Admin Management", href: "/dashboard/admin", iconSrc: "/admin_panel_settings.png" },
     ],
