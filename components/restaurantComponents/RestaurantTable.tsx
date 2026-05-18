@@ -109,16 +109,16 @@ export const RestaurantTable = ({
     <>
       <table className="w-full border-collapse">
         <thead className="bg-white">
-          <tr className="border-b border-gray-200">
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">NAME</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">LOCATION</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">RATING</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">COST FOR TWO</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">ACTIONS</th>
+          <tr className="border-b border-gray-200 h-[40px]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">NAME</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">LOCATION</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">RATING</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">COST FOR TWO</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
           </tr>
         </thead>
 
-        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+        <tbody className="bg-[#FFFFFF]">
           {restaurants.map((r, idx) => {
             if (!r.id) return null;
 
@@ -130,13 +130,13 @@ export const RestaurantTable = ({
                 }`}
                 onClick={() => onRowClick?.(r.id)}
               >
-                <td className="px-6 py-3 font-medium text-[#1D293D]">{r.name}</td>
-                <td className="px-6 py-3 text-[#5b6473]">
+                <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{r.name}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">
                   {r.area}, {r.city}
                 </td>
-                <td className="px-6 py-3 text-[#5b6473]">{r.rating ?? "-"}</td>
-                <td className="px-6 py-3 text-[#5b6473]">
-                  {r.cost_for_two ? `₹${r.cost_for_two}` : "-"}
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">{r.rating ?? "-"}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">
+                  {r.cost_for_two ? `Rs ${r.cost_for_two}` : "-"}
                 </td>
 
                 <td className="px-4 py-4">

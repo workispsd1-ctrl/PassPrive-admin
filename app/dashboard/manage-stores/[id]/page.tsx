@@ -1193,10 +1193,10 @@ const Grid = ({ children }: { children: ReactNode }) => (
   <div className="grid grid-cols-2 gap-6">{children}</div>
 );
 
-const ReadOnly = ({ label, value }: { label: string; value: ReactNode }) => (
+const ReadOnly = ({ label, value }: { label: string; value: unknown }) => (
   <div>
     <label className="text-xs text-gray-500 uppercase">{label}</label>
-    <div className="text-sm font-medium">{value ?? "-"}</div>
+    <div className="text-sm font-medium">{typeof value === "string" || typeof value === "number" ? value : value == null ? "-" : String(value)}</div>
   </div>
 );
 

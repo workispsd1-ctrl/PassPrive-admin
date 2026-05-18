@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
 import { showToast } from "@/hooks/useToast";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { RestaurantTable } from "@/components/restaurantComponents/RestaurantTable";
 import { fetchRestaurantsPage, type RestaurantFlatRecord } from "@/lib/restaurantAdmin";
 
@@ -124,17 +125,25 @@ export default function RestaurantsPage() {
     fetchRestaurants();
   }, [page, limit, debouncedSearch, refresh]);
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const handleToggleSidebar = () => {
+    window.dispatchEvent(new Event("dashboard-toggle-sidebar"));
+    setSidebarOpen((prev) => !prev);
+  };
+
   return (
     <>
-      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+      <div className="min-h-full w-full space-y-4">
+
+      <div className="min-h-full space-y-6 p-6">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           variant="search-only"
           placeholder="Search restaurants by name, city, or area..."
         />
-
-        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
           {loading ? (
             <div className="p-6">
               <RestaurantsTableSkeleton />
@@ -157,6 +166,7 @@ export default function RestaurantsPage() {
             />
           )}
         </div>
+      </div>
       </div>
 
       <Button

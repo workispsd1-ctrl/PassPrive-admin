@@ -52,7 +52,7 @@ const MONTHS = [
   "December",
 ];
 
-const WEEKLY_LABELS = ["W1", "W2", "W3", "W4", "W5", "W6"] as const;
+const WEEKLY_LABELS = ["Week 1", "Week 2", "Week 3", "Week 4"] as const;
 
 type Stats = {
   totalUsers: number;
@@ -143,8 +143,8 @@ export default function AdminDashboard() {
           .from("stores")
           .select("created_at");
 
-        setWeeklyRestaurants(computeWeeklyCounts((rdata as any[]) || []));
-        setWeeklyStores(computeWeeklyCounts((sdata as any[]) || []));
+        setWeeklyRestaurants(computeWeeklyCounts((rdata as any[]) || [], 4));
+        setWeeklyStores(computeWeeklyCounts((sdata as any[]) || [], 4));
 
         const { count: restaurantsCount } = await supabaseBrowser
           .from("restaurants")
@@ -233,15 +233,15 @@ export default function AdminDashboard() {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "#5800AB4D";
+            if (!chartArea) return "rgba(88, 0, 171, 0.6)";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0, "#5800AB4D");
-            gradient.addColorStop(1, "#5800AB1A");
+            gradient.addColorStop(0.05, "rgba(88, 0, 171, 0.6)");
+            gradient.addColorStop(0.95, "rgba(88, 0, 171, 0.1)");
             return gradient;
           },
         },
@@ -258,25 +258,27 @@ export default function AdminDashboard() {
           data: weeklyStores,
           fill: true as const,
           borderColor: "#5800AB",
-          borderWidth: 2,
-          tension: 0.35,
+          borderWidth: 2.5,
+          tension: 0.5,
           pointRadius: 0,
-          pointHoverRadius: 3,
+          pointHoverRadius: 0,
+          borderJoinStyle: "round" as const,
+          borderCapStyle: "round" as const,
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart as {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "#5800AB4D";
+            if (!chartArea) return "rgba(88, 0, 171, 0.6)";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0, "#5800AB4D");
-            gradient.addColorStop(1, "#5800AB00");
+            gradient.addColorStop(0.05, "rgba(88, 0, 171, 0.6)");
+            gradient.addColorStop(0.95, "rgba(88, 0, 171, 0.1)");
             return gradient;
           },
         },
@@ -308,15 +310,15 @@ export default function AdminDashboard() {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "#5800AB4D";
+            if (!chartArea) return "rgba(88, 0, 171, 0.6)";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0, "#5800AB4D");
-            gradient.addColorStop(1, "#5800AB00");
+            gradient.addColorStop(0.05, "rgba(88, 0, 171, 0.6)");
+            gradient.addColorStop(0.95, "rgba(88, 0, 171, 0.1)");
             return gradient;
           },
         },
@@ -349,7 +351,7 @@ export default function AdminDashboard() {
                   <ChevronRight className="h-5 w-5" />
                 )}
               </button>
-              <h1 className="text-[20px] font-normal leading-[32px] text-[#1D293D]">Dashboard - Super Admin</h1>
+              <h1 className="text-[22px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">Dashboard - Superadmin</h1>
             </div>
             <div className="flex items-center gap-3 text-[#1f2a37]">
               <button
@@ -420,18 +422,41 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* MONTHLY CHART */}
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-            <div className="flex h-[460px] min-w-0 flex-col rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm lg:basis-[68.5%]">
-              <div className="flex items-start justify-between p-4 pb-0">
+          {/* OVERVIEW + SUBSCRIPTIONS */}
+          <div className="flex flex-col gap-4">
+            <div className="flex min-h-[116px] flex-col rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] px-4 py-3 shadow-sm">
+              <div className="mb-1 flex items-center justify-between">
+                <h3 className="text-[18px] font-medium leading-[28px] tracking-[0px] text-[#000000]">Overview</h3>
+                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#000000] hover:underline">View all</button>
+              </div>
+              <div className="mt-1.5 grid flex-1 grid-cols-[1fr_auto] content-start gap-x-4 gap-y-2 overflow-hidden">
+                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Conversion Rate</span>
+                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{conversionRate}</span>
+                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Total Revenue</span>
+                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">
+                  {new Intl.NumberFormat("en-MU", {
+                    style: "currency",
+                    currency: "MUR",
+                    maximumFractionDigits: 2,
+                  }).format(stats.totalRevenue)}
+                </span>
+                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Restaurants</span>
+                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalRestaurants}</span>
+                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Stores</span>
+                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalStores}</span>
+              </div>
+            </div>
+
+            <div className="flex h-[460px] flex-col rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] p-4 shadow-sm">
+              <div className="flex items-start justify-between pb-0">
                 <div>
-                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">Memberships</h3>
-                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Last 12 months by membership date</p>
+                  <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">Subscriptions</h3>
+                  <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Last 12 months</p>
                 </div>
-                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all statistic</button>
+                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#000000] hover:underline">View all statistic</button>
               </div>
 
-              <div className="h-[349px] p-3">
+              <div className="min-h-0 flex-1 pt-2">
                 <Line
                   data={monthlyChartData}
                   options={{
@@ -441,14 +466,14 @@ export default function AdminDashboard() {
                     scales: {
                       y: {
                         beginAtZero: true,
-                        suggestedMax: 50,
+                        suggestedMax: 500,
                         ticks: {
                           precision: 0,
-                          stepSize: 10,
+                          stepSize: 100,
                           color: "#94A3B8",
                           font: { size: 11, weight: 400 },
                         },
-                        grid: { color: "#E7ECF4" },
+                        grid: { display: false },
                         border: { display: false },
                       },
                       x: {
@@ -461,37 +486,18 @@ export default function AdminDashboard() {
                 />
               </div>
             </div>
-
-            {/* RIGHT COLUMN */}
-            <div className="flex h-[460px] w-full flex-col rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm lg:basis-[31.5%]">
-              <div className="mb-1 flex items-center justify-between">
-                <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">Overview</h3>
-                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
-              </div>
-              <MiniStat label="Conversion Rate" value={conversionRate} />
-              <MiniStat
-                label="Total Revenue"
-                value={new Intl.NumberFormat("en-MU", {
-                  style: "currency",
-                  currency: "MUR",
-                  maximumFractionDigits: 2,
-                }).format(stats.totalRevenue)}
-              />
-              <MiniStat label="Restaurants" value={stats.totalRestaurants} />
-              <MiniStat label="Stores" value={stats.totalStores} />
-            </div>
           </div>
 
           {/* WEEKLY TRENDS */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Restaurants Weekly */}
-            <div className="h-[400px] rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm">
+            <div className="h-[400px] rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] p-4 shadow-sm">
               <div className="mb-2 flex items-start justify-between">
                 <div>
-                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">New Restaurants</h3>
-                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Per week growth</p>
+                  <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">New Restaurants</h3>
+                  <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Per week growth</p>
                 </div>
-                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
+                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5800AB] hover:underline">View all</button>
               </div>
               <div className="h-[310px]">
                 <Bar
@@ -510,7 +516,7 @@ export default function AdminDashboard() {
                           color: "#94A3B8",
                           font: { size: 11, weight: 400 },
                         },
-                        grid: { color: "#E7ECF4" },
+                        grid: { display: false },
                         border: { display: false },
                       },
                       x: {
@@ -525,13 +531,13 @@ export default function AdminDashboard() {
             </div>
 
             {/* Stores Weekly */}
-            <div className="h-[400px] rounded-2xl border border-[#FFFFFF99] bg-[linear-gradient(180deg,rgba(255,255,255,0.40)_0%,rgba(255,255,255,0.30)_50%,rgba(255,255,255,0.20)_100%)] p-4 shadow-sm">
+            <div className="h-[400px] rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] p-4 shadow-sm">
               <div className="mb-2 flex items-start justify-between">
                 <div>
-                  <h3 className="text-[16px] font-medium leading-6 text-[#1D293D]">New Stores</h3>
-                  <p className="text-[12px] font-normal leading-4 text-[#45556C]">Per week growth</p>
+                  <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">New Stores</h3>
+                  <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Per week growth</p>
                 </div>
-                <button className="text-[12px] font-medium leading-4 text-[#1D1B20] hover:underline">View all</button>
+                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5800AB] hover:underline">View all</button>
               </div>
               <div className="h-[310px]">
                 <Line
@@ -550,7 +556,7 @@ export default function AdminDashboard() {
                           color: "#94A3B8",
                           font: { size: 11, weight: 400 },
                         },
-                        grid: { color: "#E7ECF4" },
+                        grid: { display: false },
                         border: { display: false },
                       },
                       x: {
@@ -655,7 +661,7 @@ function KPI({
   value: React.ReactNode;
 }) {
   return (
-    <div className="h-[90px] rounded-2xl border border-white/60 border-l-4 border-l-[#5800AB] bg-[linear-gradient(180deg,rgba(255,255,255,0.4)_0%,rgba(255,255,255,0.3)_50%,rgba(255,255,255,0.2)_100%)] px-4 py-3 shadow-sm">
+    <div className="h-[90px] rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#5800AB] bg-[#FFFFFF] px-4 py-3 shadow-sm">
       <div className="flex h-full items-center gap-5">
         <Image
           src={iconSrc}
@@ -665,8 +671,8 @@ function KPI({
           className="h-[38px] w-[38px] shrink-0 object-contain"
         />
         <div>
-          <div className="text-[12px] font-normal leading-4 text-[#45556C]">{label}</div>
-          <div className="text-[24px] font-normal leading-8 text-[#0F172B]">{value}</div>
+          <div className="text-[12px] font-normal leading-4 tracking-[0px] text-[#5E5E5E]">{label}</div>
+          <div className="text-[24px] font-semibold leading-8 tracking-[0px] text-[#000000]">{value}</div>
         </div>
       </div>
     </div>
@@ -675,9 +681,9 @@ function KPI({
 
 function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-0.5">
-      <span className="text-[12px] font-normal leading-4 text-[#45556C]">{label}</span>
-      <span className="text-[14px] font-normal leading-5 text-[#0F172B]">{value}</span>
+    <div className="flex items-center justify-between py-2">
+      <span className="text-[14px] font-normal leading-[20px] tracking-[0px] text-[#5E5E5E]">{label}</span>
+      <span className="text-[14px] font-semibold leading-[20px] tracking-[0px] text-[#000000]">{value}</span>
     </div>
   );
 }

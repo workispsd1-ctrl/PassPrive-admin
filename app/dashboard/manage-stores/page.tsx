@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { StoreTable } from "@/components/storesComponents/StoreTable";
 
 const ITEMS_PER_PAGE = 10;
@@ -149,9 +150,17 @@ export default function StoresPage() {
     fetchStores();
   }, [page, limit, debouncedSearch, refresh]);
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const handleToggleSidebar = () => {
+    window.dispatchEvent(new Event("dashboard-toggle-sidebar"));
+    setSidebarOpen((prev) => !prev);
+  };
+
   return (
     <>
-      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+      <div className="min-h-full w-full space-y-4">
+      <div className="min-h-full space-y-6 p-6">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -159,7 +168,7 @@ export default function StoresPage() {
           placeholder="Search stores by name, category, city, or location..."
         />
 
-        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
           {loading ? (
             <div className="p-6">
               <StoresTableSkeleton />
@@ -185,6 +194,8 @@ export default function StoresPage() {
           )}
         </div>
       </div>
+      </div>
+
 
       {/* Floating Add Button */}
       <Button

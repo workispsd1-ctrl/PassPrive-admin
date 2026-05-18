@@ -41,11 +41,11 @@ export const SearchAndFilter = (props: SearchAndFilterProps) => {
 
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-center">
-      <div className="flex-1 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <div className="flex-1 relative w-full">
+        <Search className="absolute left-[16px] top-1/2 -translate-y-1/2 text-[#938F96] w-5 h-5" />
         <Input
           placeholder={props.placeholder ?? "Search..."}
-          className="pl-10 h-10 border-gray-300"
+          className="pl-[48px] pr-[16px] h-[44px] rounded-[12px] border border-gray-200 bg-[#FFFFFF] text-[14px] font-normal placeholder:!text-[#938F96] !shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)] focus-visible:ring-0 focus-visible:ring-offset-0"
           value={props.searchTerm}
           onChange={(e) => props.onSearchChange(e.target.value)}
         />

@@ -119,6 +119,18 @@ export default function MoodCategoryManager({
     );
   }, [categories, query]);
 
+  function isServiceCategoriesRoute(path: string) {
+    return String(path || "").trim() === "/api/service-categories";
+  }
+
+  async function getAccessToken() {
+    const { data, error } = await supabaseBrowser.auth.getSession();
+    if (error) throw error;
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+    return token;
+  }
+
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
@@ -132,7 +144,8 @@ export default function MoodCategoryManager({
         return;
       }
 
-      const response = await fetch(`${API_BASE}${apiPath}`, { method: "GET", cache: "no-store" });
+      const url = isServiceCategoriesRoute(apiPath) ? apiPath : `${API_BASE}${apiPath}`;
+      const response = await fetch(url, { method: "GET", cache: "no-store" });
       if (!response.ok) throw new Error("Failed to load categories.");
       const payload = (await response.json()) as MoodCategoryRecord[] | { items?: MoodCategoryRecord[] };
       setCategories(Array.isArray(payload) ? payload : payload.items || []);
@@ -286,12 +299,25 @@ export default function MoodCategoryManager({
         selection_type: "MULTI" as const,
       };
 
-      if (editingId) {
-        const { error } = await supabaseBrowser.from(supabaseTable).update(record).eq("id", editingId);
-        if (error) throw error;
+      if (isServiceCategoriesRoute(apiPath)) {
+        // Call server-side API (uses service role) to bypass RLS
+        const token = await getAccessToken();
+        const url = editingId ? `${apiPath}/${editingId}` : apiPath;
+        const res = await fetch(url, {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(record),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || "Save failed");
       } else {
-        const { error } = await supabaseBrowser.from(supabaseTable).insert(record);
-        if (error) throw error;
+        if (editingId) {
+          const { error } = await supabaseBrowser.from(supabaseTable).update(record).eq("id", editingId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabaseBrowser.from(supabaseTable).insert(record);
+          if (error) throw error;
+        }
       }
 
       showToast({ title: editingId ? "Category updated" : "Category created" });
@@ -315,15 +341,22 @@ export default function MoodCategoryManager({
 
     try {
       setDeletingId(id);
-      if (!supabaseTable) throw new Error("Delete unsupported for this route.");
-      if (storageBucket && category.light_theme_image_path) {
-        await supabaseBrowser.storage.from(storageBucket).remove([category.light_theme_image_path]).catch(() => undefined);
+      if (isServiceCategoriesRoute(apiPath)) {
+        const token = await getAccessToken();
+        const res = await fetch(`${apiPath}/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || "Delete failed");
+      } else {
+        if (!supabaseTable) throw new Error("Delete unsupported for this route.");
+        if (storageBucket && category.light_theme_image_path) {
+          await supabaseBrowser.storage.from(storageBucket).remove([category.light_theme_image_path]).catch(() => undefined);
+        }
+        if (storageBucket && category.dark_theme_image_path) {
+          await supabaseBrowser.storage.from(storageBucket).remove([category.dark_theme_image_path]).catch(() => undefined);
+        }
+        const { error } = await supabaseBrowser.from(supabaseTable).delete().eq("id", id);
+        if (error) throw error;
       }
-      if (storageBucket && category.dark_theme_image_path) {
-        await supabaseBrowser.storage.from(storageBucket).remove([category.dark_theme_image_path]).catch(() => undefined);
-      }
-      const { error } = await supabaseBrowser.from(supabaseTable).delete().eq("id", id);
-      if (error) throw error;
       if (editingId === id) resetForm();
       setCategories((current) => current.filter((item) => item.id !== id));
       showToast({ title: "Category deleted" });

@@ -128,29 +128,29 @@ export const StoreTable = ({
     <>
       <table className="w-full border-collapse">
         <thead className="bg-white">
-          <tr className="border-b border-gray-200">
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
+          <tr className="border-b border-gray-200 h-[40px]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
               NAME
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
               LOCATION
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
               CATEGORY
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
               STATUS
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
               FEATURED
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
               ACTIONS
             </th>
           </tr>
         </thead>
 
-        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+        <tbody className="bg-[#FFFFFF]">
           {stores.map((s, idx) => {
             if (!s.id) return null;
 
@@ -162,14 +162,12 @@ export const StoreTable = ({
                 }`}
                 onClick={() => onRowClick?.(s.id)}
               >
-                <td className="px-6 py-3 font-medium text-[#1D293D]">{s.name}</td>
-
-                <td className="px-6 py-3 text-[#5b6473]">{formatLocation(s)}</td>
-
-                <td className="px-6 py-3 text-[#5b6473]">
+                <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{s.name}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">{formatLocation(s)}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">
                   {s.category || "-"}
                   {s.subcategory ? (
-                    <span className="text-xs text-[#929292]"> • {s.subcategory}</span>
+                    <span className="text-[14px] text-[#AEA9B1]"> • {s.subcategory}</span>
                   ) : null}
                 </td>
 

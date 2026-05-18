@@ -425,16 +425,16 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
 
   return (
     <header
-      className={`flex justify-between bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] px-6 ${
-        navbarDescription ? "h-20 items-start py-4" : "h-14 items-center"
+      className={`flex justify-between bg-[#FFFFFF] px-[24px] border-b border-[#000000]/[0.08] ${
+        navbarDescription ? "min-h-[64px] items-start pt-[24px] pb-[16px]" : "min-h-[64px] items-start pt-[24px] pb-[12px]"
       }`}
     >
-      <div className="flex items-center">
+      <div className="flex items-center gap-[10px]">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed?.(!collapsed)}
-          className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-slate-200/40"
+          className="rounded-md p-1 text-[#5b6473] transition hover:bg-slate-200/40"
         >
           {collapsed ? (
             <ChevronRight className="h-5 w-5" />
@@ -443,7 +443,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
           )}
         </Button>
         <div>
-          <span className="text-[20px] font-normal leading-[32px] text-[#1D293D]">
+          <span className="text-[22px] font-semibold leading-[28px] text-[#000000]">
             {(() => {
               let title = pathName[pathname] || "";
 

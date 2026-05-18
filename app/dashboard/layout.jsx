@@ -9,12 +9,13 @@ import { useAuth } from "@/store/hooks/useAuth";
 
 const DashboardLayout = ({ children }) => {
   const pathname = usePathname();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
   const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const isDashboardHome = pathname === "/dashboard";
-  const dashboardGradientClass =
-    "bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]";
+  const sidebarExpandedWidth = 310;
+  const sidebarCollapsedWidth = 84;
+  const dashboardGradientClass = "bg-[#FFFFFF]";
   // Track screen width
   useEffect(() => {
     const checkScreenSize = () => {
@@ -31,6 +32,8 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     if (!isLargeScreen) {
       setSidebarCollapsed(true);
+    } else {
+      setSidebarCollapsed(false);
     }
   }, [isLargeScreen]);
 
@@ -73,9 +76,12 @@ const DashboardLayout = ({ children }) => {
         }}
       />
       <div
-        className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? "ml-16" : "ml-64"
-        }`}
+        className="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
+        style={{
+          marginLeft: sidebarCollapsed
+            ? `${sidebarCollapsedWidth}px`
+            : `${sidebarExpandedWidth}px`,
+        }}
       >
         {!isDashboardHome && (
           <Navbar

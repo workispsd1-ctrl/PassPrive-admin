@@ -14,24 +14,28 @@ create table if not exists public.service_categories (
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
+  light_theme_image_url text null,
+  light_theme_image_path text null,
+  dark_theme_image_url text null,
+  dark_theme_image_path text null,
   constraint service_categories_pkey primary key (id),
   constraint service_categories_key_key unique (key),
   constraint service_categories_slug_key unique (slug),
+  constraint service_categories_selection_type_chk check (
+    (
+      selection_type = any (array['SINGLE'::text, 'MULTI'::text])
+    )
+  ),
+  constraint service_categories_sort_order_chk check ((sort_order >= 0)),
   constraint service_categories_title_chk check (
     (
       length(
-        trim(
+        TRIM(
           both
           from
             title
         )
       ) > 0
-    )
-  ),
-  constraint service_categories_sort_order_chk check ((sort_order >= 0)),
-  constraint service_categories_selection_type_chk check (
-    (
-      selection_type = any (array['SINGLE'::text, 'MULTI'::text])
     )
   )
 ) TABLESPACE pg_default;
@@ -42,9 +46,9 @@ create index if not exists service_categories_active_sort_idx on public.service_
   title
 ) TABLESPACE pg_default;
 
-create trigger trg_service_categories_set_updated_at before
-update on service_categories for each row
-execute function set_updated_at ();
+create trigger trg_service_categories_set_updated_at BEFORE
+update on service_categories for EACH row
+execute FUNCTION set_updated_at ();
 
 insert into public.service_categories (key, slug, title, sort_order, is_active, selection_type)
 values
@@ -63,3 +67,36 @@ set
   sort_order = excluded.sort_order,
   is_active = excluded.is_active,
   selection_type = excluded.selection_type;
+
+-- enable RLS and provide policies similar to other admin-write tables
+alter table public.service_categories enable row level security;
+
+drop policy if exists service_categories_public_read on public.service_categories;
+create policy service_categories_public_read
+on public.service_categories
+for select
+using (is_active = true);
+
+drop policy if exists service_categories_admin_write on public.service_categories;
+create policy service_categories_admin_write
+on public.service_categories
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.users u
+    where u.id = auth.uid()
+      and lower(coalesce(u.role, '')) in ('admin', 'superadmin')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.users u
+    where u.id = auth.uid()
+      and lower(coalesce(u.role, '')) in ('admin', 'superadmin')
+  )
+);
+
+comment on table public.service_categories is 'Service categories including light/dark theme images and metadata.';
