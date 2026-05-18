@@ -197,68 +197,67 @@ export const UserTable = ({
             Export
           </button>
         </div> */}
-        <table className="w-full border-collapse">
+        <table className="min-w-full border-collapse">
           <thead className="bg-white">
-            <tr className="border-b border-gray-200 ">
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+            <tr className="border-b border-gray-200 h-[40px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 NAME
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 PHONE
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 EMAIL
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 PLAN
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 SUBSCRIPTION DATE
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 JOIN DATE
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 LAST OPENED
               </th>
-              <th className="text-left py-3 lg:px-6 md:px-6 px-6 font-semibold text-[#1D293D] text-[12px]">
+              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                 ACTIONS
               </th>
             </tr>
           </thead>
-          <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+          <tbody className="bg-[#FFFFFF]">
             {users.length > 0 ? (
               users.map((user, idx) => (
                 <tr
                   key={user.id}
-                  className={`border-b border-gray-200 hover:bg-white/20 transition-colors lg:text-md md:text-md text-sm ${
-                    idx !== users.length - 1 ? "border-b" : ""
-                  }`}
+                  className={`border-b border-gray-200 hover:bg-white/20 transition-colors lg:text-md md:text-md text-sm ${idx !== users.length - 1 ? "border-b" : ""
+                    }`}
                 >
-                  <td className="py-3 px-6 text-[#1D293D] font-medium">{user.full_name || user.display_name || "-"}</td>
-                  <td className="py-3 px-6 text-center text-[#5b6473]">
+                  <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{user.full_name || user.display_name || "-"}</td>
+                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                     {user.phone ?? "-"}
                   </td>
-                  <td className="py-3 px-6 text-[#5b6473]">{user.email}</td>
-                  <td className="py-3 px-6">
+                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{user.email}</td>
+                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                     <StatusBadge status={user.membership_tier || user.membership || "none"} />
                   </td>
-                  <td className="py-3 px-6 text-[#5b6473]">
+                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                     {(user.user_subscription?.length ?? 0) > 0
                       ? formatStartDateIST(
-                          user.user_subscription?.[0]?.start_date ??
-                            user.user_subscription?.[0]?.created_at
-                        )
+                        user.user_subscription?.[0]?.start_date ??
+                        user.user_subscription?.[0]?.created_at
+                      )
                       : formatStartDateIST(user.membership_started)}
                   </td>
-                  <td className="py-3 px-6 text-[#5b6473]">
+                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                     {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
                     {displayValidTill(user.created_at || "", user.created_at || "")}
                   </td>
-                  <td className="py-4 px-6 text-[#5b6473]">
+                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                     {formatToIndia(user.last_opened)}
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Button
                         variant="ghost"
@@ -361,11 +360,10 @@ export const UserTable = ({
               {selectedData?.full_name || selectedData?.display_name || "User"}
             </h2>
             <span
-              className={`text-[12px] font-semibold px-3 py-1 rounded-full ${
-                selectedData?.membership_tier !== "none"
+              className={`text-[12px] font-semibold px-3 py-1 rounded-full ${selectedData?.membership_tier !== "none"
                   ? "bg-green-100 text-green-700"
                   : "bg-gray-200 text-gray-700"
-              }`}
+                }`}
             >
               {selectedData?.membership_tier || "none"}
             </span>
@@ -553,31 +551,38 @@ const PlanBadge = ({ plan }: { plan?: string }) => {
 const StatusBadge = ({ status }: { status?: string }) => {
   const value = status?.trim().toLowerCase() || "none";
 
-  const map: Record<string, string> = {
-    active: "bg-green-100 text-green-700",
-    canceled: "bg-red-100 text-red-600",
-    past_due: "bg-yellow-100 text-yellow-700",
-    unpaid: "bg-yellow-100 text-yellow-700",
-    none: "bg-gray-200 text-gray-700",
-    free: "bg-gray-200 text-gray-700",
-  };
+  const isPremium = value.includes("black") || value.includes("gold") || value.includes("enterprise") || value.includes("professional") || value === "active";
+
+  let badgeClass = "px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block ";
+
+  if (isPremium) {
+    badgeClass += "bg-[#EAE3FA] text-[#5800AB]";
+  } else if (value === "none" || value === "free") {
+    badgeClass += "bg-[#F3F4F6] text-[#6B7280]";
+  } else if (value === "canceled") {
+    badgeClass += "bg-[#FEE2E2] text-[#DC2626]";
+  } else if (value === "past_due" || value === "unpaid") {
+    badgeClass += "bg-[#FEF3C7] text-[#D97706]";
+  } else {
+    badgeClass += "bg-[#EAE3FA] text-[#5800AB]";
+  }
 
   const labelMap: Record<string, string> = {
-    active: "Active",
+    none: "None",
+    free: "Free",
     canceled: "Canceled",
     past_due: "Past Due",
     unpaid: "Unpaid",
-    none: "None",
-    free: "Free",
+  };
+
+  const getLabel = () => {
+    if (labelMap[value]) return labelMap[value];
+    return value.split(/[\s_-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   };
 
   return (
-    <span
-      className={`px-2 py-1 rounded-full text-[12px] font-semibold ${
-        map[value] ?? "bg-gray-200 text-gray-700"
-      }`}
-    >
-      {labelMap[value] ?? value}
+    <span className={badgeClass}>
+      {getLabel()}
     </span>
   );
 };

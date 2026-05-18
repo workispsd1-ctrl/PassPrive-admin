@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/command";
 import { showToast } from "@/hooks/useToast";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -539,7 +540,13 @@ export default function PassPriveItemsManager({
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF4D" }}>
       <div className="mx-auto flex min-h-screen w-full max-w-[1360px] flex-col" style={{ background: "#FFFFFF4D" }}>
-        <div className="flex-1 px-4 pb-6 pt-4 sm:px-5 lg:px-6">
+        <div className="flex-1 px-4 pb-6 pt-3 sm:px-5 lg:px-6 space-y-4">
+          <SearchAndFilter
+            searchTerm={query}
+            onSearchChange={setQuery}
+            variant="search-only"
+            placeholder={searchPlaceholder}
+          />
           <Card
             className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
             style={{
@@ -547,7 +554,7 @@ export default function PassPriveItemsManager({
                 "linear-gradient(310.35deg, rgba(255, 255, 255, 0.4) 4.07%, rgba(255, 255, 255, 0.3) 48.73%, rgba(255, 255, 255, 0.2) 100%)",
             }}
           >
-            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-4 py-4 sm:px-5">
+            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-4 pt-3 pb-2.5 sm:px-5 sm:pt-4 sm:pb-3">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="mb-3 flex items-center gap-3">
@@ -578,100 +585,97 @@ export default function PassPriveItemsManager({
                   </Button>
                 </div>
               </div>
-
-              <div className="relative w-full lg:max-w-[1120px]">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
-                />
-              </div>
             </CardHeader>
 
-            <CardContent className="px-4 py-4 sm:px-5">
-            {loading ? (
-              <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading {entityPluralLabel.toLowerCase()}...
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
-                <p className="text-sm font-medium text-slate-900">{emptyTitle}</p>
-                <p className="mt-2 text-sm text-slate-500">{emptyDescription}</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {filteredItems.map((item) => {
-                  const actualIndex = items.findIndex((candidate) => candidate.id === item.id);
-                  const entityId = getItemEntityId(item, entityIdKey);
-                  const option = optionsMap.get(entityId);
-                  const nested = entityNestedKey === "restaurant" ? item.restaurant : item.store;
-                  const meta = optionMeta(option || nested || { id: "", name: "" });
+            <CardContent className="px-4 pt-2 pb-3.5 sm:px-5 sm:pt-2.5 sm:pb-4">
+              {loading ? (
+                <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading {entityPluralLabel.toLowerCase()}...
+                </div>
+              ) : filteredItems.length === 0 ? (
+                <div className="rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
+                  <p className="text-sm font-medium text-slate-900">{emptyTitle}</p>
+                  <p className="mt-2 text-sm text-slate-500">{emptyDescription}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {filteredItems.map((item) => {
+                    const actualIndex = items.findIndex((candidate) => candidate.id === item.id);
+                    const entityId = getItemEntityId(item, entityIdKey);
+                    const option = optionsMap.get(entityId);
+                    const nested = entityNestedKey === "restaurant" ? item.restaurant : item.store;
+                    const meta = optionMeta(option || nested || { id: "", name: "" });
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-[14px] border border-slate-200/80 px-4 py-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
-                      style={{
-                        background:
-                          "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
-                      }}
-                    >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="truncate text-[14px] font-semibold leading-5 text-slate-900">
-                            {resolveItemLabel(item, optionsMap, entityNestedKey, entityIdKey)}
-                            </p>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${
-                              item.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
-                            }`}
+                    return (
+                      <div
+                        key={item.id}
+                        className="rounded-[14px] border border-slate-200/80 px-4 py-4 shadow-[0_2px_14px_rgba(15,23,42,0.07)] transition-shadow hover:shadow-[0_6px_20px_rgba(15,23,42,0.09)]"
+                        style={{
+                          background:
+                            "linear-gradient(0deg, #FFFFFF, #FFFFFF), linear-gradient(142.22deg, #ECFEFF 4.91%, #F3E8FF 95.09%)",
+                        }}
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-[14px] font-semibold leading-5 text-slate-900">
+                                {resolveItemLabel(item, optionsMap, entityNestedKey, entityIdKey)}
+                              </p>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${item.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+                                  }`}
+                              >
+                                {item.is_active ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[12px] leading-5 text-slate-500">{meta || `${entityLabel} linked to this card.`}</p>
+                            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
+                              <span>Sort: {item.sort_order ?? 0}</span>
+                              <span>ID: {entityId}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <Button
+                              variant="outline"
+                              className="h-9 rounded-xl border-[#000000]/15 bg-transparent px-3 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-[#000000] shadow-sm hover:bg-[#000000]/[0.04] hover:border-[#000000]/30 transition-colors"
+                              onClick={() => moveItem(actualIndex, -1)}
+                              disabled={actualIndex <= 0}
                             >
-                              {item.is_active ? "Active" : "Inactive"}
-                            </span>
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="h-9 rounded-xl border-[#000000]/15 bg-transparent px-3 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-[#000000] shadow-sm hover:bg-[#000000]/[0.04] hover:border-[#000000]/30 transition-colors"
+                              onClick={() => moveItem(actualIndex, 1)}
+                              disabled={actualIndex === items.length - 1}
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="h-9 rounded-xl border-[#000000]/15 bg-transparent px-3 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-[#000000] shadow-sm hover:bg-[#000000]/[0.04] hover:border-[#000000]/30 transition-colors"
+                              onClick={() => openEditDialog(item)}
+                            >
+                              <Image src="/restaurentpasspriveedit.png" alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5 opacity-90" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="h-9 rounded-xl border-2 border-red-500 bg-transparent px-3 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-red-600 shadow-sm hover:bg-red-50 hover:border-red-600 transition-colors"
+                              onClick={() => setDeletingItem(item)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                              Delete
+                            </Button>
                           </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-500">{meta || `${entityLabel} linked to this card.`}</p>
-                          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
-                            <span>Sort: {item.sort_order ?? 0}</span>
-                            <span>ID: {entityId}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                          <Button
-                            variant="outline"
-                            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
-                            onClick={() => moveItem(actualIndex, -1)}
-                            disabled={actualIndex <= 0}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
-                            onClick={() => moveItem(actualIndex, 1)}
-                            disabled={actualIndex === items.length - 1}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" className="h-9 rounded-xl border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(item)}>
-                            <Image src="/restaurentpasspriveedit.png" alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" className="h-9 rounded-xl border-red-200 bg-white px-3 text-[13px] font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700" onClick={() => setDeletingItem(item)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

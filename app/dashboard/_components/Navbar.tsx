@@ -20,7 +20,7 @@ interface NavbarProps {
 
 const pathName: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/dashboard/bank-offers": "Bank Offers Manager",
+  "/dashboard/bank-offers": "Bank offers",
   "/dashboard/users": "User Management",
   "/dashboard/manage-restaurants": "Restaurant Management",
   "/dashboard/manage-stores": "Stores Management",
@@ -425,9 +425,8 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
 
   return (
     <header
-      className={`flex justify-between bg-[#FFFFFF] px-[24px] border-b border-[#000000]/[0.08] ${
-        navbarDescription ? "min-h-[64px] items-start pt-[24px] pb-[16px]" : "min-h-[64px] items-start pt-[24px] pb-[12px]"
-      }`}
+      className={`flex justify-between bg-[#FFFFFF] px-[24px] border-b border-[#000000]/[0.08] ${navbarDescription ? "min-h-[64px] items-start pt-[24px] pb-[16px]" : "min-h-[64px] items-start pt-[24px] pb-[12px]"
+        }`}
     >
       <div className="flex items-center gap-[10px]">
         <Button

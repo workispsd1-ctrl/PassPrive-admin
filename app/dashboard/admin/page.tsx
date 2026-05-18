@@ -477,7 +477,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="min-h-full p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+      <div className="min-h-full space-y-6 p-6">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           {/* Search Input */}
           <form
@@ -540,48 +540,48 @@ export default function AdminPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm lg:w-full md:w-full w-[320px]">
+          <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
               <thead className="bg-white">
-                <tr className="border-b border-gray-200">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
+                <tr className="border-b border-gray-200 h-[40px]">
+                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
+                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
+                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
+                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                     Phone
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#1D293D] uppercase tracking-wider">
+                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
                     Actions
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] divide-y divide-gray-200">
+              <tbody className="bg-[#FFFFFF] divide-y divide-gray-200">
                 {admins.map((admmin, idx) => (
                   <tr key={admmin.id} className={`border-b border-gray-200 hover:bg-white/20 transition ${idx !== admins.length - 1 ? "border-b" : ""}`}>
-                    <td className="wrap-break-word px-6 py-3 text-sm font-medium text-[#1D293D]">
+                    <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000] wrap-break-word">
                       {admmin?.email}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-[#5b6473]">
+                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                       <span className="flex items-center">
                         {admmin?.full_name || admmin?.name}
                       </span>
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-[#5b6473]">
+                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                       <span className="flex items-center">
                         {formatRole(admmin?.role)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#5b6473]">
+                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                       {admmin?.phone}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                       <div className="flex items-center gap-3">
                         <Button
                           variant="ghost"

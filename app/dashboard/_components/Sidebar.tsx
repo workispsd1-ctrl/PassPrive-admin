@@ -47,13 +47,13 @@ type MenuGroup = {
 };
 
 const sidebarLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap";
 
 const sidebarSmallLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+  "text-[15px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
 
 const sidebarMutedLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap text-[#000000]";
+  "text-[15px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
 
 const topLevelItems: MenuItem[] = [
   { title: "Dashboard", href: "/dashboard", iconSrc: "/Dashboard.png", exact: true },
@@ -270,7 +270,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[#E7DDF8] bg-white shadow-[0_10px_30px_rgba(126,41,215,0.06)] transition-[width] duration-300 ease-out",
-        collapsed ? "w-[84px]" : "w-[310px]"
+        collapsed ? "w-[84px]" : "w-[320px]"
       )}
     >
       <div

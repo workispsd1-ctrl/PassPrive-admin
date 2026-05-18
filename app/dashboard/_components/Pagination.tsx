@@ -20,7 +20,7 @@ export default function PaginationBar({
   setPage,
 }: Pagination) {
   return (
-    <div className="w-full flex justify-end px-4 py-2 bg-[#f3f7fc] text-sm text-gray-700">
+    <div className="w-full flex justify-end px-4 py-2 bg-transparent text-sm text-gray-700">
       <div className="flex items-center space-x-4">
         <div className="whitespace-nowrap lg:flex gap-2 md:flex hidden">
           <span className="font-medium">Total</span>{" "}

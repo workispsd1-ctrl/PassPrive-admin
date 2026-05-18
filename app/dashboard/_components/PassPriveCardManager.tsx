@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/hooks/useToast";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -197,9 +198,9 @@ export default function PassPriveCardManager({
         }
 
         const nextCards = ((data as PassPriveCard[] | null) || []).map((card) => ({
-            ...card,
-            item_count: countsByCardId.get(card.id) || 0,
-          }));
+          ...card,
+          item_count: countsByCardId.get(card.id) || 0,
+        }));
 
         setCards(nextCards);
         cardCache.set(cacheKey, { data: nextCards, expiresAt: Date.now() + CARD_CACHE_TTL_MS });
@@ -378,7 +379,13 @@ export default function PassPriveCardManager({
           background: "#FFFFFF4D",
         }}
       >
-        <div className="flex-1 px-4 pb-8 pt-6 sm:px-5 lg:px-6 lg:pt-7">
+        <div className="flex-1 px-4 pb-8 pt-3 sm:px-5 lg:px-6 lg:pt-4 space-y-4">
+          <SearchAndFilter
+            searchTerm={query}
+            onSearchChange={setQuery}
+            variant="search-only"
+            placeholder={searchPlaceholder}
+          />
           <Card
             className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
             style={{
@@ -386,7 +393,7 @@ export default function PassPriveCardManager({
                 "linear-gradient(310.35deg, rgba(255, 255, 255, 0.4) 4.07%, rgba(255, 255, 255, 0.3) 48.73%, rgba(255, 255, 255, 0.2) 100%)",
             }}
           >
-            <CardHeader className="space-y-5 border-b border-slate-100/90 bg-white/70 px-5 py-5 sm:px-6 sm:py-6">
+            <CardHeader className="space-y-4 border-b border-slate-100/90 bg-white/70 px-5 pt-4 pb-3 sm:px-6 sm:pt-4.5 sm:pb-3.5">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <CardTitle className="text-[19px] leading-7 tracking-tight text-slate-900">Cards</CardTitle>
@@ -397,19 +404,9 @@ export default function PassPriveCardManager({
                   Add new card
                 </Button>
               </div>
-
-              <div className="relative w-full lg:max-w-[1120px]">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="h-11 rounded-2xl border-slate-200 bg-white pl-10 text-sm shadow-[0_1px_0_rgba(15,23,42,0.02)] placeholder:text-slate-400"
-                />
-              </div>
             </CardHeader>
 
-            <CardContent className="px-5 py-6 sm:px-6 sm:py-6">
+            <CardContent className="px-5 pt-2 pb-5 sm:px-6 sm:pt-2.5 sm:pb-5">
               {loading ? (
                 <div className="flex items-center justify-center gap-3 rounded-[16px] border border-dashed border-slate-200 bg-white px-6 py-20 text-sm text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -448,24 +445,32 @@ export default function PassPriveCardManager({
                         </div>
 
                         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
-                          <Button variant="outline" className="h-10 rounded-xl border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50" onClick={() => openEditDialog(card)}>
-                            {editIconSrc ? <Image src={editIconSrc} alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5" /> : null}
+                          <Button
+                            variant="outline"
+                            className="h-10 rounded-xl border-[#000000]/15 bg-transparent px-4 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-[#000000] shadow-sm hover:bg-[#000000]/[0.04] hover:border-[#000000]/30 transition-colors"
+                            onClick={() => openEditDialog(card)}
+                          >
+                            {editIconSrc ? <Image src={editIconSrc} alt="Edit" width={14} height={14} className="mr-2 h-3.5 w-3.5 opacity-90" /> : null}
                             Edit
                           </Button>
                           <Button
-                            variant="destructive"
-                            className="h-10 rounded-xl bg-red-600 px-4 text-[13px] font-medium text-white hover:bg-red-700"
+                            asChild
+                            variant="outline"
+                            className="h-10 rounded-xl border-[#000000]/15 bg-transparent px-4 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-[#000000] shadow-sm hover:bg-[#000000]/[0.04] hover:border-[#000000]/30 transition-colors"
+                          >
+                            <Link href={`${basePath}/${card.id}`}>
+                              {manageIconSrc ? <Image src={manageIconSrc} alt="Manage" width={14} height={14} className="mr-2 h-3.5 w-3.5 opacity-90" /> : null}
+                              {detailLabel}
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-10 rounded-xl border-2 border-red-500 bg-transparent px-4 font-['Be_Vietnam_Pro',sans-serif] text-[13px] font-semibold tracking-[0px] text-red-600 shadow-sm hover:bg-red-50 hover:border-red-600 transition-colors"
                             onClick={() => setDeletingCard(card)}
                             disabled={saving}
                           >
-                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            <Trash2 className="mr-2 h-3.5 w-3.5 text-red-600" />
                             Delete
-                          </Button>
-                          <Button asChild variant="outline" className="h-10 rounded-xl border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50">
-                            <Link href={`${basePath}/${card.id}`}>
-                              {manageIconSrc ? <Image src={manageIconSrc} alt="Manage" width={14} height={14} className="mr-2 h-3.5 w-3.5" /> : null}
-                              {detailLabel}
-                            </Link>
                           </Button>
                         </div>
                       </div>

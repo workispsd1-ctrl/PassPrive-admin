@@ -138,71 +138,16 @@ function UsersPage() {
 
   return (
     <>
-      <div className="min-h-full w-full space-y-4">
-        <div className="flex h-14 items-center justify-between">
-          <div className="flex items-center">
-            <button
-              type="button"
-              onClick={handleToggleSidebar}
-              aria-label="Toggle sidebar"
-              className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-white/70"
-            >
-              {sidebarOpen ? (
-                <ChevronLeft className="h-5 w-5" />
-              ) : (
-                <ChevronRight className="h-5 w-5" />
-              )}
-            </button>
-            <h1 className="text-[22px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">User Management</h1>
-          </div>
-          <div className="flex items-center gap-3 text-[#1f2a37]">
-            <button
-              type="button"
-              className="rounded-md p-1.5 transition hover:bg-white/70"
-              aria-label="Download"
-            >
-              <Image
-                src="/download.png"
-                alt="Download"
-                width={16}
-                height={16}
-                className="h-4 w-4 object-contain"
-              />
-            </button>
-            <button
-              type="button"
-              className="rounded-md p-1.5 transition hover:bg-white/70"
-              aria-label="Refresh"
-            >
-              <Image
-                src="/refresh.png"
-                alt="Refresh"
-                width={16}
-                height={16}
-                className="h-4 w-4 object-contain"
-              />
-            </button>
-            <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
-              <div className="h-7 w-7 rounded-full bg-[#929292]" />
-              <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
-                Super Admin
-              </span>
-            </div>
-          </div>
-        </div>
-
-      {/* Filters + Table */}
-      <div className="min-h-full space-y-6 p-6 bg-[#FFFFFF]">
+      <div className="min-h-full space-y-6 p-6">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           planFilter={planFilter}
           onPlanFilterChange={setPlanFilter}
           placeholder="Search by name, email, or phone no..."
-
         />
 
-        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
           {loading ? (
             <div className="p-6">
               <LoadingSkeleton />
@@ -309,7 +254,6 @@ function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </>
   );
 }

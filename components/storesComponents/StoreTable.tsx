@@ -126,7 +126,7 @@ export const StoreTable = ({
 
   return (
     <>
-      <table className="w-full border-collapse">
+      <table className="min-w-full border-collapse bg-white">
         <thead className="bg-white">
           <tr className="border-b border-gray-200 h-[40px]">
             <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">

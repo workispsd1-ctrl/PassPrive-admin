@@ -344,59 +344,7 @@ export default function CorporatePage() {
 
   return (
     <>
-      <div className="min-h-full w-full space-y-4">
-        <div className="flex h-14 items-center justify-between">
-          <div className="flex items-center">
-            <button
-              type="button"
-              onClick={handleToggleSidebar}
-              aria-label="Toggle sidebar"
-              className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-white/70"
-            >
-              {sidebarOpen ? (
-                <ChevronLeft className="h-5 w-5" />
-              ) : (
-                <ChevronRight className="h-5 w-5" />
-              )}
-            </button>
-            <h1 className="text-[22px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">Corporate Management</h1>
-          </div>
-          <div className="flex items-center gap-3 text-[#1f2a37]">
-            <button
-              type="button"
-              className="rounded-md p-1.5 transition hover:bg-white/70"
-              aria-label="Download"
-            >
-              <Image
-                src="/download.png"
-                alt="Download"
-                width={16}
-                height={16}
-                className="h-4 w-4 object-contain"
-              />
-            </button>
-            <button
-              type="button"
-              className="rounded-md p-1.5 transition hover:bg-white/70"
-              aria-label="Refresh"
-            >
-              <Image
-                src="/refresh.png"
-                alt="Refresh"
-                width={16}
-                height={16}
-                className="h-4 w-4 object-contain"
-              />
-            </button>
-            <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
-              <div className="h-7 w-7 rounded-full bg-[#929292]" />
-              <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
-                Super Admin
-              </span>
-            </div>
-          </div>
-        </div>
-      <div className="min-h-full space-y-6 p-6 bg-[#FFFFFF]">
+      <div className="min-h-full space-y-6 p-6">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={(v) => {
@@ -407,7 +355,7 @@ export default function CorporatePage() {
           placeholder="Search corporates by name, city, or area..."
         />
 
-        <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
           {loading ? (
             <div className="p-6">
               <CorporatesTableSkeleton />
@@ -557,7 +505,6 @@ export default function CorporatePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </>
   );
 }
@@ -624,19 +571,19 @@ function CorporateTable({
 
   return (
     <>
-      <table className="w-full border-spacing-0 border-collapse">
+      <table className="min-w-full border-spacing-0 border-collapse bg-white">
         <thead className="bg-white">
-          <tr className="border-b border-gray-200">
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">NAME</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">LOCATION</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">EMAIL</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">PLAN</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">STATUS</th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">ACTIONS</th>
+          <tr className="border-b border-gray-200 h-[40px]">
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">NAME</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">LOCATION</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">EMAIL</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">PLAN</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">STATUS</th>
+            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
           </tr>
         </thead>
 
-        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+        <tbody className="bg-[#FFFFFF]">
           {corporates.map((c, idx) => {
             if (!c.id) return null;
 
@@ -648,19 +595,23 @@ function CorporateTable({
                 }`}
                 onClick={() => onRowClick?.(c.id)}
               >
-                <td className="px-6 py-3 font-medium text-[#1D293D]">{c.name}</td>
-                <td className="px-6 py-3 text-[#5b6473]">{formatLocation(c)}</td>
-                <td className="px-6 py-3 text-[#5b6473]">{c.email ?? c.owner_email ?? "-"}</td>
-                <td className="px-6 py-3 text-[#5b6473]">{c.plan ?? "-"}</td>
-                <td className="px-6 py-3">
+                <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{c.name}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{formatLocation(c)}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{c.email ?? c.owner_email ?? "-"}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{c.plan ?? "-"}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                   {c.is_active === false ? (
-                    <span className="text-xs font-semibold text-red-600">Disabled</span>
+                    <span className="bg-[#FEE2E2] text-[#DC2626] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
+                      Disabled
+                    </span>
                   ) : (
-                    <span className="text-xs font-semibold text-green-700">Active</span>
+                    <span className="bg-[#EAE3FA] text-[#5800AB] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
+                      Active
+                    </span>
                   )}
                 </td>
 
-                <td className="px-6 py-3">
+                <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <Button
                       size="sm"

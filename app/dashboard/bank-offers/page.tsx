@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Zap,
   Layers,
+  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -787,8 +788,8 @@ export default function BankOffersPage() {
   }
 
   return (
-    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-full bg-white">
+      <div className="mx-auto max-w-[1360px] px-4 py-4 sm:px-5 lg:px-6">
         {editingId ? (
           <div className="mb-4 flex justify-end">
             <Button
@@ -801,7 +802,7 @@ export default function BankOffersPage() {
             </Button>
           </div>
         ) : null}
-        <div className="grid gap-8 lg:grid-cols-[720px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
           {/* Left Sidebar - Form */}
           <div className="space-y-6">
             {/* Main Form Card */}
@@ -818,29 +819,29 @@ export default function BankOffersPage() {
                 description="Bank details and branding"
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <TextField 
-                  label="Offer name" 
-                  value={form.title} 
-                  onChange={(value) => setForm((c) => ({ ...c, title: value }))} 
-                  placeholder="20% off weekend dining" 
+                <TextField
+                  label="Offer name"
+                  value={form.title}
+                  onChange={(value) => setForm((c) => ({ ...c, title: value }))}
+                  placeholder="20% off weekend dining"
                 />
-                <TextField 
-                  label="Short label" 
-                  value={form.short_title} 
-                  onChange={(value) => setForm((c) => ({ ...c, short_title: value }))} 
-                  placeholder="Weekend deal" 
+                <TextField
+                  label="Short label"
+                  value={form.short_title}
+                  onChange={(value) => setForm((c) => ({ ...c, short_title: value }))}
+                  placeholder="Weekend deal"
                 />
-                <TextField 
-                  label="Bank name" 
-                  value={form.bank_name} 
-                  onChange={(value) => setForm((c) => ({ ...c, bank_name: value }))} 
-                  placeholder="HDFC Bank" 
+                <TextField
+                  label="Bank name"
+                  value={form.bank_name}
+                  onChange={(value) => setForm((c) => ({ ...c, bank_name: value }))}
+                  placeholder="HDFC Bank"
                 />
-                <TextField 
-                  label="Sponsor name" 
-                  value={form.sponsor_name} 
-                  onChange={(value) => setForm((c) => ({ ...c, sponsor_name: value }))} 
-                  placeholder="Usually the same as bank name" 
+                <TextField
+                  label="Sponsor name"
+                  value={form.sponsor_name}
+                  onChange={(value) => setForm((c) => ({ ...c, sponsor_name: value }))}
+                  placeholder="Usually the same as bank name"
                 />
               </div>
 
@@ -853,16 +854,16 @@ export default function BankOffersPage() {
                 onRemoveLogo={() => void handleRemoveLogo()}
               />
 
-              <TextareaField 
-                label="Offer description" 
-                value={form.description} 
-                onChange={(value) => setForm((c) => ({ ...c, description: value }))} 
+              <TextareaField
+                label="Offer description"
+                value={form.description}
+                onChange={(value) => setForm((c) => ({ ...c, description: value }))}
               />
-              <TextField 
-                label="Badge text" 
-                value={form.badge_text} 
-                onChange={(value) => setForm((c) => ({ ...c, badge_text: value }))} 
-                placeholder="Bank Offer" 
+              <TextField
+                label="Badge text"
+                value={form.badge_text}
+                onChange={(value) => setForm((c) => ({ ...c, badge_text: value }))}
+                placeholder="Bank Offer"
               />
 
               {/* Step 2 */}
@@ -872,48 +873,48 @@ export default function BankOffersPage() {
                 description="What will customers get?"
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField 
-                  label="Offer type" 
-                  value={form.offer_type} 
-                  options={OFFER_TYPES} 
-                  onChange={(value) => setForm((c) => ({ ...c, offer_type: value as BankOfferForm["offer_type"] }))} 
+                <SelectField
+                  label="Offer type"
+                  value={form.offer_type}
+                  options={OFFER_TYPES}
+                  onChange={(value) => setForm((c) => ({ ...c, offer_type: value as BankOfferForm["offer_type"] }))}
                 />
-                <SelectField 
-                  label="Payment method" 
-                  value={form.payment_instrument_type} 
-                  options={PAYMENT_INSTRUMENTS} 
-                  onChange={(value) => setForm((c) => ({ ...c, payment_instrument_type: value as BankOfferForm["payment_instrument_type"] }))} 
+                <SelectField
+                  label="Payment method"
+                  value={form.payment_instrument_type}
+                  options={PAYMENT_INSTRUMENTS}
+                  onChange={(value) => setForm((c) => ({ ...c, payment_instrument_type: value as BankOfferForm["payment_instrument_type"] }))}
                 />
-                <NumberField 
-                  label="Discount %" 
-                  value={form.discount_percent} 
-                  onChange={(value) => setForm((c) => ({ ...c, discount_percent: value }))} 
+                <NumberField
+                  label="Discount %"
+                  value={form.discount_percent}
+                  onChange={(value) => setForm((c) => ({ ...c, discount_percent: value }))}
                 />
-                <NumberField 
-                  label="Flat discount" 
-                  value={form.discount_amount} 
-                  onChange={(value) => setForm((c) => ({ ...c, discount_amount: value }))} 
+                <NumberField
+                  label="Flat discount"
+                  value={form.discount_amount}
+                  onChange={(value) => setForm((c) => ({ ...c, discount_amount: value }))}
                 />
-                <NumberField 
-                  label="Cashback %" 
-                  value={form.cashback_percent} 
-                  onChange={(value) => setForm((c) => ({ ...c, cashback_percent: value }))} 
+                <NumberField
+                  label="Cashback %"
+                  value={form.cashback_percent}
+                  onChange={(value) => setForm((c) => ({ ...c, cashback_percent: value }))}
                 />
-                <NumberField 
-                  label="Cashback amount" 
-                  value={form.cashback_amount} 
-                  onChange={(value) => setForm((c) => ({ ...c, cashback_amount: value }))} 
+                <NumberField
+                  label="Cashback amount"
+                  value={form.cashback_amount}
+                  onChange={(value) => setForm((c) => ({ ...c, cashback_amount: value }))}
                 />
-                <NumberField 
-                  label="Max discount" 
-                  value={form.max_discount_amount} 
-                  onChange={(value) => setForm((c) => ({ ...c, max_discount_amount: value }))} 
+                <NumberField
+                  label="Max discount"
+                  value={form.max_discount_amount}
+                  onChange={(value) => setForm((c) => ({ ...c, max_discount_amount: value }))}
                 />
-                <TextField 
-                  label="Currency" 
-                  value={form.currency_code} 
-                  onChange={(value) => setForm((c) => ({ ...c, currency_code: value.toUpperCase() }))} 
-                  maxLength={3} 
+                <TextField
+                  label="Currency"
+                  value={form.currency_code}
+                  onChange={(value) => setForm((c) => ({ ...c, currency_code: value.toUpperCase() }))}
+                  maxLength={3}
                 />
               </div>
 
@@ -924,47 +925,47 @@ export default function BankOffersPage() {
                 description="When is this offer live?"
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <DateTimeField 
-                  label="Starts on" 
-                  value={form.valid_from} 
-                  onChange={(value) => setForm((c) => ({ ...c, valid_from: value }))} 
+                <DateTimeField
+                  label="Starts on"
+                  value={form.valid_from}
+                  onChange={(value) => setForm((c) => ({ ...c, valid_from: value }))}
                 />
-                <DateTimeField 
-                  label="Ends on" 
-                  value={form.valid_until} 
-                  onChange={(value) => setForm((c) => ({ ...c, valid_until: value }))} 
+                <DateTimeField
+                  label="Ends on"
+                  value={form.valid_until}
+                  onChange={(value) => setForm((c) => ({ ...c, valid_until: value }))}
                 />
-                <SelectField 
-                  label="Status" 
-                  value={form.status} 
-                  options={STATUS_OPTIONS} 
-                  onChange={(value) => setForm((c) => ({ ...c, status: value as BankOfferForm["status"] }))} 
+                <SelectField
+                  label="Status"
+                  value={form.status}
+                  options={STATUS_OPTIONS}
+                  onChange={(value) => setForm((c) => ({ ...c, status: value as BankOfferForm["status"] }))}
                 />
-                <NumberField 
-                  label="Priority" 
-                  value={form.priority} 
-                  onChange={(value) => setForm((c) => ({ ...c, priority: value }))} 
+                <NumberField
+                  label="Priority"
+                  value={form.priority}
+                  onChange={(value) => setForm((c) => ({ ...c, priority: value }))}
                 />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <ToggleField 
-                  label="Show in app" 
-                  checked={form.is_active} 
-                  onChange={(checked) => setForm((c) => ({ ...c, is_active: checked }))} 
+                <ToggleField
+                  label="Show in app"
+                  checked={form.is_active}
+                  onChange={(checked) => setForm((c) => ({ ...c, is_active: checked }))}
                 />
-                <ToggleField 
-                  label="Needs coupon code" 
-                  checked={form.requires_coupon_code} 
-                  onChange={(checked) => setForm((c) => ({ ...c, requires_coupon_code: checked, coupon_code: checked ? c.coupon_code : "" }))} 
+                <ToggleField
+                  label="Needs coupon code"
+                  checked={form.requires_coupon_code}
+                  onChange={(checked) => setForm((c) => ({ ...c, requires_coupon_code: checked, coupon_code: checked ? c.coupon_code : "" }))}
                 />
               </div>
 
               {form.requires_coupon_code ? (
-                <TextField 
-                  label="Coupon code" 
-                  value={form.coupon_code} 
-                  onChange={(value) => setForm((c) => ({ ...c, coupon_code: value }))} 
+                <TextField
+                  label="Coupon code"
+                  value={form.coupon_code}
+                  onChange={(value) => setForm((c) => ({ ...c, coupon_code: value }))}
                 />
               ) : null}
 
@@ -972,100 +973,105 @@ export default function BankOffersPage() {
               <AdvancedSettingsSection form={form} setForm={setForm} />
 
               <div className="pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={resetForm} 
-                  className="border-slate-200 hover:bg-slate-50 transition-colors duration-200"
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="w-full h-[40px] rounded-[12px] border-[0.3px] border-[#938F96] bg-white text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] hover:bg-slate-50 active:bg-slate-100 transition-colors duration-200"
                 >
                   Reset form
-                </Button>
+                </button>
               </div>
-            </SectionCard>
 
-            {/* Card Rules Section */}
-            <SectionCard
-              icon={CreditCard}
-              title="Eligible Cards"
-              description="Specific card BINs (optional)"
-              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
-              action={
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setBins((current) => [...current, createBinDraft()])} 
-                  className="border-slate-200 hover:bg-slate-50 transition-colors duration-200"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add rule
-                </Button>
-              }
-            >
-              <div className="space-y-3">
-                {bins.map((row, index) => (
-                  <BinRuleCard
-                    key={row.clientId}
-                    row={row}
-                    index={index}
-                    onUpdate={(value) =>
-                      setBins((current) =>
-                        current.map((item) =>
-                          item.clientId === row.clientId ? value : item
+              {/* Eligible Cards Subsection */}
+              <div className="pt-[16px] flex flex-col gap-[16px]">
+                <div className="flex h-[40px] justify-between items-center">
+                  <div className="flex flex-col gap-[2px]">
+                    <h2 className="text-[20px] font-semibold font-['Be_Vietnam_Pro',sans-serif] leading-[28px] text-[#000000] tracking-[0px]">
+                      Eligible Cards
+                    </h2>
+                    <p className="text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#AEA9B1]">
+                      Specific card BINs (optional)
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBins((current) => [...current, createBinDraft()])}
+                    className="h-[28px] px-[12px] rounded-[10px] bg-[#5800AB]/10 text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] tracking-[0.5px] text-[#5800AB] hover:bg-[#5800AB]/20 active:bg-[#5800AB]/30 transition-colors duration-200 flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add rule
+                  </button>
+                </div>
+
+                <div className="space-y-[16px]">
+                  {bins.map((row, index) => (
+                    <BinRuleCard
+                      key={row.clientId}
+                      row={row}
+                      index={index}
+                      onUpdate={(value) =>
+                        setBins((current) =>
+                          current.map((item) =>
+                            item.clientId === row.clientId ? value : item
+                          )
                         )
-                      )
-                    }
-                    onRemove={() =>
-                      setBins((current) =>
-                        current.filter((item) => item.clientId !== row.clientId)
-                      )
-                    }
-                  />
-                ))}
+                      }
+                      onRemove={() =>
+                        setBins((current) =>
+                          current.filter((item) => item.clientId !== row.clientId)
+                        )
+                      }
+                    />
+                  ))}
+                </div>
               </div>
-            </SectionCard>
 
-            {/* Location Rules Section */}
-            <SectionCard
-              icon={Target}
-              title="Where This Works"
-              description="Geographic and merchant targeting"
-              gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
-              action={
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setTargets((current) => [...current, createTargetDraft()])} 
-                  className="border-slate-200 hover:bg-slate-50 transition-colors duration-200"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add rule
-                </Button>
-              }
-            >
-              <div className="space-y-3">
-                {targets.map((row, index) => (
-                  <TargetRuleCard
-                    key={row.clientId}
-                    row={row}
-                    index={index}
-                    cityOptions={cityOptions}
-                    categoryOptions={categoryOptions}
-                    restaurants={restaurants}
-                    stores={stores}
-                    onUpdate={(value) =>
-                      setTargets((current) =>
-                        current.map((item) =>
-                          item.clientId === row.clientId ? value : item
+              {/* Where This Works Subsection */}
+              <div className="pt-[16px] flex flex-col gap-[16px]">
+                <div className="flex h-[40px] justify-between items-center">
+                  <div className="flex flex-col gap-[2px]">
+                    <h2 className="text-[20px] font-semibold font-['Be_Vietnam_Pro',sans-serif] leading-[28px] text-[#000000] tracking-[0px]">
+                      Where This Works
+                    </h2>
+                    <p className="text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#AEA9B1]">
+                      Geographic and merchant targeting
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTargets((current) => [...current, createTargetDraft()])}
+                    className="h-[28px] px-[12px] rounded-[10px] bg-[#5800AB]/10 text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] tracking-[0.5px] text-[#5800AB] hover:bg-[#5800AB]/20 active:bg-[#5800AB]/30 transition-colors duration-200 flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add rule
+                  </button>
+                </div>
+
+                <div className="space-y-[16px]">
+                  {targets.map((row, index) => (
+                    <TargetRuleCard
+                      key={row.clientId}
+                      row={row}
+                      index={index}
+                      cityOptions={cityOptions}
+                      categoryOptions={categoryOptions}
+                      restaurants={restaurants}
+                      stores={stores}
+                      onUpdate={(value) =>
+                        setTargets((current) =>
+                          current.map((item) =>
+                            item.clientId === row.clientId ? value : item
+                          )
                         )
-                      )
-                    }
-                    onRemove={() =>
-                      setTargets((current) =>
-                        current.filter((item) => item.clientId !== row.clientId)
-                      )
-                    }
-                  />
-                ))}
+                      }
+                      onRemove={() =>
+                        setTargets((current) =>
+                          current.filter((item) => item.clientId !== row.clientId)
+                        )
+                      }
+                    />
+                  ))}
+                </div>
               </div>
             </SectionCard>
           </div>
@@ -1080,13 +1086,13 @@ export default function BankOffersPage() {
               gradient="bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]"
             >
               <div className="relative">
-                <Input 
-                  value={filter} 
-                  onChange={(e) => setFilter(e.target.value)} 
-                  placeholder="Search offers..." 
+                <Input
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Search offers..."
                   className="border-slate-200 pl-10 focus:border-[#5800AB] focus:ring-[#5800AB] transition-colors duration-200"
                 />
-                <BadgePercent className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               </div>
 
               {loading ? (
@@ -1098,7 +1104,7 @@ export default function BankOffersPage() {
                   description="Create an offer or adjust the search criteria."
                 />
               ) : (
-                <div className="space-y-3 pt-4 max-h-[calc(100vh-300px)] overflow-y-auto">
+                <div className="flex flex-col gap-4 pt-4 max-h-[calc(100vh-300px)] overflow-y-auto">
                   {filteredOffers.map((offer) => (
                     <OfferCard
                       key={offer.id}
@@ -1173,14 +1179,12 @@ export default function BankOffersPage() {
 // ============================================================================
 
 function SectionCard({
-  icon: Icon,
   title,
   description,
   action,
   children,
-  gradient = "bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)]",
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
   action?: React.ReactNode;
@@ -1188,20 +1192,19 @@ function SectionCard({
   gradient?: string;
 }) {
   return (
-    <section className={`rounded-2xl border border-slate-200/60 ${gradient} p-6 shadow-sm hover:shadow-md transition-shadow duration-300`}>
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-            <Icon className="h-5 w-5 text-slate-700" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-            <p className="mt-0.5 text-xs text-slate-600">{description}</p>
-          </div>
+    <section className="rounded-[16px] border border-slate-200/60 bg-white p-[16px] flex flex-col gap-[16px] shadow-[0_8px_32px_rgba(31,38,135,0.15)] transition-shadow duration-300">
+      <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-[2px]">
+          <h2 className="text-[20px] font-semibold font-['Be_Vietnam_Pro',sans-serif] leading-[28px] text-[#000000] tracking-[0px]">
+            {title}
+          </h2>
+          <p className="text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#AEA9B1]">
+            {description}
+          </p>
         </div>
         {action}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="flex flex-col gap-[16px]">{children}</div>
     </section>
   );
 }
@@ -1216,15 +1219,17 @@ function StepSection({
   description: string;
 }) {
   return (
-    <div className="border-t border-slate-200/50 pt-4 first:border-t-0 first:pt-0">
-      <div className="flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
-          {stepNumber}
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-          <p className="mt-0.5 text-xs text-slate-600">{description}</p>
-        </div>
+    <div className="flex items-start gap-[12px] pt-4 first:pt-0">
+      <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[10px] bg-[#5800AB]/10 text-[14px] font-semibold font-['Be_Vietnam_Pro',sans-serif] text-[#5800AB]">
+        {stepNumber}
+      </div>
+      <div className="flex flex-col gap-[2px]">
+        <h3 className="text-[18px] font-semibold font-['Be_Vietnam_Pro',sans-serif] leading-[26px] text-black">
+          {title}
+        </h3>
+        <p className="text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#AEA9B1]">
+          {description}
+        </p>
       </div>
     </div>
   );
@@ -1245,13 +1250,13 @@ function TextField({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-slate-700">{label}</label>
-      <Input 
-        value={value} 
-        onChange={(e) => onChange(e.target.value)} 
-        placeholder={placeholder} 
-        maxLength={maxLength} 
-        className="mt-2 h-10 border-slate-200 bg-white shadow-sm focus:border-emerald-400 focus:ring-emerald-400 transition-colors duration-200" 
+      <label className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] tracking-[0px]">{label}</label>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] shadow-none"
       />
     </div>
   );
@@ -1268,12 +1273,12 @@ function NumberField({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-slate-700">{label}</label>
-      <Input 
-        type="number" 
-        value={value} 
-        onChange={(e) => onChange(e.target.value)} 
-        className="mt-2 h-10 border-slate-200 bg-white shadow-sm focus:border-emerald-400 focus:ring-emerald-400 transition-colors duration-200" 
+      <label className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] tracking-[0px]">{label}</label>
+      <Input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] shadow-none"
       />
     </div>
   );
@@ -1290,12 +1295,12 @@ function DateTimeField({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-slate-700">{label}</label>
-      <Input 
-        type="datetime-local" 
-        value={value} 
-        onChange={(e) => onChange(e.target.value)} 
-        className="mt-2 h-10 border-slate-200 bg-white shadow-sm focus:border-emerald-400 focus:ring-emerald-400 transition-colors duration-200" 
+      <label className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] tracking-[0px]">{label}</label>
+      <Input
+        type="datetime-local"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] shadow-none"
       />
     </div>
   );
@@ -1312,11 +1317,11 @@ function TextareaField({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-slate-700">{label}</label>
-      <Textarea 
-        value={value} 
-        onChange={(e) => onChange(e.target.value)} 
-        className="mt-2 min-h-20 border-slate-200 bg-white shadow-sm focus:border-emerald-400 focus:ring-emerald-400 transition-colors duration-200 resize-none" 
+      <label className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] tracking-[0px]">{label}</label>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 min-h-[100px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white p-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] resize-none shadow-none"
       />
     </div>
   );
@@ -1335,11 +1340,11 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-slate-700">{label}</label>
-      <select 
-        value={value} 
-        onChange={(e) => onChange(e.target.value)} 
-        className="mt-2 flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none shadow-sm focus:border-emerald-400 focus:ring-emerald-400 transition-colors duration-200"
+      <label className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] tracking-[0px]">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 flex h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] py-2 text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB]"
       >
         {options.map((option) => {
           if (typeof option === "string") {
@@ -1370,14 +1375,16 @@ function ToggleField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer transition-colors duration-200">
-      <input 
-        type="checkbox" 
-        checked={checked} 
-        onChange={(e) => onChange(e.target.checked)} 
-        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" 
+    <label className="flex items-center h-[20px] gap-[8px] cursor-pointer select-none">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-[16px] w-[16px] shrink-0 rounded-[4px] border-[0.3px] border-[#938F96] text-[#5800AB] focus:ring-[#5800AB] cursor-pointer"
       />
-      {label}
+      <span className="text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000]">
+        {label}
+      </span>
     </label>
   );
 }
@@ -1396,54 +1403,52 @@ function LogoUploadSection({
   onRemoveLogo: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <p className="text-sm font-medium text-slate-800">Bank logo</p>
-          <p className="mt-1 text-xs text-slate-600">PNG, JPG, or SVG</p>
-        </div>
+    <div className="flex flex-col gap-[8px]">
+      <p className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] tracking-[0px]">
+        Bank logo
+      </p>
+
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="w-full h-[120px] rounded-[12px] border-[2px] border-dashed border-[#CAC5CD] bg-white p-[16px] flex flex-col items-center justify-center gap-[8px] cursor-pointer hover:bg-slate-50/50 transition-colors duration-200"
+      >
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onLogoPick} />
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => fileRef.current?.click()} 
-          className="border-slate-200 bg-white hover:bg-slate-50 transition-colors duration-200"
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          {logoPreview ? "Replace" : "Upload"}
-        </Button>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-          {logoPreview ? (
+
+        {logoPreview ? (
+          <div className="relative h-[80px] w-[80px] flex items-center justify-center overflow-hidden rounded-lg bg-white">
             <Image src={logoPreview} alt="Bank logo preview" width={80} height={80} className="h-full w-full object-contain" unoptimized />
-          ) : (
-            <Building2 className="h-8 w-8 text-slate-300" />
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-xs font-medium text-slate-800">
-              {logoPreview ? "✓ Logo ready" : "No logo yet"}
-            </p>
-            <p className="mt-1 text-xs text-slate-600">
-              {logoFile
-                ? `${logoFile.name}`
-                : logoPreview
-                  ? "Current logo"
-                  : "Upload to add branding"}
-            </p>
-            {logoPreview ? (
-              <button
-                type="button"
-                onClick={onRemoveLogo}
-                className="mt-2 text-xs font-medium text-red-600 hover:text-red-700 transition-colors duration-200"
-              >
-                Remove logo
-              </button>
-            ) : null}
           </div>
-        </div>
+        ) : (
+          <>
+            <Upload className="h-[20px] w-[20px] text-[#5800AB]" />
+            <div className="flex flex-col items-center justify-center gap-[2px]">
+              <p className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#5800AB] text-center">
+                Upload to add branding
+              </p>
+              <p className="text-[12px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[16px] text-[#AEA9B1] text-center">
+                PNG, JPG, or SVG
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-[12px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[18px] text-[#AEA9B1]">
+        <span>
+          {logoFile ? `✓ ${logoFile.name}` : logoPreview ? "Current logo" : "No logo yet."}
+        </span>
+        {logoPreview ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemoveLogo();
+            }}
+            className="text-[12px] font-medium text-red-600 hover:text-red-700 transition-colors duration-200"
+          >
+            Remove logo
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -1457,100 +1462,100 @@ function AdvancedSettingsSection({
   setForm: (fn: (current: BankOfferForm) => BankOfferForm) => void;
 }) {
   return (
-    <details className="rounded-2xl border border-slate-200 bg-slate-50/50 group">
-      <summary className="cursor-pointer list-none px-4 py-4 text-sm font-semibold text-slate-800 flex items-center gap-2 hover:text-slate-900 transition-colors duration-200">
-        <Zap className="h-4 w-4 text-amber-600" />
+    <details className="rounded-[12px] border-[0.3px] border-[#938F96] bg-white group overflow-hidden">
+      <summary className="cursor-pointer list-none px-[12px] h-[44px] flex items-center gap-[8px] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] hover:bg-slate-50 transition-colors duration-200">
+        <Zap className="h-[20px] w-[20px] text-[#F59E0B]" />
         Advanced Settings
-        <span className="ml-auto group-open:rotate-180 transition-transform duration-200">▼</span>
+        <span className="ml-auto group-open:rotate-180 transition-transform duration-200 text-[#000000] text-xs">▼</span>
       </summary>
-      <div className="space-y-4 border-t border-slate-200 px-4 py-4">
+      <div className="space-y-4 border-t-[0.3px] border-[#938F96] px-4 py-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField 
-            label="Sponsor type" 
-            value={form.sponsor_type} 
-            options={SPONSOR_TYPES} 
-            onChange={(value) => setForm((c) => ({ ...c, sponsor_type: value as BankOfferForm["sponsor_type"] }))} 
+          <SelectField
+            label="Sponsor type"
+            value={form.sponsor_type}
+            options={SPONSOR_TYPES}
+            onChange={(value) => setForm((c) => ({ ...c, sponsor_type: value as BankOfferForm["sponsor_type"] }))}
           />
-          <SelectField 
-            label="Funding" 
-            value={form.funded_by} 
-            options={FUNDED_BY} 
-            onChange={(value) => setForm((c) => ({ ...c, funded_by: value as BankOfferForm["funded_by"] }))} 
+          <SelectField
+            label="Funding"
+            value={form.funded_by}
+            options={FUNDED_BY}
+            onChange={(value) => setForm((c) => ({ ...c, funded_by: value as BankOfferForm["funded_by"] }))}
           />
-          <SelectField 
-            label="Benefit type" 
-            value={form.benefit_kind} 
-            options={BENEFIT_KINDS} 
-            onChange={(value) => setForm((c) => ({ ...c, benefit_kind: value as BankOfferForm["benefit_kind"] }))} 
+          <SelectField
+            label="Benefit type"
+            value={form.benefit_kind}
+            options={BENEFIT_KINDS}
+            onChange={(value) => setForm((c) => ({ ...c, benefit_kind: value as BankOfferForm["benefit_kind"] }))}
           />
-          <SelectField 
-            label="Card network" 
-            value={form.card_network} 
-            options={CARD_NETWORKS} 
-            onChange={(value) => setForm((c) => ({ ...c, card_network: value }))} 
+          <SelectField
+            label="Card network"
+            value={form.card_network}
+            options={CARD_NETWORKS}
+            onChange={(value) => setForm((c) => ({ ...c, card_network: value }))}
           />
-          <SelectField 
-            label="Module" 
-            value={form.applies_to_module} 
-            options={MODULE_TYPES} 
-            onChange={(value) => setForm((c) => ({ ...c, applies_to_module: value as BankOfferForm["applies_to_module"] }))} 
+          <SelectField
+            label="Module"
+            value={form.applies_to_module}
+            options={MODULE_TYPES}
+            onChange={(value) => setForm((c) => ({ ...c, applies_to_module: value as BankOfferForm["applies_to_module"] }))}
           />
-          <SelectField 
-            label="Payment flow" 
-            value={form.applies_to_payment_flow} 
-            options={PAYMENT_FLOWS} 
-            onChange={(value) => setForm((c) => ({ ...c, applies_to_payment_flow: value as BankOfferForm["applies_to_payment_flow"] }))} 
+          <SelectField
+            label="Payment flow"
+            value={form.applies_to_payment_flow}
+            options={PAYMENT_FLOWS}
+            onChange={(value) => setForm((c) => ({ ...c, applies_to_payment_flow: value as BankOfferForm["applies_to_payment_flow"] }))}
           />
-          <NumberField 
-            label="Min bill amount" 
-            value={form.min_transaction_amount} 
-            onChange={(value) => setForm((c) => ({ ...c, min_transaction_amount: value }))} 
+          <NumberField
+            label="Min bill amount"
+            value={form.min_transaction_amount}
+            onChange={(value) => setForm((c) => ({ ...c, min_transaction_amount: value }))}
           />
-          <NumberField 
-            label="Max bill amount" 
-            value={form.max_transaction_amount} 
-            onChange={(value) => setForm((c) => ({ ...c, max_transaction_amount: value }))} 
+          <NumberField
+            label="Max bill amount"
+            value={form.max_transaction_amount}
+            onChange={(value) => setForm((c) => ({ ...c, max_transaction_amount: value }))}
           />
-          <TextField 
-            label="Display label" 
-            value={form.display_label} 
-            onChange={(value) => setForm((c) => ({ ...c, display_label: value }))} 
+          <TextField
+            label="Display label"
+            value={form.display_label}
+            onChange={(value) => setForm((c) => ({ ...c, display_label: value }))}
           />
-          <TextField 
-            label="Issuer bank" 
-            value={form.issuer_bank_name} 
-            onChange={(value) => setForm((c) => ({ ...c, issuer_bank_name: value }))} 
+          <TextField
+            label="Issuer bank"
+            value={form.issuer_bank_name}
+            onChange={(value) => setForm((c) => ({ ...c, issuer_bank_name: value }))}
           />
-          <TextField 
-            label="Banner image URL" 
-            value={form.banner_image} 
-            onChange={(value) => setForm((c) => ({ ...c, banner_image: value }))} 
+          <TextField
+            label="Banner image URL"
+            value={form.banner_image}
+            onChange={(value) => setForm((c) => ({ ...c, banner_image: value }))}
           />
-          <TextField 
-            label="Brand color" 
-            value={form.bank_brand_color} 
-            onChange={(value) => setForm((c) => ({ ...c, bank_brand_color: value }))} 
-            placeholder="#0047AB" 
+          <TextField
+            label="Brand color"
+            value={form.bank_brand_color}
+            onChange={(value) => setForm((c) => ({ ...c, bank_brand_color: value }))}
+            placeholder="#0047AB"
           />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <ToggleField 
-            label="Stack with other offers" 
-            checked={form.stackable_with_other_offers} 
-            onChange={(checked) => setForm((c) => ({ ...c, stackable_with_other_offers: checked }))} 
+          <ToggleField
+            label="Stack with other offers"
+            checked={form.stackable_with_other_offers}
+            onChange={(checked) => setForm((c) => ({ ...c, stackable_with_other_offers: checked }))}
           />
-          <ToggleField 
-            label="Stack with platform offers" 
-            checked={form.stackable_with_platform_offers} 
-            onChange={(checked) => setForm((c) => ({ ...c, stackable_with_platform_offers: checked }))} 
+          <ToggleField
+            label="Stack with platform offers"
+            checked={form.stackable_with_platform_offers}
+            onChange={(checked) => setForm((c) => ({ ...c, stackable_with_platform_offers: checked }))}
           />
         </div>
 
-        <TextareaField 
-          label="Terms & conditions" 
-          value={form.terms_and_conditions} 
-          onChange={(value) => setForm((c) => ({ ...c, terms_and_conditions: value }))} 
+        <TextareaField
+          label="Terms & conditions"
+          value={form.terms_and_conditions}
+          onChange={(value) => setForm((c) => ({ ...c, terms_and_conditions: value }))}
         />
       </div>
     </details>
@@ -1569,56 +1574,60 @@ function BinRuleCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="group rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
+    <div className="group rounded-[12px] bg-white p-[16px] transition-all duration-200">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+        <div className="flex items-center gap-[8px]">
+          <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#5800AB]/[0.15] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#5800AB]">
             {index + 1}
           </div>
-          <p className="text-sm font-medium text-slate-800">Card Rule</p>
+          <p className="text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#000000]">Card Rule</p>
         </div>
-        <button 
-          type="button" 
-          onClick={onRemove} 
+        <button
+          type="button"
+          onClick={onRemove}
           className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField 
-          label="BIN" 
-          value={row.bin} 
-          onChange={(value) => onUpdate({ ...row, bin: value.replace(/\D/g, "") })} 
-          placeholder="431940" 
+        <TextField
+          label="BIN"
+          value={row.bin}
+          onChange={(value) => onUpdate({ ...row, bin: value.replace(/\D/g, "") })}
+          placeholder="431940"
         />
-        <NumberField 
-          label="BIN length" 
-          value={row.bin_length} 
-          onChange={(value) => onUpdate({ ...row, bin_length: value })} 
+        <NumberField
+          label="BIN length"
+          value={row.bin_length}
+          onChange={(value) => onUpdate({ ...row, bin_length: value })}
         />
-        <SelectField 
-          label="Card type" 
-          value={row.card_type} 
-          options={BIN_CARD_TYPES} 
-          onChange={(value) => onUpdate({ ...row, card_type: value })} 
+        <SelectField
+          label="Card type"
+          value={row.card_type}
+          options={BIN_CARD_TYPES}
+          onChange={(value) => onUpdate({ ...row, card_type: value })}
         />
-        <SelectField 
-          label="Network" 
-          value={row.card_network} 
-          options={CARD_NETWORKS} 
-          onChange={(value) => onUpdate({ ...row, card_network: value })} 
+        <SelectField
+          label="Network"
+          value={row.card_network}
+          options={CARD_NETWORKS}
+          onChange={(value) => onUpdate({ ...row, card_network: value })}
         />
-        <TextField 
-          label="Bank name" 
-          value={row.issuer_bank_name} 
-          onChange={(value) => onUpdate({ ...row, issuer_bank_name: value })} 
-        />
-        <ToggleField 
-          label="Active" 
-          checked={row.is_active} 
-          onChange={(checked) => onUpdate({ ...row, is_active: checked })} 
-        />
+        <div className="sm:col-span-2">
+          <TextField
+            label="Bank name"
+            value={row.issuer_bank_name}
+            onChange={(value) => onUpdate({ ...row, issuer_bank_name: value })}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <ToggleField
+            label="Active"
+            checked={row.is_active}
+            onChange={(checked) => onUpdate({ ...row, is_active: checked })}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1644,44 +1653,46 @@ function TargetRuleCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="group rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] p-4 shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
+    <div className="group rounded-[12px] bg-white p-[16px] transition-all duration-200">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-700">
+        <div className="flex items-center gap-[8px]">
+          <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#5800AB]/[0.15] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#5800AB]">
             {index + 1}
           </div>
-          <p className="text-sm font-medium text-slate-800">Location Rule</p>
+          <p className="text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#000000]">Location Rule</p>
         </div>
-        <button 
-          type="button" 
-          onClick={onRemove} 
+        <button
+          type="button"
+          onClick={onRemove}
           className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <SelectField 
-          label="Type" 
-          value={row.target_type} 
-          options={TARGET_TYPES} 
-          onChange={(value) =>
-            onUpdate({
-              ...row,
-              target_type: value as TargetDraft["target_type"],
-              target_id: "",
-              city: "",
-              area: "",
-              category_slug: "",
-              chain_name: "",
-            })
-          }
-        />
+        <div className="sm:col-span-2">
+          <SelectField
+            label="Type"
+            value={row.target_type}
+            options={TARGET_TYPES}
+            onChange={(value) =>
+              onUpdate({
+                ...row,
+                target_type: value as TargetDraft["target_type"],
+                target_id: "",
+                city: "",
+                area: "",
+                category_slug: "",
+                chain_name: "",
+              })
+            }
+          />
+        </div>
         {row.target_type === "CITY" || row.target_type === "AREA" ? (
-          <SelectField 
-            label="City" 
-            value={row.city} 
-            options={cityOptions} 
+          <SelectField
+            label="City"
+            value={row.city}
+            options={cityOptions}
             onChange={(value) =>
               onUpdate({
                 ...row,
@@ -1692,31 +1703,31 @@ function TargetRuleCard({
           />
         ) : null}
         {row.target_type === "AREA" ? (
-          <TextField 
-            label="Area" 
-            value={row.area} 
-            onChange={(value) => onUpdate({ ...row, area: value })} 
+          <TextField
+            label="Area"
+            value={row.area}
+            onChange={(value) => onUpdate({ ...row, area: value })}
           />
         ) : null}
         {row.target_type === "CATEGORY" ? (
-          <SelectField 
-            label="Category" 
-            value={row.category_slug} 
-            options={categoryOptions} 
-            onChange={(value) => onUpdate({ ...row, category_slug: value })} 
+          <SelectField
+            label="Category"
+            value={row.category_slug}
+            options={categoryOptions}
+            onChange={(value) => onUpdate({ ...row, category_slug: value })}
           />
         ) : null}
         {row.target_type === "CHAIN" ? (
-          <TextField 
-            label="Chain name" 
-            value={row.chain_name} 
-            onChange={(value) => onUpdate({ ...row, chain_name: value })} 
+          <TextField
+            label="Chain name"
+            value={row.chain_name}
+            onChange={(value) => onUpdate({ ...row, chain_name: value })}
           />
         ) : null}
         {row.target_type === "RESTAURANT" ? (
-          <SelectField 
-            label="Restaurant" 
-            value={row.target_id} 
+          <SelectField
+            label="Restaurant"
+            value={row.target_id}
             options={restaurants.map((item) => ({
               value: item.id,
               label: `${item.name}${item.city ? ` • ${item.city}` : ""}`,
@@ -1725,9 +1736,9 @@ function TargetRuleCard({
           />
         ) : null}
         {row.target_type === "STORE" ? (
-          <SelectField 
-            label="Store" 
-            value={row.target_id} 
+          <SelectField
+            label="Store"
+            value={row.target_id}
             options={stores.map((item) => ({
               value: item.id,
               label: `${item.name}${item.city ? ` • ${item.city}` : ""}`,
@@ -1736,8 +1747,10 @@ function TargetRuleCard({
           />
         ) : null}
         {row.target_type === "ALL" ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-            ✓ Available everywhere
+          <div className="sm:col-span-2">
+            <div className="h-[44px] px-[12px] rounded-[12px] border-[0.3px] border-emerald-200 bg-emerald-50/40 text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-emerald-700 flex items-center gap-1.5">
+              ✓ Available everywhere
+            </div>
           </div>
         ) : null}
       </div>
@@ -1756,64 +1769,106 @@ function OfferCard({
   onDelete: () => void;
   isDeleting: boolean;
 }) {
+  const initials = useMemo(() => {
+    const name = offer.bank_name || "";
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase() || "BK";
+  }, [offer.bank_name]);
+
+  const brandColorRaw = offer.bank_brand_color?.trim() || "#CF0E43";
+  const brandColor = brandColorRaw.startsWith("#")
+    ? brandColorRaw
+    : (/^[0-9a-fA-F]{3,6}$/.test(brandColorRaw) ? `#${brandColorRaw}` : brandColorRaw);
+
   return (
-    <article className="group rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] p-3 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
-      <div className="flex gap-3">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-          {offer.bank_logo_url ? (
-            <Image 
-              src={offer.bank_logo_url} 
-              alt={offer.bank_name} 
-              width={56} 
-              height={56} 
-              className="h-full w-full object-contain" 
-              unoptimized 
-            />
-          ) : (
-            <Building2 className="h-6 w-6 text-slate-300" />
-          )}
+    <div className="group flex flex-col gap-[4px] py-[12px] border-b border-slate-100 last:border-b-0 first:pt-0 last:pb-0 transition-all duration-200">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-[12px] min-w-0 flex-1">
+          {/* Bank Logo / Initials */}
+          <div
+            className="flex h-[41px] w-[41px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[12px] font-semibold font-['Be_Vietnam_Pro',sans-serif] leading-[16px]"
+            style={{
+              backgroundColor: brandColor.startsWith("#") ? `${brandColor}1A` : brandColor,
+              color: brandColor,
+            }}
+          >
+            {offer.bank_logo_url ? (
+              <Image
+                src={offer.bank_logo_url}
+                alt={offer.bank_name}
+                width={41}
+                height={41}
+                className="h-full w-full object-contain"
+                unoptimized
+              />
+            ) : (
+              <span>{initials}</span>
+            )}
+          </div>
+
+          {/* Title & Status Stack */}
+          <div className="min-w-0 flex-1 flex flex-col gap-[2px]">
+            <h3 className="text-[16px] font-semibold font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-black truncate">
+              {offer.bank_name}
+            </h3>
+            <div className="flex items-center gap-[8px]">
+              {offer.is_active ? (
+                <span className="inline-flex items-center rounded-full bg-[#00752E]/15 px-[8px] py-[2px] text-[12px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[16px] text-[#00752E]">
+                  ACTIVE
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-slate-500/15 px-[8px] py-[2px] text-[12px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[16px] text-slate-500">
+                  INACTIVE
+                </span>
+              )}
+              <span className="text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#667085]">
+                {humanize(offer.payment_instrument_type)}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-semibold text-slate-900">{offer.bank_name}</h3>
-            <StatusBadge active={offer.is_active} label={offer.status} />
-            <Pill>{humanize(offer.payment_instrument_type)}</Pill>
-          </div>
-          <p className="mt-1 truncate text-xs font-medium text-slate-800">{offer.title}</p>
-          <div className="mt-2 flex flex-wrap gap-1">
-            <Pill>{offerBenefitText(offer)}</Pill>
-            <Pill>Priority {offer.priority}</Pill>
-          </div>
+
+        {/* Inline Actions */}
+        <div className="flex items-center gap-[8px] shrink-0 self-center">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="h-[28px] w-[28px] rounded-[10px] flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-black transition-colors duration-200"
+            title="Edit offer"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="h-[28px] w-[28px] rounded-[10px] flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-black transition-colors duration-200 disabled:opacity-50"
+            title="Delete offer"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
-      <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onEdit} 
-          className="flex-1 border-slate-200 hover:bg-emerald-50 hover:border-emerald-200 transition-colors duration-200"
-        >
-          <Pencil className="mr-1 h-3.5 w-3.5" />
-          Edit
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onDelete} 
-          disabled={isDeleting} 
-          className="flex-1 border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors duration-200"
-        >
-          {isDeleting ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <>
-              <Trash2 className="mr-1 h-3.5 w-3.5" />
-              Delete
-            </>
-          )}
-        </Button>
+
+      {/* Offer Title */}
+      <p className="text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-black">
+        {offer.title}
+      </p>
+
+      {/* Benefit & Priority */}
+      <div className="flex items-center gap-[6px] text-[12px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[16px] text-[#AEA9B1]">
+        <span>{offerBenefitText(offer)}</span>
+        <span className="text-[#AEA9B1]">•</span>
+        <span>Priority {offer.priority}</span>
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -1825,7 +1880,7 @@ function RedemptionTable({
   currencyCode: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-[linear-gradient(137.84deg,_#ECFEFF_0.07%,_#F3E8FF_64.69%)] shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-slate-50 text-left text-slate-600 font-medium border-b border-slate-200">
@@ -1917,7 +1972,7 @@ function StatusBadge({ active, label }: { active: boolean; label: string }) {
     EXPIRED: "bg-slate-100 text-slate-600",
     ARCHIVED: "bg-gray-100 text-gray-600",
   };
-  
+
   const color = colors[label as keyof typeof colors] || "bg-slate-100 text-slate-600";
 
   return (

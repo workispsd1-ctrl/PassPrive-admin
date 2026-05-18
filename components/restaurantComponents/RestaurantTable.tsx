@@ -15,7 +15,7 @@ import {
 import { getTokenClient } from "@/lib/getTokenClient";
 
 interface Props {
-  restaurants: Pick<RestaurantFlatRecord, "id" | "name" | "city" | "area" | "rating" | "cost_for_two">[];
+  restaurants: Pick<RestaurantFlatRecord, "id" | "name" | "city" | "area" | "rating" | "cost_for_two" | "offer">[];
   page: number;
   totalPages: number;
   totalRecord: number;
@@ -107,13 +107,14 @@ export const RestaurantTable = ({
 
   return (
     <>
-      <table className="w-full border-collapse">
+      <table className="min-w-full border-collapse bg-white">
         <thead className="bg-white">
           <tr className="border-b border-gray-200 h-[40px]">
             <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">NAME</th>
             <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">LOCATION</th>
             <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">RATING</th>
             <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">COST FOR TWO</th>
+            <th className="px-6 py-2 text-center text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">OFFER</th>
             <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
           </tr>
         </thead>
@@ -131,12 +132,21 @@ export const RestaurantTable = ({
                 onClick={() => onRowClick?.(r.id)}
               >
                 <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{r.name}</td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                   {r.area}, {r.city}
                 </td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">{r.rating ?? "-"}</td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{r.rating ?? "-"}</td>
+                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                   {r.cost_for_two ? `Rs ${r.cost_for_two}` : "-"}
+                </td>
+                <td className="px-6 py-4 text-center">
+                  {r.offer ? (
+                    <span className="bg-[#EAE3FA] text-[#5800AB] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
+                      Offer
+                    </span>
+                  ) : (
+                    <span className="text-[#8A92A6]">—</span>
+                  )}
                 </td>
 
                 <td className="px-4 py-4">
