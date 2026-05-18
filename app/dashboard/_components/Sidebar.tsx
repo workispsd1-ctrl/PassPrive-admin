@@ -507,3 +507,4 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     </aside>
   );
 }
+//redeploying
