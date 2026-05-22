@@ -66,6 +66,7 @@ type BankOfferRecord = {
   is_active: boolean;
   bank_name: string;
   bank_logo_url: string | null;
+  bank_brand_color: string | null;
   currency_code: string;
   discount_percent: number | null;
   discount_amount: number | null;
@@ -236,7 +237,19 @@ function createTargetDraft(): TargetDraft {
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object" && error !== null) {
+    const record = error as Record<string, unknown>;
+    const parts = [record.message, record.details, record.hint, record.code]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    if (parts.length > 0) return parts.join(" | ");
+  }
   return fallback;
+}
+
+async function getCurrentUserId() {
+  const { data, error } = await supabaseBrowser.auth.getUser();
+  if (error) throw error;
+  return data.user?.id || null;
 }
 
 function numberOrNull(value: string) {
@@ -304,43 +317,48 @@ function humanize(value: string) {
 
 function buildOfferPayload(form: BankOfferForm, bankLogoUrl: string | null) {
   return {
+    source_type: "BANK",
     title: form.title.trim(),
     short_title: form.short_title.trim() || null,
     description: form.description.trim() || null,
-    terms_and_conditions: form.terms_and_conditions.trim() || null,
+    terms_and_conditions: form.terms_and_conditions.trim() ? [form.terms_and_conditions.trim()] : [],
     sponsor_type: form.sponsor_type,
     sponsor_name: form.sponsor_name.trim(),
     offer_type: form.offer_type,
-    benefit_kind: form.benefit_kind,
-    discount_percent: numberOrNull(form.discount_percent),
-    discount_amount: numberOrNull(form.discount_amount),
+    benefit_percent: numberOrNull(form.discount_percent) ?? numberOrNull(form.cashback_percent),
+    benefit_value: numberOrNull(form.discount_amount) ?? numberOrNull(form.cashback_amount),
     max_discount_amount: numberOrNull(form.max_discount_amount),
-    cashback_amount: numberOrNull(form.cashback_amount),
-    cashback_percent: numberOrNull(form.cashback_percent),
-    min_transaction_amount: numberOrNull(form.min_transaction_amount),
-    max_transaction_amount: numberOrNull(form.max_transaction_amount),
+    min_bill_amount: numberOrNull(form.min_transaction_amount),
+    max_bill_amount: numberOrNull(form.max_transaction_amount),
     currency_code: (form.currency_code.trim() || "INR").toUpperCase(),
-    payment_instrument_type: form.payment_instrument_type,
-    card_network: form.card_network || null,
-    issuer_bank_name: form.issuer_bank_name.trim() || null,
-    applies_to_module: form.applies_to_module,
-    applies_to_payment_flow: form.applies_to_payment_flow,
-    valid_from: isoString(form.valid_from),
-    valid_until: isoString(form.valid_until),
-    stackable_with_other_offers: form.stackable_with_other_offers,
-    stackable_with_platform_offers: form.stackable_with_platform_offers,
-    requires_coupon_code: form.requires_coupon_code,
-    coupon_code: form.requires_coupon_code ? form.coupon_code.trim() : null,
+    module: form.applies_to_module,
+    payment_flow: form.applies_to_payment_flow,
+    starts_at: isoString(form.valid_from),
+    ends_at: isoString(form.valid_until),
+    is_stackable: form.stackable_with_other_offers,
     priority: Number(form.priority || 100),
-    display_label: form.display_label.trim() || null,
     badge_text: form.badge_text.trim() || null,
-    banner_image: form.banner_image.trim() || null,
     status: form.status,
     is_active: form.is_active,
-    bank_name: form.bank_name.trim(),
-    bank_logo_url: bankLogoUrl,
-    bank_brand_color: form.bank_brand_color.trim() || null,
-    funded_by: form.funded_by,
+    logo_url: bankLogoUrl,
+    metadata: {
+      bank_name: form.bank_name.trim(),
+      bank_brand_color: form.bank_brand_color.trim() || null,
+      funded_by: form.funded_by,
+      benefit_kind: form.benefit_kind,
+      payment_instrument_type: form.payment_instrument_type,
+      card_network: form.card_network || null,
+      issuer_bank_name: form.issuer_bank_name.trim() || null,
+      requires_coupon_code: form.requires_coupon_code,
+      coupon_code: form.requires_coupon_code ? form.coupon_code.trim() || null : null,
+      discount_percent: numberOrNull(form.discount_percent),
+      discount_amount: numberOrNull(form.discount_amount),
+      cashback_amount: numberOrNull(form.cashback_amount),
+      cashback_percent: numberOrNull(form.cashback_percent),
+      display_label: form.display_label.trim() || null,
+      banner_image: form.banner_image.trim() || null,
+      stackable_with_platform_offers: form.stackable_with_platform_offers,
+    },
   };
 }
 
@@ -410,10 +428,11 @@ export default function BankOffersPage() {
 
   async function loadOffers() {
     const { data, error } = await supabaseBrowser
-      .from("bank_offers")
+      .from("offers")
       .select(
-        "id,title,short_title,sponsor_name,offer_type,payment_instrument_type,card_network,valid_from,valid_until,priority,status,is_active,bank_name,bank_logo_url,currency_code,discount_percent,discount_amount,cashback_amount,cashback_percent,coupon_code"
+        "id,title,short_title,sponsor_name,offer_type,starts_at,ends_at,priority,status,is_active,logo_url,currency_code,benefit_percent,benefit_value,metadata"
       )
+      .eq("source_type", "BANK")
       .order("priority", { ascending: true })
       .order("created_at", { ascending: false });
 
@@ -427,44 +446,93 @@ export default function BankOffersPage() {
       return;
     }
 
-    setOffers((data as BankOfferRecord[]) || []);
+    const nextOffers = ((data as Array<Record<string, unknown>>) || []).map((item) => {
+      const metadata = (item.metadata as Record<string, unknown> | null) || {};
+      const paymentInstrument =
+        typeof metadata.payment_instrument_type === "string" && metadata.payment_instrument_type
+          ? metadata.payment_instrument_type
+          : "CARD";
+      const cardNetwork = typeof metadata.card_network === "string" ? metadata.card_network : "ANY";
+
+      return {
+        id: String(item.id || ""),
+        title: String(item.title || ""),
+        short_title: typeof item.short_title === "string" ? item.short_title : null,
+        sponsor_name: typeof item.sponsor_name === "string" ? item.sponsor_name : "",
+        offer_type: (typeof item.offer_type === "string" ? item.offer_type : "PERCENT_DISCOUNT") as BankOfferRecord["offer_type"],
+        payment_instrument_type: paymentInstrument as BankOfferRecord["payment_instrument_type"],
+        card_network: cardNetwork,
+        valid_from: typeof item.starts_at === "string" ? item.starts_at : "",
+        valid_until: typeof item.ends_at === "string" ? item.ends_at : "",
+        priority: typeof item.priority === "number" ? item.priority : Number(item.priority || 100),
+        status: (typeof item.status === "string" ? item.status : "DRAFT") as BankOfferRecord["status"],
+        is_active: Boolean(item.is_active),
+        bank_name: typeof metadata.bank_name === "string" ? metadata.bank_name : typeof item.sponsor_name === "string" ? item.sponsor_name : "",
+        bank_logo_url: typeof item.logo_url === "string" ? item.logo_url : null,
+        bank_brand_color: typeof metadata.bank_brand_color === "string" ? metadata.bank_brand_color : null,
+        currency_code: typeof item.currency_code === "string" ? item.currency_code : "INR",
+        discount_percent: typeof metadata.discount_percent === "number" ? metadata.discount_percent : typeof item.benefit_percent === "number" ? item.benefit_percent : null,
+        discount_amount: typeof metadata.discount_amount === "number" ? metadata.discount_amount : typeof item.benefit_value === "number" ? item.benefit_value : null,
+        cashback_amount: typeof metadata.cashback_amount === "number" ? metadata.cashback_amount : null,
+        cashback_percent: typeof metadata.cashback_percent === "number" ? metadata.cashback_percent : null,
+        coupon_code: typeof metadata.coupon_code === "string" ? metadata.coupon_code : null,
+      } satisfies BankOfferRecord;
+    });
+
+    setOffers(nextOffers);
   }
 
   async function loadMerchantOptions() {
     const [restaurantRes, storeRes] = await Promise.all([
       supabaseBrowser.from("restaurants").select("id,name,city,area").order("name", { ascending: true }),
-      supabaseBrowser.from("stores").select("id,name,city,area").order("name", { ascending: true }),
+      supabaseBrowser.from("stores").select("id,name,city,location_name").order("name", { ascending: true }),
     ]);
 
     if (!restaurantRes.error) setRestaurants((restaurantRes.data as MerchantOption[]) || []);
-    if (!storeRes.error) setStores((storeRes.data as MerchantOption[]) || []);
+    if (!storeRes.error) {
+      const nextStores = ((storeRes.data as Array<Record<string, unknown>>) || []).map((item) => ({
+        id: String(item.id || ""),
+        name: String(item.name || ""),
+        city: typeof item.city === "string" ? item.city : null,
+        area: typeof item.location_name === "string" ? item.location_name : null,
+      }));
+      setStores(nextStores);
+    }
   }
 
   async function loadRelations(offerId: string) {
-    const [binsRes, targetsRes, redemptionsRes] = await Promise.all([
+    const [binsRes, targetsRes, redemptionsRes, paymentRulesRes] = await Promise.all([
       supabaseBrowser
-        .from("bank_offer_bins")
+        .from("offer_bins")
         .select("id,bin,bin_length,card_type,card_network,issuer_bank_name,is_active")
-        .eq("bank_offer_id", offerId)
+        .eq("offer_id", offerId)
         .order("created_at", { ascending: true }),
       supabaseBrowser
-        .from("bank_offer_targets")
-        .select("id,target_type,target_id,city,area,category_slug,chain_name")
-        .eq("bank_offer_id", offerId)
+        .from("offer_targets")
+        .select("id,target_type,target_entity_id,city,area,category,tag")
+        .eq("offer_id", offerId)
         .order("created_at", { ascending: true }),
       supabaseBrowser
-        .from("bank_offer_redemptions")
+        .from("offer_redemptions")
         .select(
-          "id,order_reference,payment_reference,original_amount,discount_amount,final_amount,redemption_status,settlement_status,redeemed_at,payment_instrument_type,card_network"
+          "id,order_reference,payment_reference,original_amount,discount_amount,final_amount,redemption_status,redeemed_at,payment_instrument_type,card_network"
         )
-        .eq("bank_offer_id", offerId)
+        .eq("offer_id", offerId)
         .order("redeemed_at", { ascending: false })
         .limit(25),
+      supabaseBrowser
+        .from("offer_payment_rules")
+        .select("payment_instrument_type,card_network,issuer_bank_name,requires_coupon_code,coupon_code")
+        .eq("offer_id", offerId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     if (binsRes.error) throw binsRes.error;
     if (targetsRes.error) throw targetsRes.error;
     if (redemptionsRes.error) throw redemptionsRes.error;
+    if (paymentRulesRes.error) throw paymentRulesRes.error;
 
     const nextBins =
       binsRes.data?.map((item) => ({
@@ -482,19 +550,46 @@ export default function BankOffersPage() {
       targetsRes.data?.map((item) => ({
         id: item.id,
         clientId: item.id,
-        target_type: item.target_type as TargetDraft["target_type"],
-        target_id: item.target_id || "",
+        target_type: ((item.target_type === "TAG" && item.tag) ? "CHAIN" : item.target_type) as TargetDraft["target_type"],
+        target_id: item.target_entity_id || "",
         city: item.city || "",
         area: item.area || "",
-        category_slug: item.category_slug || "",
-        chain_name: item.chain_name || "",
+        category_slug: item.category || "",
+        chain_name: item.target_type === "TAG" ? item.tag || "" : "",
       })) || [];
 
     existingBinIdsRef.current = nextBins.map((item) => item.id!).filter(Boolean);
     existingTargetIdsRef.current = nextTargets.map((item) => item.id!).filter(Boolean);
     setBins(nextBins.length ? nextBins : [createBinDraft()]);
     setTargets(nextTargets.length ? nextTargets : [createTargetDraft()]);
-    setRedemptions((redemptionsRes.data as RedemptionRecord[]) || []);
+    setRedemptions(
+      ((redemptionsRes.data as Array<Record<string, unknown>>) || []).map((item) => ({
+        id: String(item.id || ""),
+        order_reference: typeof item.order_reference === "string" ? item.order_reference : "",
+        payment_reference: typeof item.payment_reference === "string" ? item.payment_reference : null,
+        original_amount: typeof item.original_amount === "number" ? item.original_amount : 0,
+        discount_amount: typeof item.discount_amount === "number" ? item.discount_amount : 0,
+        final_amount: typeof item.final_amount === "number" ? item.final_amount : 0,
+        redemption_status: typeof item.redemption_status === "string" ? item.redemption_status : "PENDING",
+        settlement_status: typeof item.redemption_status === "string" ? item.redemption_status : "PENDING",
+        redeemed_at: typeof item.redeemed_at === "string" ? item.redeemed_at : new Date().toISOString(),
+        payment_instrument_type: typeof item.payment_instrument_type === "string" ? item.payment_instrument_type : null,
+        card_network: typeof item.card_network === "string" ? item.card_network : null,
+      }))
+    );
+
+    const paymentRule = paymentRulesRes.data;
+    if (paymentRule) {
+      setForm((current) => ({
+        ...current,
+        payment_instrument_type:
+          (paymentRule.payment_instrument_type as BankOfferForm["payment_instrument_type"]) || current.payment_instrument_type,
+        card_network: paymentRule.card_network || current.card_network,
+        issuer_bank_name: paymentRule.issuer_bank_name || current.issuer_bank_name,
+        requires_coupon_code: Boolean(paymentRule.requires_coupon_code),
+        coupon_code: paymentRule.coupon_code || "",
+      }));
+    }
   }
 
   function resetForm() {
@@ -514,51 +609,63 @@ export default function BankOffersPage() {
     try {
       setRedemptionsLoading(true);
 
-      const { data, error } = await supabaseBrowser.from("bank_offers").select("*").eq("id", offerId).single();
+      const { data, error } = await supabaseBrowser
+        .from("offers")
+        .select("*")
+        .eq("id", offerId)
+        .eq("source_type", "BANK")
+        .single();
       if (error) throw error;
+
+      const metadata = (data.metadata as Record<string, unknown> | null) || {};
+      const termsText = Array.isArray(data.terms_and_conditions)
+        ? data.terms_and_conditions.filter((item: unknown): item is string => typeof item === "string").join("\n")
+        : "";
 
       setEditingId(offerId);
       setForm({
         title: data.title || "",
         short_title: data.short_title || "",
         description: data.description || "",
-        terms_and_conditions: data.terms_and_conditions || "",
+        terms_and_conditions: termsText,
         sponsor_type: data.sponsor_type || "BANK",
         sponsor_name: data.sponsor_name || "",
         offer_type: data.offer_type || "PERCENT_DISCOUNT",
         benefit_kind: data.benefit_kind || "MONETARY",
-        discount_percent: data.discount_percent?.toString() || "",
-        discount_amount: data.discount_amount?.toString() || "",
+        discount_percent:
+          (typeof metadata.discount_percent === "number" ? metadata.discount_percent : data.benefit_percent)?.toString() || "",
+        discount_amount:
+          (typeof metadata.discount_amount === "number" ? metadata.discount_amount : data.benefit_value)?.toString() || "",
         max_discount_amount: data.max_discount_amount?.toString() || "",
-        cashback_amount: data.cashback_amount?.toString() || "",
-        cashback_percent: data.cashback_percent?.toString() || "",
-        min_transaction_amount: data.min_transaction_amount?.toString() || "",
-        max_transaction_amount: data.max_transaction_amount?.toString() || "",
+        cashback_amount: (typeof metadata.cashback_amount === "number" ? metadata.cashback_amount : null)?.toString() || "",
+        cashback_percent: (typeof metadata.cashback_percent === "number" ? metadata.cashback_percent : null)?.toString() || "",
+        min_transaction_amount: data.min_bill_amount?.toString() || "",
+        max_transaction_amount: data.max_bill_amount?.toString() || "",
         currency_code: data.currency_code || "INR",
-        payment_instrument_type: data.payment_instrument_type || "CARD",
-        card_network: data.card_network || "ANY",
-        issuer_bank_name: data.issuer_bank_name || "",
-        applies_to_module: data.applies_to_module || "BOTH",
-        applies_to_payment_flow: data.applies_to_payment_flow || "BILL_PAYMENT",
-        valid_from: datetimeValue(data.valid_from),
-        valid_until: datetimeValue(data.valid_until),
-        stackable_with_other_offers: Boolean(data.stackable_with_other_offers),
-        stackable_with_platform_offers: Boolean(data.stackable_with_platform_offers),
-        requires_coupon_code: Boolean(data.requires_coupon_code),
-        coupon_code: data.coupon_code || "",
+        payment_instrument_type: (metadata.payment_instrument_type as BankOfferForm["payment_instrument_type"]) || "CARD",
+        card_network: (metadata.card_network as string) || "ANY",
+        issuer_bank_name: (metadata.issuer_bank_name as string) || "",
+        applies_to_module: data.module || "BOTH",
+        applies_to_payment_flow: data.payment_flow || "BILL_PAYMENT",
+        valid_from: datetimeValue(data.starts_at),
+        valid_until: datetimeValue(data.ends_at),
+        stackable_with_other_offers: Boolean(data.is_stackable),
+        stackable_with_platform_offers: Boolean(metadata.stackable_with_platform_offers),
+        requires_coupon_code: Boolean(metadata.requires_coupon_code),
+        coupon_code: (metadata.coupon_code as string) || "",
         priority: data.priority?.toString() || "100",
-        display_label: data.display_label || "",
+        display_label: (metadata.display_label as string) || "",
         badge_text: data.badge_text || "",
-        banner_image: data.banner_image || "",
+        banner_image: (metadata.banner_image as string) || "",
         status: data.status || "DRAFT",
         is_active: Boolean(data.is_active),
-        bank_name: data.bank_name || "",
-        bank_logo_url: data.bank_logo_url || "",
-        bank_brand_color: data.bank_brand_color || "",
-        funded_by: data.funded_by || "BANK",
+        bank_name: (metadata.bank_name as string) || data.sponsor_name || "",
+        bank_logo_url: data.logo_url || "",
+        bank_brand_color: (metadata.bank_brand_color as string) || "",
+        funded_by: (metadata.funded_by as BankOfferForm["funded_by"]) || "BANK",
       });
       setLogoFile(null);
-      setLogoPreview(data.bank_logo_url || "");
+      setLogoPreview(data.logo_url || "");
       if (fileRef.current) fileRef.current.value = "";
 
       await loadRelations(offerId);
@@ -639,13 +746,13 @@ export default function BankOffersPage() {
     const deleteIds = existingBinIdsRef.current.filter((id) => !currentIds.includes(id));
 
     if (deleteIds.length) {
-      const { error } = await supabaseBrowser.from("bank_offer_bins").delete().in("id", deleteIds);
+      const { error } = await supabaseBrowser.from("offer_bins").delete().in("id", deleteIds);
       if (error) throw error;
     }
 
     for (const row of cleanRows) {
       const payload = {
-        bank_offer_id: offerId,
+        offer_id: offerId,
         bin: row.bin.trim(),
         bin_length: Number(row.bin_length || 6),
         card_type: row.card_type || null,
@@ -655,10 +762,10 @@ export default function BankOffersPage() {
       };
 
       if (row.id) {
-        const { error } = await supabaseBrowser.from("bank_offer_bins").update(payload).eq("id", row.id);
+        const { error } = await supabaseBrowser.from("offer_bins").update(payload).eq("id", row.id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabaseBrowser.from("bank_offer_bins").insert(payload).select("id").single();
+        const { data, error } = await supabaseBrowser.from("offer_bins").insert(payload).select("id").single();
         if (error) throw error;
         row.id = data.id;
       }
@@ -673,33 +780,51 @@ export default function BankOffersPage() {
     const deleteIds = existingTargetIdsRef.current.filter((id) => !currentIds.includes(id));
 
     if (deleteIds.length) {
-      const { error } = await supabaseBrowser.from("bank_offer_targets").delete().in("id", deleteIds);
+      const { error } = await supabaseBrowser.from("offer_targets").delete().in("id", deleteIds);
       if (error) throw error;
     }
 
     for (const row of cleanRows) {
       const payload = {
-        bank_offer_id: offerId,
-        target_type: row.target_type,
-        target_id:
+        offer_id: offerId,
+        target_type: row.target_type === "CHAIN" ? "TAG" : row.target_type,
+        target_entity_id:
           row.target_type === "RESTAURANT" || row.target_type === "STORE" ? row.target_id || null : null,
         city: row.target_type === "CITY" || row.target_type === "AREA" ? row.city.trim() || null : null,
         area: row.target_type === "AREA" ? row.area.trim() || null : null,
-        category_slug: row.target_type === "CATEGORY" ? row.category_slug.trim() || null : null,
-        chain_name: row.target_type === "CHAIN" ? row.chain_name.trim() || null : null,
+        category: row.target_type === "CATEGORY" ? row.category_slug.trim() || null : null,
+        tag: row.target_type === "CHAIN" ? row.chain_name.trim() || null : null,
       };
 
       if (row.id) {
-        const { error } = await supabaseBrowser.from("bank_offer_targets").update(payload).eq("id", row.id);
+        const { error } = await supabaseBrowser.from("offer_targets").update(payload).eq("id", row.id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabaseBrowser.from("bank_offer_targets").insert(payload).select("id").single();
+        const { data, error } = await supabaseBrowser.from("offer_targets").insert(payload).select("id").single();
         if (error) throw error;
         row.id = data.id;
       }
     }
 
     existingTargetIdsRef.current = cleanRows.map((item) => item.id!).filter(Boolean);
+  }
+
+  async function syncPaymentRules(offerId: string) {
+    const { error: deleteError } = await supabaseBrowser.from("offer_payment_rules").delete().eq("offer_id", offerId);
+    if (deleteError) throw deleteError;
+
+    const payload = {
+      offer_id: offerId,
+      payment_instrument_type: form.payment_instrument_type || null,
+      card_network: form.card_network || null,
+      issuer_bank_name: form.issuer_bank_name.trim() || null,
+      requires_coupon_code: form.requires_coupon_code,
+      coupon_code: form.requires_coupon_code ? form.coupon_code.trim() || null : null,
+      requires_saved_card: false,
+    };
+
+    const { error } = await supabaseBrowser.from("offer_payment_rules").insert(payload);
+    if (error) throw error;
   }
 
   async function handleSubmit() {
@@ -715,16 +840,23 @@ export default function BankOffersPage() {
       setSaving(true);
       const bankLogoUrl = await uploadLogoIfNeeded();
       const payload = buildOfferPayload(form, bankLogoUrl);
+      const userId = await getCurrentUserId();
 
       const offerId = editingId || uid();
 
       if (editingId) {
-        const { error } = await supabaseBrowser.from("bank_offers").update(payload).eq("id", editingId);
+        const { error } = await supabaseBrowser
+          .from("offers")
+          .update({ ...payload, updated_by: userId })
+          .eq("id", editingId)
+          .eq("source_type", "BANK");
         if (error) throw error;
       } else {
-        const { error } = await supabaseBrowser.from("bank_offers").insert({
+        const { error } = await supabaseBrowser.from("offers").insert({
           id: offerId,
           ...payload,
+          created_by: userId,
+          updated_by: userId,
         });
         if (error) throw error;
         createdOfferId = offerId;
@@ -733,6 +865,7 @@ export default function BankOffersPage() {
       const finalOfferId = editingId || createdOfferId;
       if (!finalOfferId) throw new Error("Missing bank offer id.");
 
+      await syncPaymentRules(finalOfferId);
       await syncBins(finalOfferId);
       await syncTargets(finalOfferId);
 
@@ -741,7 +874,7 @@ export default function BankOffersPage() {
       await startEdit(finalOfferId);
     } catch (error: unknown) {
       if (createdOfferId) {
-        await supabaseBrowser.from("bank_offers").delete().eq("id", createdOfferId);
+        await supabaseBrowser.from("offers").delete().eq("id", createdOfferId).eq("source_type", "BANK");
       }
       showToast({
         type: "error",
@@ -758,8 +891,16 @@ export default function BankOffersPage() {
 
     try {
       setDeletingId(id);
-      const { error } = await supabaseBrowser.from("bank_offers").delete().eq("id", id);
+      const { data, error } = await supabaseBrowser
+        .from("offers")
+        .delete()
+        .eq("id", id)
+        .eq("source_type", "BANK")
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Bank offer not found in offers schema.");
+      }
       if (editingId === id) resetForm();
       setOffers((current) => current.filter((offer) => offer.id !== id));
       showToast({ title: "Bank offer deleted" });
@@ -1416,7 +1557,15 @@ function LogoUploadSection({
 
         {logoPreview ? (
           <div className="relative h-[80px] w-[80px] flex items-center justify-center overflow-hidden rounded-lg bg-white">
-            <Image src={logoPreview} alt="Bank logo preview" width={80} height={80} className="h-full w-full object-contain" unoptimized />
+            <Image
+              src={logoPreview}
+              alt="Bank logo preview"
+              width={80}
+              height={80}
+              className="h-full w-full object-contain"
+              style={{ width: "auto", height: "auto", maxWidth: "100%", maxHeight: "100%" }}
+              unoptimized
+            />
           </div>
         ) : (
           <>
@@ -1802,6 +1951,7 @@ function OfferCard({
                 width={41}
                 height={41}
                 className="h-full w-full object-contain"
+                style={{ width: "auto", height: "auto", maxWidth: "100%", maxHeight: "100%" }}
                 unoptimized
               />
             ) : (

@@ -57,6 +57,8 @@ const sidebarMutedLabelClass =
 
 const topLevelItems: MenuItem[] = [
   { title: "Dashboard", href: "/dashboard", iconSrc: "/Dashboard.png", exact: true },
+  { title: "Banner Management", href: "/dashboard/offers", iconSrc: "/bankoffers.png" },
+  { title: "PassPrive Offers", href: "/dashboard/passprive-offers", iconSrc: "/request_quote.png" },
   { title: "Bank Offers", href: "/dashboard/bank-offers", iconSrc: "/bankoffers.png" },
   { title: "Store Campaign", href: "/dashboard/store-campaign", iconSrc: "/campaign.png" },
   { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/request_quote.png" },
