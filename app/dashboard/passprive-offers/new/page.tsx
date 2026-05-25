@@ -258,6 +258,7 @@ export default function NewPasspriveOfferPage() {
     const terms = [...selectedTerms, ...customTerms];
 
     const payload = {
+      source_type: "PLATFORM",
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || null,
       description: form.description.trim() || null,

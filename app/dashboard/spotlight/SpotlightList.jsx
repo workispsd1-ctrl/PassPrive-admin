@@ -26,21 +26,34 @@ export default function SpotlightList({ onEdit }) {
   const [query, setQuery] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
 
-  const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const BASE =
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
+    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") ||
+    "";
+
+  const buildUrl = (path) => {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return BASE ? `${BASE}${normalizedPath}` : normalizedPath;
+  };
 
   const fetchItems = async () => {
     setLoading(true);
     setApiError("");
 
     try {
-      if (!BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL in .env.local");
-
-      const url =
+      const path =
         moduleFilter === "all"
-          ? `${BASE}/api/spotlight`
-          : `${BASE}/api/spotlight?module_type=${encodeURIComponent(moduleFilter)}`;
+          ? "/api/spotlight"
+          : `/api/spotlight?module_type=${encodeURIComponent(moduleFilter)}`;
 
-      const res = await fetch(url, { cache: "no-store" });
+      let res = await fetch(buildUrl(path), { cache: "no-store" });
+      if (res.status === 404) {
+        const fallbackPath =
+          moduleFilter === "all"
+            ? "/spotlight"
+            : `/spotlight?module_type=${encodeURIComponent(moduleFilter)}`;
+        res = await fetch(buildUrl(fallbackPath), { cache: "no-store" });
+      }
 
       if (!res.ok) {
         const text = await res.text();
@@ -87,9 +100,10 @@ export default function SpotlightList({ onEdit }) {
     if (!ok) return;
 
     try {
-      if (!BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL in .env.local");
-
-      const res = await fetch(`${BASE}/api/spotlight/${id}`, { method: "DELETE" });
+      let res = await fetch(buildUrl(`/api/spotlight/${id}`), { method: "DELETE" });
+      if (res.status === 404) {
+        res = await fetch(buildUrl(`/spotlight/${id}`), { method: "DELETE" });
+      }
 
       if (!res.ok) {
         const text = await res.text();

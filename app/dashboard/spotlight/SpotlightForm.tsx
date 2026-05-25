@@ -95,11 +95,18 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const BASE =
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "") ||
+    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") ||
+    "";
+
+  const buildUrl = (path: string) => {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    return BASE ? `${BASE}${normalizedPath}` : normalizedPath;
+  };
 
   const handleSubmit = async () => {
     try {
-      if (!BASE) throw new Error("Missing NEXT_PUBLIC_BACKEND_URL");
       setLoading(true);
 
       const form = new FormData();
@@ -109,12 +116,20 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
       form.append("module_type", moduleType);
       if (file) form.append("file", file);
 
-      const endpoint = editingItem?.id ? `${BASE}/api/spotlight/${editingItem.id}` : `${BASE}/api/spotlight`;
+      const apiPath = editingItem?.id ? `/api/spotlight/${editingItem.id}` : "/api/spotlight";
+      const fallbackPath = editingItem?.id ? `/spotlight/${editingItem.id}` : "/spotlight";
 
-      const res = await fetch(endpoint, {
+      let res = await fetch(buildUrl(apiPath), {
         method: editingItem?.id ? "PUT" : "POST",
         body: form,
       });
+
+      if (res.status === 404) {
+        res = await fetch(buildUrl(fallbackPath), {
+          method: editingItem?.id ? "PUT" : "POST",
+          body: form,
+        });
+      }
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");

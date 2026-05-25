@@ -84,6 +84,23 @@ function getLabel(value: unknown) {
   return typeof candidate === "string" && candidate.trim() ? candidate : `Item ${getId(value) || "-"}`;
 }
 
+function getSourceType(value: unknown): string {
+  if (!isRecord(value)) return "";
+
+  const directSource =
+    value.source_type ??
+    value.sourceType ??
+    (isRecord(value.offer) ? value.offer.source_type ?? value.offer.sourceType : undefined);
+
+  if (typeof directSource === "string") return directSource.toUpperCase();
+  return "";
+}
+
+function isPlatformOffer(value: unknown): boolean {
+  const sourceType = getSourceType(value);
+  return sourceType === "PLATFORM";
+}
+
 function normalizeArray(payload: unknown): JsonRecord[] {
   if (Array.isArray(payload)) {
     return payload.filter(isRecord);
@@ -294,7 +311,7 @@ function PasspriveOffersContent() {
       setLoadingOffers(true);
       const endpoint = showActiveOnly ? `${OFFER_BASE_PATH}/active` : OFFER_BASE_PATH;
       const response = await apiGet(`${backendUrl}${endpoint}`);
-      const nextOffers = normalizeArray(response.data);
+      const nextOffers = normalizeArray(response.data).filter(isPlatformOffer);
       setOffers(nextOffers);
 
       const selectedId =
@@ -351,6 +368,23 @@ function PasspriveOffersContent() {
       ]);
 
       const detail = normalizeObject(detailResponse.data) || {};
+      if (!isPlatformOffer(detail)) {
+        showToast({
+          title: "Unsupported offer source",
+          description: "Only PLATFORM offers can be managed from this page.",
+          type: "error",
+        });
+        setSelectedOffer(null);
+        setOfferDraft("{}");
+        setStoreTargets([]);
+        setPlanTargets([]);
+        setConditions([]);
+        setRedemptions([]);
+        setUsageLimit(null);
+        setUsageLimitDraft("{\n  \n}");
+        return;
+      }
+
       const nextStoreTargets =
         normalizeArray(storeTargetsResponse.data).length > 0
           ? normalizeArray(storeTargetsResponse.data)
@@ -434,9 +468,14 @@ function PasspriveOffersContent() {
     const payload = parseJson<JsonRecord>(offerDraft, "offer");
     if (!payload) return;
 
+    const nextPayload: JsonRecord = {
+      ...payload,
+      source_type: "PLATFORM",
+    };
+
     try {
       setSavingOffer(true);
-      await apiPut(`${backendUrl}${OFFER_BASE_PATH}/${selectedOfferId}`, payload);
+      await apiPut(`${backendUrl}${OFFER_BASE_PATH}/${selectedOfferId}`, nextPayload);
       showToast({ title: "Offer updated successfully" });
       await loadOffers(selectedOfferId);
       await loadOfferDetail(selectedOfferId);
