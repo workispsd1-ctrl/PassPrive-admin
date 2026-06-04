@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   ArrowLeftRight,
   BookOpen,
+  Gift,
   HelpCircle,
   Inbox,
   Info,
@@ -63,6 +64,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Store Campaign", href: "/dashboard/store-campaign", iconSrc: "/campaign.png" },
   { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/request_quote.png" },
   { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
+  { title: "Gift Events", href: "/dashboard/gift-events", icon: Gift },
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
   //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },

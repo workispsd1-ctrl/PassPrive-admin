@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mcp config (contains secrets/tokens)
+.mcp.json
+
+# agent / assistant data
+.claude/
+.codex/
+.cursor/
+.aider*
+.continue/
+.windsurf/
+CLAUDE.local.md
