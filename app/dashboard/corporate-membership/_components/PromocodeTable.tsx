@@ -195,7 +195,7 @@ export default function PromocodeTable({ promocodes, companyName, onExport }: Pr
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {p.passType === "Black" ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-black text-white">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                         Black Pass
                       </span>
                     ) : (
@@ -204,7 +204,7 @@ export default function PromocodeTable({ promocodes, companyName, onExport }: Pr
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 line-through">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
                     {formatCurrency(p.actualPrice)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
