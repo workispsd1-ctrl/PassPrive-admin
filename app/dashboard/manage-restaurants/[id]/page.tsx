@@ -31,9 +31,12 @@ import {
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
   buildRestaurantBasePayload,
+  formatDateTimeLocal,
   deleteRestaurantImages,
   fetchRestaurantDetail,
+  getOfferDateMinimum,
   replaceRestaurantRelations,
+  validateRestaurantOffers,
   uploadRestaurantImages,
 } from "@/lib/restaurantAdmin";
 
@@ -151,6 +154,7 @@ export default function RestaurantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useSelector((state: RootState) => state.admin);
+  const nowDateTimeLocal = formatDateTimeLocal();
 
   const [restaurant, setRestaurant] = useState<RestaurantFlatRecord | null>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<RestaurantFlatRecord | null>(null);
@@ -233,6 +237,16 @@ export default function RestaurantDetailPage() {
 
   const handleSave = async () => {
     if (!restaurant) return;
+
+    const offerValidationError = validateRestaurantOffers(restaurant.offers);
+    if (offerValidationError) {
+      showToast({
+        type: "error",
+        title: "Invalid offer details",
+        description: offerValidationError,
+      });
+      return;
+    }
 
     if (
       restaurant.modification_available &&
@@ -647,11 +661,11 @@ export default function RestaurantDetailPage() {
                 </option>
               ))}
             </select>
-            <Input className={inputClass} disabled={!editMode} type="number" placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="number" placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)) })} />
+            <Input className={inputClass} disabled={!editMode} type="number" min={0} step="0.01" placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)) })} />
+            <Input className={inputClass} disabled={!editMode} type="number" min={0} step="0.01" placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)) })} />
             <ToggleField label="Active" checked={offer.is_active !== false} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, is_active: value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="datetime-local" value={offer.start_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="datetime-local" value={offer.end_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, end_at: e.target.value } : entry)) })} />
+            <Input className={inputClass} disabled={!editMode} type="datetime-local" min={nowDateTimeLocal} value={offer.start_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)) })} />
+            <Input className={inputClass} disabled={!editMode} type="datetime-local" min={getOfferDateMinimum(offer.start_at)} value={offer.end_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, end_at: e.target.value } : entry)) })} />
             <Textarea className="col-span-2" disabled={!editMode} placeholder="Description" value={offer.description || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, description: e.target.value } : entry)) })} />
             {editMode && (
               <div className="col-span-2 flex justify-end">

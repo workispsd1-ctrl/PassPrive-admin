@@ -35,7 +35,7 @@ type MoodCategoryForm = {
   light_theme_image_path: string;
   dark_theme_image_url: string;
   dark_theme_image_path: string;
-  sort_order: number;
+  sort_order: string;
 };
 
 const initialForm: MoodCategoryForm = {
@@ -44,8 +44,10 @@ const initialForm: MoodCategoryForm = {
   light_theme_image_path: "",
   dark_theme_image_url: "",
   dark_theme_image_path: "",
-  sort_order: 100,
+  sort_order: "100",
 };
+
+const SORT_ORDER_MIN = 1;
 
 function slugify(value: string) {
   return value
@@ -191,6 +193,7 @@ export default function MoodCategoryManager({
   }
 
   function populateForm(category: MoodCategoryRecord) {
+    const nextSortOrder = Number(category.sort_order);
     setEditingId(category.id);
     setForm({
       title: category.title || "",
@@ -198,7 +201,7 @@ export default function MoodCategoryManager({
       light_theme_image_path: category.light_theme_image_path || "",
       dark_theme_image_url: category.dark_theme_image_url || "",
       dark_theme_image_path: category.dark_theme_image_path || "",
-      sort_order: category.sort_order || 100,
+      sort_order: Number.isInteger(nextSortOrder) && nextSortOrder >= SORT_ORDER_MIN ? String(nextSortOrder) : "100",
     });
     setLightFile(null);
     setDarkFile(null);
@@ -250,6 +253,27 @@ export default function MoodCategoryManager({
       return;
     }
 
+    const hasLightImage = Boolean(lightFile || form.light_theme_image_url.trim());
+    const hasDarkImage = Boolean(darkFile || form.dark_theme_image_url.trim());
+
+    if (!editingId && !hasLightImage && !hasDarkImage) {
+      showToast({
+        type: "error",
+        title: "At least one image is required to create a category.",
+      });
+      return;
+    }
+
+    const sortOrder = Number(form.sort_order);
+
+    if (!Number.isInteger(sortOrder) || sortOrder < SORT_ORDER_MIN) {
+      showToast({
+        type: "error",
+        title: "Sort order must be a whole positive number.",
+      });
+      return;
+    }
+
     try {
       setSaving(true);
       if (!supabaseTable) {
@@ -298,7 +322,7 @@ export default function MoodCategoryManager({
         light_theme_image_path: nextLightPath,
         dark_theme_image_url: nextDarkUrl,
         dark_theme_image_path: nextDarkPath,
-        sort_order: Number(form.sort_order ?? 100),
+        sort_order: sortOrder,
         is_active: true,
         selection_type: "MULTI" as const,
       };
@@ -432,16 +456,30 @@ export default function MoodCategoryManager({
                   htmlFor="sort_order"
                   className="text-[16px] font-medium text-black font-['Be_Vietnam_Pro',sans-serif] tracking-[0.5px] leading-5"
                 >
-                  Sort order
+                  Sort order (positive number)
                 </Label>
                 <Input
                   id="sort_order"
                   type="number"
+                  min={SORT_ORDER_MIN}
+                  step={1}
                   value={form.sort_order}
-                  onChange={(event) => setForm((current) => ({ ...current, sort_order: Number(event.target.value) }))}
-                  placeholder="100"
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setForm((current) => ({
+                      ...current,
+                      sort_order: nextValue,
+                    }));
+                  }}
+                  placeholder="Enter a positive number"
                   className="h-[44px] rounded-[12px] border border-slate-200 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#938F96] p-3 focus-visible:ring-1 focus-visible:ring-[#5800AB]"
                 />
+                <p className="text-[12px] text-slate-500 font-['Be_Vietnam_Pro',sans-serif] leading-4">
+                  Use a whole number greater than 0. Lower numbers appear first.
+                </p>
+                <p className="text-[12px] text-slate-500 font-['Be_Vietnam_Pro',sans-serif] leading-4">
+                  At least one image is required before creating a category.
+                </p>
               </div>
 
               {[

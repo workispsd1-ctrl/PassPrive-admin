@@ -45,6 +45,110 @@ export type RestaurantSubscriptionInput = {
   expires_at?: string | null;
 };
 
+export function formatDateTimeLocal(value: Date = new Date()) {
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+export function getOfferDateMinimum(startAt?: string | null) {
+  const now = formatDateTimeLocal();
+  if (!startAt) return now;
+  return startAt > now ? startAt : now;
+}
+
+export function validateRestaurantOffers(offers: RestaurantOfferInput[] | undefined) {
+  const now = Date.now();
+
+  for (const [index, offer] of (offers || []).entries()) {
+    const title = asString(offer?.title);
+    const startAt = asString(offer?.start_at);
+    const endAt = asString(offer?.end_at);
+    const discountValue = asNumber(offer?.discount_value);
+    const hasAnyContent = Boolean(
+      title || offer?.description || offer?.badge_text || offer?.offer_type || discountValue !== null || offer?.min_spend !== null || startAt || endAt
+    );
+
+    if (!hasAnyContent) continue;
+
+    if (!title) {
+      return `Offer ${index + 1}: title is required.`;
+    }
+
+    if (discountValue !== null && discountValue < 0) {
+      return `Offer ${index + 1}: flat amount cannot be negative.`;
+    }
+
+    if (startAt) {
+      const parsedStart = new Date(startAt);
+      if (Number.isNaN(parsedStart.getTime())) {
+        return `Offer ${index + 1}: start date is invalid.`;
+      }
+      if (parsedStart.getTime() < now) {
+        return `Offer ${index + 1}: start date cannot be in the past.`;
+      }
+    }
+
+    if (endAt) {
+      const parsedEnd = new Date(endAt);
+      if (Number.isNaN(parsedEnd.getTime())) {
+        return `Offer ${index + 1}: end date is invalid.`;
+      }
+      if (parsedEnd.getTime() < now) {
+        return `Offer ${index + 1}: end date cannot be in the past.`;
+      }
+    }
+
+    if (startAt && endAt) {
+      const parsedStart = new Date(startAt);
+      const parsedEnd = new Date(endAt);
+      if (parsedEnd.getTime() <= parsedStart.getTime()) {
+        return `Offer ${index + 1}: end date must be later than start date.`;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function validateRestaurantAdvertising(input: {
+  ad_starts_at?: string | null;
+  ad_ends_at?: string | null;
+}) {
+  const now = Date.now();
+  const startAt = asString(input.ad_starts_at);
+  const endAt = asString(input.ad_ends_at);
+
+  if (startAt) {
+    const parsedStart = new Date(startAt);
+    if (Number.isNaN(parsedStart.getTime())) {
+      return "Advertising start date is invalid.";
+    }
+    if (parsedStart.getTime() < now) {
+      return "Advertising start date cannot be in the past.";
+    }
+  }
+
+  if (endAt) {
+    const parsedEnd = new Date(endAt);
+    if (Number.isNaN(parsedEnd.getTime())) {
+      return "Advertising end date is invalid.";
+    }
+    if (parsedEnd.getTime() < now) {
+      return "Advertising end date cannot be in the past.";
+    }
+  }
+
+  if (startAt && endAt) {
+    const parsedStart = new Date(startAt);
+    const parsedEnd = new Date(endAt);
+    if (parsedEnd.getTime() <= parsedStart.getTime()) {
+      return "Advertising end date must be later than start date.";
+    }
+  }
+
+  return null;
+}
+
 export type RestaurantFlatRecord = {
   id: string;
   name: string;
@@ -907,11 +1011,15 @@ async function replaceRows(table: string, restaurantId: string, rows: Record<str
     .delete()
     .eq("restaurant_id", restaurantId);
 
-  if (deleteError) throw deleteError;
+  if (deleteError) {
+    throw new Error(`Failed to clear ${table}: ${deleteError.message || JSON.stringify(deleteError)}`);
+  }
   if (!rows.length) return;
 
   const { error: insertError } = await supabaseBrowser.from(table).insert(rows);
-  if (insertError) throw insertError;
+  if (insertError) {
+    throw new Error(`Failed to insert into ${table}: ${insertError.message || JSON.stringify(insertError)}`);
+  }
 }
 
 export async function replaceRestaurantRelations(

@@ -22,6 +22,16 @@ export async function POST(request: NextRequest) {
     if (auth.error) return auth.error;
 
     const body = await request.json();
+    const hasLightImage = Boolean(String(body.light_theme_image_url || "").trim());
+    const hasDarkImage = Boolean(String(body.dark_theme_image_url || "").trim());
+
+    if (!hasLightImage && !hasDarkImage) {
+      return NextResponse.json(
+        { error: "At least one image is required to create a service category" },
+        { status: 400 }
+      );
+    }
+
     const record = {
       key: body.key,
       slug: body.slug,
