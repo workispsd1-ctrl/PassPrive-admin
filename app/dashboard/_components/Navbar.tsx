@@ -56,6 +56,7 @@ const pathName: Record<string, string> = {
   "/dashboard/transactions": "Transactions",
   "/dashboard/editorial-collections": "Editorial Collections",
   "/dashboard/editorial-collections/[id]": "Editorial Collection",
+  "/dashboard/corporate-membership": "Corporate Membership",
 };
 
 const pathDescription: Record<string, string> = {
@@ -69,6 +70,7 @@ const pathDescription: Record<string, string> = {
   "/dashboard/mood-categories": "Create, edit, and organize restaurant category cards shown in the app.",
   "/dashboard/store-mood-categories": "Create, edit, and organize store category cards shown in the app.",
   "/dashboard/editorial-collections": "Create and manage editorial collections shown in the app.",
+  "/dashboard/corporate-membership": "Configure corporate accounts, simulate pass pricing & cashbacks, and generate promo codes.",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
@@ -418,6 +420,8 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       }
     } else if (pathname === "/dashboard/reports") {
       await handleExportReports();
+    } else if (pathname === "/dashboard/corporate-membership") {
+      window.dispatchEvent(new CustomEvent("export-corporate-promocodes"));
     }
   };
 

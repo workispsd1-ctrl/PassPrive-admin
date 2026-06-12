@@ -13,6 +13,7 @@ import {
   Inbox,
   Info,
   LayoutGrid,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
   //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
+  { title: "Corporate Membership", href: "/dashboard/corporate-membership", icon: Users },
   { title: "Support Inbox", href: "/dashboard/support-inbox", icon: Inbox },
   { title: "FAQ", href: "/dashboard/faq", icon: HelpCircle },
   { title: "Help Topics", href: "/dashboard/help-center", icon: BookOpen },
