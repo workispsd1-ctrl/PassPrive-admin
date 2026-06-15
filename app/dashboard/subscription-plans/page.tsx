@@ -20,8 +20,8 @@ const ITEMS_PER_PAGE = 10;
 interface SubscriptionPlan {
   id: string;
   plan_name: string;
-  amount: string; // ✅ single amount (INR) stored as text/varchar in DB
-  type: string;   // "2" | "week" | "10days" | "15days" | "20days" | "month" | "2months" | "3months"
+  amount: string; 
+  type: string;  
   product_id: string;
   price_id: string;
   sort_order: number;
@@ -215,7 +215,7 @@ export default function SubscriptionPlansPage() {
             id: "",
             plan_name: "",
             amount: "",
-            type: "month",
+            type: "1year",
             product_id: "",
             price_id: "",
             sort_order: (plans?.length || 0) + 1,
