@@ -20,8 +20,12 @@ import {
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
   buildRestaurantInsertPayload,
+  formatDateTimeLocal,
   replaceRestaurantRelations,
+  getOfferDateMinimum,
   uploadRestaurantImages,
+  validateRestaurantAdvertising,
+  validateRestaurantOffers,
 } from "@/lib/restaurantAdmin";
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
@@ -150,6 +154,7 @@ async function getAccessToken() {
 
 export default function AddRestaurantPage() {
   const router = useRouter();
+  const nowDateTimeLocal = formatDateTimeLocal();
   const [loading, setLoading] = useState(false);
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
   const [selectedMoodTags, setSelectedMoodTags] = useState<string[]>([]);
@@ -286,6 +291,29 @@ export default function AddRestaurantPage() {
     }
     if (partnerPassword.length < 6) {
       showToast({ type: "error", title: "Password must be at least 6 characters" });
+      return;
+    }
+
+    const offerValidationError = validateRestaurantOffers(offers);
+    if (offerValidationError) {
+      showToast({
+        type: "error",
+        title: "Invalid offer details",
+        description: offerValidationError,
+      });
+      return;
+    }
+
+    const advertisingValidationError = validateRestaurantAdvertising({
+      ad_starts_at: form.ad_starts_at,
+      ad_ends_at: form.ad_ends_at,
+    });
+    if (advertisingValidationError) {
+      showToast({
+        type: "error",
+        title: "Invalid advertising dates",
+        description: advertisingValidationError,
+      });
       return;
     }
 
@@ -560,11 +588,11 @@ export default function AddRestaurantPage() {
                 </option>
               ))}
             </select>
-            <Input type="number" className={inputClass} placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)))} />
-            <Input type="number" className={inputClass} placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)))} />
+            <Input type="number" min={0} step="0.01" className={inputClass} placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)))} />
+            <Input type="number" min={0} step="0.01" className={inputClass} placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)))} />
             <ToggleField label="Active" checked={offer.is_active !== false} onCheckedChange={(value) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, is_active: value } : entry)))} />
-            <Input type="datetime-local" className={inputClass} value={offer.start_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)))} />
-            <Input type="datetime-local" className={inputClass} value={offer.end_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, end_at: e.target.value } : entry)))} />
+            <Input type="datetime-local" min={nowDateTimeLocal} className={inputClass} value={offer.start_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)))} />
+            <Input type="datetime-local" min={getOfferDateMinimum(offer.start_at)} className={inputClass} value={offer.end_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, end_at: e.target.value } : entry)))} />
             <Textarea className="col-span-2" placeholder="Description" value={offer.description || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, description: e.target.value } : entry)))} />
             <div className="col-span-2 flex justify-end">
               <Button variant="outline" onClick={() => setOffers((previous) => previous.filter((_, entryIndex) => entryIndex !== index))}>Remove offer</Button>
@@ -597,8 +625,8 @@ export default function AddRestaurantPage() {
           <ToggleField label="Advertised" checked={form.is_advertised} onCheckedChange={(value) => setForm((previous) => ({ ...previous, is_advertised: value }))} />
           <Input type="number" className={inputClass} name="ad_priority" placeholder="Ad priority" value={form.ad_priority} onChange={handleChange} />
           <Input className={inputClass} name="ad_badge_text" placeholder="Ad badge text" value={form.ad_badge_text} onChange={handleChange} />
-          <Input type="datetime-local" className={inputClass} name="ad_starts_at" value={form.ad_starts_at} onChange={handleChange} />
-          <Input type="datetime-local" className={inputClass} name="ad_ends_at" value={form.ad_ends_at} onChange={handleChange} />
+          <Input type="datetime-local" min={formatDateTimeLocal()} className={inputClass} name="ad_starts_at" value={form.ad_starts_at} onChange={handleChange} />
+          <Input type="datetime-local" min={getOfferDateMinimum(form.ad_starts_at)} className={inputClass} name="ad_ends_at" value={form.ad_ends_at} onChange={handleChange} />
         </div>
       </section>
 
