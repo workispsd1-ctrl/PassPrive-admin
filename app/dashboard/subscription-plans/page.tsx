@@ -29,25 +29,11 @@ interface SubscriptionPlan {
 
 // map stored type -> friendly label for the table
 const TYPE_LABELS: Record<string, string> = {
-  "2": "2 days",
-  week: "1 week",
-  "10days": "10 days",
-  "15days": "15 days",
-  "20days": "20 days",
-  month: "1 month",
-  "2months": "2 months",
-  "3months": "3 months",
+  "1year": "1 year",
 };
 
 const TYPE_OPTIONS = [
-  { value: "2", label: "2 days" },
-  { value: "week", label: "1 week" },
-  { value: "10days", label: "10 days" },
-  { value: "15days", label: "15 days" },
-  { value: "20days", label: "20 days" },
-  { value: "month", label: "1 month" },
-  { value: "2months", label: "2 months" },
-  { value: "3months", label: "3 months" },
+  { value: "1year", label: "1 year" },
 ];
 
 export default function SubscriptionPlansPage() {
