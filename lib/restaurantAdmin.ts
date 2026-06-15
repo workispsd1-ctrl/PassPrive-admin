@@ -149,6 +149,15 @@ export function validateRestaurantAdvertising(input: {
   return null;
 }
 
+export type MerchantType = "Verified" | "Preferred" | "Unclaimed";
+
+export const MERCHANT_TYPE_OPTIONS: { value: MerchantType | ""; label: string; defaultMdr: number | null }[] = [
+  { value: "", label: "Select merchant type", defaultMdr: null },
+  { value: "Verified", label: "Verified", defaultMdr: 2.5 },
+  { value: "Preferred", label: "Preferred", defaultMdr: 3.5 },
+  { value: "Unclaimed", label: "Unclaimed", defaultMdr: null },
+];
+
 export type RestaurantFlatRecord = {
   id: string;
   name: string;
@@ -166,6 +175,8 @@ export type RestaurantFlatRecord = {
   owner_user_id: string | null;
   is_pure_veg: boolean;
   booking_enabled: boolean;
+  merchant_type: MerchantType | null;
+  mdr_rate: number | null;
   avg_duration_minutes: number | null;
   max_bookings_per_slot: number | null;
   advance_booking_days: number | null;
@@ -851,6 +862,8 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     ad_ends_at: asString(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
+    merchant_type: asString(input.merchant_type),
+    mdr_rate: asNumber(input.mdr_rate),
   };
 
   for (const [key, value] of Object.entries(optionalValues)) {

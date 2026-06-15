@@ -19,6 +19,7 @@ import { showToast } from "@/hooks/useToast";
 import {
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
+  MERCHANT_TYPE_OPTIONS,
   buildRestaurantInsertPayload,
   formatDateTimeLocal,
   replaceRestaurantRelations,
@@ -200,6 +201,8 @@ export default function AddRestaurantPage() {
     ad_badge_text: "",
     ad_starts_at: "",
     ad_ends_at: "",
+    merchant_type: "" as string,
+    mdr_rate: "" as string,
   });
 
   const handleChange = (
@@ -386,6 +389,8 @@ export default function AddRestaurantPage() {
         ad_badge_text: form.ad_badge_text || undefined,
         ad_starts_at: form.ad_starts_at || undefined,
         ad_ends_at: form.ad_ends_at || undefined,
+        merchant_type: (form.merchant_type || undefined) as "Verified" | "Preferred" | "Unclaimed" | undefined,
+        mdr_rate: form.mdr_rate ? Number(form.mdr_rate) : undefined,
       });
 
       console.log("[AddRestaurant] restaurant insert payload", basePayload);
@@ -477,6 +482,52 @@ export default function AddRestaurantPage() {
       </section>
 
       
+
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">Merchant Plan</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label htmlFor="merchant_type" className="text-sm font-medium">Merchant Type</label>
+            <select
+              id="merchant_type"
+              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
+              value={form.merchant_type}
+              onChange={(e) => {
+                const selected = MERCHANT_TYPE_OPTIONS.find((o) => o.value === e.target.value);
+                setForm((prev) => ({
+                  ...prev,
+                  merchant_type: e.target.value,
+                  mdr_rate: selected?.defaultMdr != null ? String(selected.defaultMdr) : prev.mdr_rate,
+                }));
+              }}
+            >
+              {MERCHANT_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">MDR Rate (%)</label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              className={inputClass}
+              placeholder="e.g. 2.5"
+              value={form.mdr_rate}
+              onChange={(e) => setForm((prev) => ({ ...prev, mdr_rate: e.target.value }))}
+            />
+            {form.merchant_type === "verified_pay_partner" && (
+              <p className="text-xs text-muted-foreground">Standard rate — default 2.5%, configurable</p>
+            )}
+            {form.merchant_type === "preferred_partner" && (
+              <p className="text-xs text-muted-foreground">All-inclusive preferred rate — typically 3.5%–5%</p>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Restaurant Partner Login</h2>
