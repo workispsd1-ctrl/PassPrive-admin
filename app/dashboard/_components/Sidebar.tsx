@@ -13,6 +13,7 @@ import {
   Inbox,
   Info,
   LayoutGrid,
+  MapPin,
   Users,
 } from "lucide-react";
 
@@ -84,6 +85,7 @@ const groups: MenuGroup[] = [
     items: [
       { title: "Restaurant Management", href: "/dashboard/manage-restaurants", iconSrc: "/restaurant_menu.png" },
       { title: "Store Management", href: "/dashboard/manage-stores", iconSrc: "/storefront.png" },
+      { title: "Tourist Place Management", href: "/dashboard/manage-tourist-places", icon: MapPin },
       //{ title: "Corporate Management", href: "/dashboard/manage-corporates", iconSrc: "/corporatemangement.png" },
       { title: "User Management", href: "/dashboard/users", iconSrc: "/supervisor_account.png" },
       { title: "Admin Management", href: "/dashboard/admin", iconSrc: "/admin_panel_settings.png" },
@@ -410,16 +412,36 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                                     : "text-[#000000] hover:bg-[#F7F2FF]"
                                 )}
                               >
-                                <Image
-                                  src={item.iconSrc || "/menu.png"}
-                                  alt={item.title}
-                                  width={16}
-                                  height={16}
-                                  className={cn(
-                                    "mr-3 h-4 w-4 shrink-0 object-contain",
-                                    active ? "brightness-0 invert" : "brightness-0 opacity-80"
-                                  )}
-                                />
+                                {item.iconSrc ? (
+                                  <Image
+                                    src={item.iconSrc}
+                                    alt={item.title}
+                                    width={16}
+                                    height={16}
+                                    className={cn(
+                                      "mr-3 h-4 w-4 shrink-0 object-contain",
+                                      active ? "brightness-0 invert" : "brightness-0 opacity-80"
+                                    )}
+                                  />
+                                ) : item.icon ? (
+                                  <item.icon
+                                    className={cn(
+                                      "mr-3 h-4 w-4 shrink-0",
+                                      active ? "brightness-0 invert" : "brightness-0 opacity-80"
+                                    )}
+                                  />
+                                ) : (
+                                  <Image
+                                    src="/menu.png"
+                                    alt={item.title}
+                                    width={16}
+                                    height={16}
+                                    className={cn(
+                                      "mr-3 h-4 w-4 shrink-0 object-contain",
+                                      active ? "brightness-0 invert" : "brightness-0 opacity-80"
+                                    )}
+                                  />
+                                )}
                                 <span className={cn(sidebarSmallLabelClass, active && "text-white", collapsed && "hidden")}>{item.title}</span>
                               </Link>
                             </TooltipTrigger>
