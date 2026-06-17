@@ -595,6 +595,8 @@ export function normalizeRestaurantRecord({
     crowd_rating: ratings.crowd_rating,
     total_ratings: ratings.total_ratings,
     reviews: Array.isArray(reviews) ? reviews : [],
+    merchant_type: (asString(restaurant?.merchant_type) as MerchantType | null) ?? null,
+    mdr_rate: asNumber(restaurant?.mdr_rate),
   };
 }
 
@@ -823,6 +825,8 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     ad_ends_at: asString(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
+    merchant_type: asString(input.merchant_type),
+    mdr_rate: asNumber(input.mdr_rate),
   };
 }
 

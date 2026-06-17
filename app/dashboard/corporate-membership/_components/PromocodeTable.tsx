@@ -10,11 +10,14 @@ import { showToast } from "@/hooks/useToast";
 export interface GeneratedPromocode {
   code: string;
   passType: "Black" | "Premium";
+  passName: string;
   actualPrice: number;
   discountPct: number;
   discountedPrice: number;
   cashbackPct: number;
   cashbackValue: number;
+  mdr: number;
+  cashback: number;
   companyName: string;
   corporateEmail: string;
   companyDomain: string;
@@ -170,7 +173,7 @@ export default function PromocodeTable({ promocodes, companyName, onExport }: Pr
                 Actual Price
               </th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Corporate Cost
+                Discounted Price
               </th>
               <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Status

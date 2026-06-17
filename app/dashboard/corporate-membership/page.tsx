@@ -17,8 +17,11 @@ export default function CorporateMembershipPage() {
 
   // Pass Config State
   const [passType, setPassType] = useState<"Black" | "Premium">("Black");
+  const [passName, setPassName] = useState("");
   const [quantity, setQuantity] = useState<number | "">("");
   const [discount, setDiscount] = useState<number | "">("");
+  const [mdr, setMdr] = useState<number | "">("");
+  const [cashback, setCashback] = useState<number | "">("");
 
   // UI state for generated codes
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedPromocode[]>([]);
@@ -91,11 +94,14 @@ export default function CorporateMembershipPage() {
         codesList.push({
           code: `${companyCode}-${typeCode}-${generateRandomSuffix()}`,
           passType: passType,
+          passName: passName.trim(),
           actualPrice: basePrice,
           discountPct: discPct,
           discountedPrice: discounted,
           cashbackPct: cashbackRate * 100,
           cashbackValue: cashbackVal,
+          mdr: Number(mdr) || 0,
+          cashback: Number(cashback) || 0,
           companyName: companyName.trim(),
           corporateEmail: email.trim(),
           companyDomain: companyDomain.trim(),
@@ -108,6 +114,7 @@ export default function CorporateMembershipPage() {
 
       setGeneratedCodes(codesList);
       setLastGeneratedCompanyName(companyName.trim());
+
       setIsGenerating(false);
 
       showToast({
@@ -132,9 +139,12 @@ export default function CorporateMembershipPage() {
       "S.No": index + 1,
       "Promo Code": p.code,
       "Pass Type": p.passType,
+      "Pass Name": p.passName,
       "Actual Price (INR)": p.actualPrice,
       "Corporate Discount (%)": p.discountPct,
       "Discounted Price (INR)": p.discountedPrice,
+      "MDR": p.mdr,
+      "Cashback": p.cashback,
       "Company Name": p.companyName,
       "Corporate Email": p.corporateEmail,
       "Company Domain": p.companyDomain,
@@ -177,10 +187,16 @@ export default function CorporateMembershipPage() {
           setCompanySize={setCompanySize}
           passType={passType}
           setPassType={setPassType}
+          passName={passName}
+          setPassName={setPassName}
           quantity={quantity}
           setQuantity={setQuantity}
           discount={discount}
           setDiscount={setDiscount}
+          mdr={mdr}
+          setMdr={setMdr}
+          cashback={cashback}
+          setCashback={setCashback}
           onSubmit={handleSubmit}
           isGenerating={isGenerating}
         />

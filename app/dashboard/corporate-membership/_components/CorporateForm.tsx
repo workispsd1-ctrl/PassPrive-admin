@@ -20,10 +20,16 @@ interface CorporateFormProps {
   setCompanySize: (val: string) => void;
   passType: "Black" | "Premium";
   setPassType: (val: "Black" | "Premium") => void;
+  passName: string;
+  setPassName: (val: string) => void;
   quantity: number | "";
   setQuantity: (val: number | "") => void;
   discount: number | "";
   setDiscount: (val: number | "") => void;
+  mdr: number | "";
+  setMdr: (val: number | "") => void;
+  cashback: number | "";
+  setCashback: (val: number | "") => void;
   onSubmit: (e: React.FormEvent) => void;
   isGenerating: boolean;
 }
@@ -43,10 +49,16 @@ export default function CorporateForm({
   setCompanySize,
   passType,
   setPassType,
+  passName,
+  setPassName,
   quantity,
   setQuantity,
   discount,
   setDiscount,
+  mdr,
+  setMdr,
+  cashback,
+  setCashback,
   onSubmit,
   isGenerating,
 }: CorporateFormProps) {
@@ -176,13 +188,66 @@ export default function CorporateForm({
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Dropdown for selecting Pass Type */}
+            <div className="space-y-1.5">
+              <Label htmlFor="passName" className="text-[14px] font-medium text-gray-700">
+                Pass Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="passName"
+                type="text"
+                placeholder="e.g. Google Black Pass"
+                className={inputClass}
+                value={passName}
+                onChange={(e) => setPassName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="mdr" className="text-[14px] font-medium text-gray-700">
+                MDR
+              </Label>
+              <Input
+                id="mdr"
+                type="number"
+                min="0"
+                placeholder="e.g. 2.5%"
+                className={inputClass}
+                value={mdr}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setMdr(v === "" ? "" : Math.max(0, parseFloat(v) || 0));
+                }}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cashback" className="text-[14px] font-medium text-gray-700">
+                Cashback
+              </Label>
+              <Input
+                id="cashback"
+                type="number"
+                min="0"
+                placeholder="e.g. 500"
+                className={inputClass}
+                value={cashback}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setCashback(v === "" ? "" : Math.max(0, parseFloat(v) || 0));
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="passType" className="text-[14px] font-medium text-gray-700">
                 Select Pass Type <span className="text-red-500">*</span>
               </Label>
               <select
                 id="passType"
+                title="Select Pass Type"
                 className="w-full rounded-lg border border-gray-200 px-3 h-10 text-sm bg-white text-black focus:border-[#5800AB] focus:ring-0 focus-visible:ring-0"
                 value={passType}
                 onChange={(e) => setPassType(e.target.value as "Black" | "Premium")}
@@ -192,7 +257,6 @@ export default function CorporateForm({
               </select>
             </div>
 
-            {/* Quantity Input */}
             <div className="space-y-1.5">
               <Label htmlFor="quantity" className="text-[14px] font-medium text-gray-700">
                 Quantity Required <span className="text-red-500">*</span>
@@ -212,7 +276,6 @@ export default function CorporateForm({
               />
             </div>
 
-            {/* Discount Input */}
             <div className="space-y-1.5">
               <Label htmlFor="discount" className="text-[14px] font-medium text-gray-700">
                 Discount (%)
@@ -254,6 +317,19 @@ export default function CorporateForm({
                 <p className="text-sm font-bold text-[#5800AB]">{(cashbackRate * 100)}% Cashback</p>
               </div>
             </div>
+
+            {qtyVal > 0 && (
+              <div className="border-t border-[#5800AB]/10 pt-3 grid grid-cols-2 gap-4 text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-gray-500 font-medium">Total Before Discount ({qtyVal} passes)</span>
+                  <p className="text-sm font-bold text-gray-800">{formatCurrency(basePrice * qtyVal)}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-gray-500 font-medium">Total After Discount</span>
+                  <p className="text-sm font-bold text-green-700">{formatCurrency(discountedPrice * qtyVal)}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

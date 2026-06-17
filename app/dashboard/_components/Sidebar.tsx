@@ -70,6 +70,7 @@ const topLevelItems: MenuItem[] = [
   //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
   { title: "Corporate Membership", href: "/dashboard/corporate-membership", icon: Users },
+  { title: "Session Sorting", href: "/dashboard/sorting-module", iconSrc: "/menu.png" },
   { title: "Support Inbox", href: "/dashboard/support-inbox", icon: Inbox },
   { title: "FAQ", href: "/dashboard/faq", icon: HelpCircle },
   { title: "Help Topics", href: "/dashboard/help-center", icon: BookOpen },

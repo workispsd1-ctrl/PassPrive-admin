@@ -30,6 +30,8 @@ import {
   RestaurantFlatRecord,
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
+  MerchantType,
+  MERCHANT_TYPE_OPTIONS,
   buildRestaurantBasePayload,
   formatDateTimeLocal,
   deleteRestaurantImages,
@@ -524,6 +526,38 @@ export default function RestaurantDetailPage() {
               <Switch checked={restaurant.is_pure_veg} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_pure_veg: value })} />
               <span className="text-sm text-gray-700">Vegetarian restaurant</span>
             </div>
+          </Field>
+          <Field label="Merchant Type">
+            <select
+              title="Merchant Type"
+              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
+              disabled={!editMode}
+              value={restaurant.merchant_type ?? ""}
+              onChange={(e) => {
+                const val = e.target.value as MerchantType | "";
+                const option = MERCHANT_TYPE_OPTIONS.find((o) => o.value === val);
+                setRestaurant({
+                  ...restaurant,
+                  merchant_type: val || null,
+                  mdr_rate: option?.defaultMdr ?? restaurant.mdr_rate,
+                });
+              }}
+            >
+              {MERCHANT_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="MDR Rate (%)">
+            <Input
+              className={inputClass}
+              type="number"
+              min={0}
+              step="0.01"
+              disabled={!editMode}
+              value={restaurant.mdr_rate ?? ""}
+              onChange={(e) => setRestaurant({ ...restaurant, mdr_rate: e.target.value ? Number(e.target.value) : null })}
+            />
           </Field>
         </Grid>
         <Field label="Full Address">
