@@ -289,31 +289,48 @@ function TouristPlacesPageContent() {
                             {place.city ? `${place.area ? `${place.area}, ` : ""}${place.city}` : place.location_name || "—"}
                           </td>
                           <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${
-                              place.payment_option === "free"
-                                ? "bg-green-100 text-green-700"
-                                : place.payment_option === "ips"
-                                ? "bg-purple-100 text-purple-700"
-                                : place.payment_option === "card"
-                                ? "bg-blue-100 text-blue-700"
-                                : place.payment_option === "mopay"
-                                ? "bg-amber-100 text-amber-700"
-                                : place.payment_option === "mopay_place"
-                                ? "bg-teal-100 text-teal-700"
-                                : "bg-gray-100 text-gray-700"
-                            }`}>
-                              {place.payment_option === "free"
-                                ? "Free Entry"
-                                : place.payment_option === "ips"
-                                ? "IPS"
-                                : place.payment_option === "card"
-                                ? "Credit/Debit Card"
-                                : place.payment_option === "mopay"
-                                ? "Mopay"
-                                : place.payment_option === "mopay_place"
-                                ? "Mopay Place"
-                                : place.payment_option.replace(/_/g, " ")}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {(() => {
+                                const opts = Array.isArray(place.payment_option)
+                                  ? place.payment_option
+                                  : typeof place.payment_option === "string"
+                                  ? [place.payment_option]
+                                  : [];
+
+                                if (opts.length === 0) return <span className="text-gray-400">—</span>;
+
+                                return opts.map((opt) => {
+                                  let bgClass = "bg-gray-100 text-gray-700";
+                                  let label = opt.replace(/_/g, " ");
+
+                                  if (opt === "free") {
+                                    bgClass = "bg-green-100 text-green-700";
+                                    label = "Free Entry";
+                                  } else if (opt === "ips") {
+                                    bgClass = "bg-purple-100 text-purple-700";
+                                    label = "IPS";
+                                  } else if (opt === "card") {
+                                    bgClass = "bg-blue-100 text-blue-700";
+                                    label = "Card";
+                                  } else if (opt === "mopay") {
+                                    bgClass = "bg-amber-100 text-amber-700";
+                                    label = "Mopay";
+                                  } else if (opt === "mopay_place") {
+                                    bgClass = "bg-teal-100 text-teal-700";
+                                    label = "Mopay Place";
+                                  }
+
+                                  return (
+                                    <span
+                                      key={opt}
+                                      className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap capitalize ${bgClass}`}
+                                    >
+                                      {label}
+                                    </span>
+                                  );
+                                });
+                              })()}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
                             {Number(place.price) > 0 ? `$${Number(place.price).toFixed(2)}` : "Free"}

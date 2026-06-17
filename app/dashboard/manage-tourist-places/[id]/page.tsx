@@ -48,6 +48,7 @@ export default function EditTouristPlacePage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [oldPictureId, setOldPictureId] = useState<string | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<{ id: string; file?: File; preview: string; dbId?: string }[]>([]);
 
   const [openingHours, setOpeningHours] = useState([
     { day_of_week: 1, name: "Monday", open_time: "09:00", close_time: "17:00", is_closed: false },
@@ -71,7 +72,7 @@ export default function EditTouristPlacePage() {
     full_address: "",
     latitude: "",
     longitude: "",
-    payment_option: "free",
+    payment_option: ["free"] as string[],
     price: "0.00",
     rating: "5.0",
     reviews_count: "0",
@@ -89,6 +90,30 @@ export default function EditTouristPlacePage() {
     ad_ends_at: "",
     booking_terms: "",
   });
+
+  const togglePaymentOption = (option: string, checked: boolean) => {
+    setForm(prev => {
+      let newOptions = [...prev.payment_option];
+      if (option === "free") {
+        newOptions = checked ? ["free"] : [];
+      } else {
+        if (checked) {
+          // Remove free if active
+          newOptions = newOptions.filter(o => o !== "free");
+          if (!newOptions.includes(option)) {
+            newOptions.push(option);
+          }
+        } else {
+          newOptions = newOptions.filter(o => o !== option);
+        }
+        // If no options are selected, default back to free
+        if (newOptions.length === 0) {
+          newOptions = ["free"];
+        }
+      }
+      return { ...prev, payment_option: newOptions };
+    });
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -125,7 +150,11 @@ export default function EditTouristPlacePage() {
           full_address: data.full_address || "",
           latitude: data.latitude !== null ? String(data.latitude) : "",
           longitude: data.longitude !== null ? String(data.longitude) : "",
-          payment_option: data.payment_option || "free",
+          payment_option: Array.isArray(data.payment_option)
+            ? data.payment_option
+            : typeof data.payment_option === "string"
+            ? [data.payment_option]
+            : ["free"],
           price: data.price !== null ? Number(data.price).toFixed(2) : "0.00",
           rating: data.rating !== null ? String(data.rating) : "5.0",
           reviews_count: data.reviews_count !== null ? String(data.reviews_count) : "0",
@@ -173,6 +202,24 @@ export default function EditTouristPlacePage() {
             return orderA - orderB;
           });
           setOpeningHours(formattedHours);
+        }
+
+        // Fetch existing gallery media assets
+        const { data: mediaData, error: mediaError } = await supabaseBrowser
+          .from("tourist_place_media_assets")
+          .select("*")
+          .eq("tourist_place_id", id)
+          .eq("is_active", true);
+
+        if (mediaError) throw mediaError;
+        if (mediaData) {
+          setGalleryFiles(
+            mediaData.map(m => ({
+              id: m.id,
+              dbId: m.id,
+              preview: m.file_url,
+            }))
+          );
         }
 
         setOldPictureId(data.picture_id);
@@ -343,6 +390,70 @@ export default function EditTouristPlacePage() {
         .insert(openingHoursPayload);
 
       if (hoursInsertError) throw hoursInsertError;
+
+      // 6. Update gallery assets
+      const { data: currentDbAssets } = await supabaseBrowser
+        .from("tourist_place_media_assets")
+        .select("*")
+        .eq("tourist_place_id", id);
+
+      const dbAssetsToKeep = galleryFiles.filter(gf => gf.dbId).map(gf => gf.dbId);
+
+      if (currentDbAssets) {
+        for (const asset of currentDbAssets) {
+          if (!dbAssetsToKeep.includes(asset.id)) {
+            // Delete file from storage
+            if (asset.file_path) {
+              const { error: removeFileError } = await supabaseBrowser.storage
+                .from("tourist-images")
+                .remove([asset.file_path]);
+              if (removeFileError) console.error("Error deleting storage file:", removeFileError);
+            }
+            // Delete row from DB
+            const { error: deleteRowError } = await supabaseBrowser
+              .from("tourist_place_media_assets")
+              .delete()
+              .eq("id", asset.id);
+            if (deleteRowError) console.error("Error deleting media asset row:", deleteRowError);
+          }
+        }
+      }
+
+      const newGalleryFiles = galleryFiles.filter(gf => !gf.dbId && gf.file);
+      if (newGalleryFiles.length > 0) {
+        const assetsPayload = [];
+        for (let i = 0; i < newGalleryFiles.length; i++) {
+          const file = newGalleryFiles[i].file!;
+          const ext = file.name.split(".").pop() || "jpg";
+          const random = Math.random().toString(36).slice(2, 9);
+          const path = `gallery/${id}/${Date.now()}-${random}.${ext}`;
+
+          const { error: uploadError } = await supabaseBrowser.storage
+            .from("tourist-images")
+            .upload(path, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabaseBrowser.storage
+            .from("tourist-images")
+            .getPublicUrl(path);
+
+          assetsPayload.push({
+            tourist_place_id: id,
+            asset_type: "scenery",
+            file_url: publicUrlData?.publicUrl || "",
+            file_path: path,
+            sort_order: (i + 1) * 10,
+            is_active: true,
+          });
+        }
+
+        const { error: assetsInsertError } = await supabaseBrowser
+          .from("tourist_place_media_assets")
+          .insert(assetsPayload);
+
+        if (assetsInsertError) throw assetsInsertError;
+      }
 
       showToast({ type: "success", title: "Tourist Place Updated Successfully" });
       router.push("/dashboard/manage-tourist-places");
@@ -569,19 +680,64 @@ export default function EditTouristPlacePage() {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
           <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-3">Pricing & Booking Preferences</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2 col-span-2 md:col-span-1">
-              <label className="text-sm font-semibold text-gray-700">Payment Option</label>
-              <select
-                value={form.payment_option}
-                onChange={(e) => setForm(prev => ({ ...prev, payment_option: e.target.value }))}
-                className="w-full h-10 border border-gray-300 focus:border-gray-400 focus:ring-0 rounded-xl px-3 text-sm bg-white"
-              >
-                <option value="free">Free Entry</option>
-                <option value="ips">IPS</option>
-                <option value="card">Credit Card/Debit Card</option>
-                <option value="mopay">Mopay</option>
-                <option value="mopay_place">Mopay Place</option>
-              </select>
+            <div className="space-y-4 col-span-2">
+              <label className="text-sm font-semibold text-gray-700 block">Accepted Payment Options *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-55/50 transition">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">Free Entry</span>
+                    <span className="text-xs text-gray-500">No ticket charge.</span>
+                  </div>
+                  <Switch
+                    checked={form.payment_option.includes("free")}
+                    onCheckedChange={(checked) => togglePaymentOption("free", checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-55/50 transition">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">IPS</span>
+                    <span className="text-xs text-gray-500">Instant Payment System.</span>
+                  </div>
+                  <Switch
+                    checked={form.payment_option.includes("ips")}
+                    onCheckedChange={(checked) => togglePaymentOption("ips", checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-55/50 transition">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">Credit/Debit Card</span>
+                    <span className="text-xs text-gray-500">Pay via Card.</span>
+                  </div>
+                  <Switch
+                    checked={form.payment_option.includes("card")}
+                    onCheckedChange={(checked) => togglePaymentOption("card", checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-55/50 transition">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">Mopay</span>
+                    <span className="text-xs text-gray-500">Pay online via Mopay.</span>
+                  </div>
+                  <Switch
+                    checked={form.payment_option.includes("mopay")}
+                    onCheckedChange={(checked) => togglePaymentOption("mopay", checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-gray-55/50 transition">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">Mopay Place</span>
+                    <span className="text-xs text-gray-500">Pay via Mopay at counter.</span>
+                  </div>
+                  <Switch
+                    checked={form.payment_option.includes("mopay_place")}
+                    onCheckedChange={(checked) => togglePaymentOption("mopay_place", checked)}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2 col-span-2 md:col-span-1">
@@ -594,7 +750,7 @@ export default function EditTouristPlacePage() {
                 value={form.price}
                 onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
                 className={inputClass}
-                disabled={form.payment_option === "free"}
+                disabled={form.payment_option.includes("free")}
               />
             </div>
 
@@ -812,6 +968,63 @@ export default function EditTouristPlacePage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Section 6.5: Gallery Images */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Gallery Images</h2>
+            <p className="text-xs text-gray-500">Upload multiple scenery or activity photos of the destination.</p>
+          </div>
+          <div className="space-y-4">
+            {galleryFiles.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {galleryFiles.map((gf) => (
+                  <div key={gf.id} className="relative h-28 rounded-xl overflow-hidden bg-gray-50 border border-gray-200">
+                    <img src={gf.preview} alt="Gallery Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGalleryFiles(prev => prev.filter(item => item.id !== gf.id));
+                      }}
+                      className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-center rounded-xl border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
+              <div className="space-y-1 text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="flex text-sm text-gray-600">
+                  <label className="relative cursor-pointer rounded-md bg-white font-semibold text-[#5800AB] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#5800AB] focus-within:ring-offset-2 hover:text-[#4a0090]">
+                    <span>Upload gallery images</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files) {
+                          const newFiles = Array.from(files).map(file => ({
+                            id: crypto.randomUUID(),
+                            file,
+                            preview: URL.createObjectURL(file),
+                          }));
+                          setGalleryFiles(prev => [...prev, ...newFiles]);
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB (Select multiple)</p>
+              </div>
+            </div>
           </div>
         </div>
 
