@@ -1043,19 +1043,26 @@ export async function replaceRestaurantRelations(
   restaurantId: string,
   input: RestaurantRelationsInput
 ) {
-  await Promise.all([
+  const tasks: Promise<void>[] = [
     replaceRows("restaurant_tags", restaurantId, buildTagRows(restaurantId, input)),
     replaceRows("restaurant_media_assets", restaurantId, buildMediaRows(restaurantId, input)),
-    replaceRows(
-      "restaurant_opening_hours",
-      restaurantId,
-      buildOpeningHoursRows(restaurantId, input.opening_hours)
-    ),
     replaceRows("restaurant_offers", restaurantId, buildOfferRows(restaurantId, input.offers)),
     replaceRows(
       "restaurant_subscriptions",
       restaurantId,
       buildSubscriptionRows(restaurantId, input.subscription)
     ),
-  ]);
+  ];
+
+  if (input.opening_hours && Object.keys(input.opening_hours).length > 0) {
+    tasks.push(
+      replaceRows(
+        "restaurant_opening_hours",
+        restaurantId,
+        buildOpeningHoursRows(restaurantId, input.opening_hours)
+      )
+    );
+  }
+
+  await Promise.all(tasks);
 }
