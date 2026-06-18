@@ -73,6 +73,7 @@ component by `section_key`, or the template by `template`, passing
 
 ## Admin UI
 
-`PassPrive-admin/app/dashboard/home-sections/` — list (reorder / show-hide /
-edit / delete) + form (native vs template, title, order, style, params).
-Writes directly via `supabaseBrowser`.
+`PassPrive-admin/app/dashboard/sorting-module/` ("Session Sorting") — pick a
+screen, then its `[id]` page lists the titles with edit / delete and an
+Add/Edit dialog (native section vs template, title, order, `section_key`,
+style overrides, params, visibility). Writes directly via `supabaseBrowser`.

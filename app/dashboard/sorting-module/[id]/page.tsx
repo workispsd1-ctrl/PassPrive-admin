@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Monitor, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Monitor, Pencil, Plus, Trash2 } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
-import AddTitleDialog from "./_components/AddTitleDialog";
+import AddTitleDialog, { TitlePayload, TitleRow } from "./_components/AddTitleDialog";
 
 type SortingScreen = {
   id: string;
@@ -17,6 +17,14 @@ type SortingTitle = {
   screen_id: string;
   title: string;
   sort_order: number;
+  section_key: string | null;
+  template: string | null;
+  data_source: string | null;
+  params: Record<string, unknown> | null;
+  style_variant: string | null;
+  title_color: string | null;
+  background: string | null;
+  enabled: boolean;
   created_at: string;
 };
 
@@ -28,6 +36,7 @@ export default function ScreenDetailPage() {
   const [titles, setTitles] = useState<SortingTitle[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<TitleRow | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -61,17 +70,16 @@ export default function ScreenDetailPage() {
     loadData();
   }, [loadData]);
 
-  const handleAddTitle = async (title: string, sortOrder: number) => {
-    const { error } = await supabaseBrowser.from("session_sorting_titles").insert({
-      screen_id: id,
-      title,
-      sort_order: sortOrder,
-    });
+  const handleSaveTitle = async (payload: TitlePayload) => {
+    const { error } = editing?.id
+      ? await supabaseBrowser.from("session_sorting_titles").update(payload).eq("id", editing.id)
+      : await supabaseBrowser.from("session_sorting_titles").insert({ screen_id: id, ...payload });
 
     if (error) {
-      showToast({ type: "error", title: "Failed to add title", description: error.message });
+      showToast({ type: "error", title: editing?.id ? "Failed to update" : "Failed to add title", description: error.message });
     } else {
-      showToast({ type: "success", title: "Title added" });
+      showToast({ type: "success", title: editing?.id ? "Title updated" : "Title added" });
+      setEditing(null);
       await loadData();
     }
   };
@@ -123,7 +131,9 @@ export default function ScreenDetailPage() {
               <tr>
                 <th className="px-5 py-3 font-medium w-12">#</th>
                 <th className="px-5 py-3 font-medium">Title</th>
+                <th className="px-5 py-3 font-medium">Section</th>
                 <th className="px-5 py-3 font-medium">Sort Order</th>
+                <th className="px-5 py-3 font-medium">Visible</th>
                 <th className="px-5 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -148,7 +158,7 @@ export default function ScreenDetailPage() {
 
               {!loading && titles.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-16">
+                  <td colSpan={6} className="px-5 py-16">
                     <div className="flex flex-col items-center text-center">
                       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8]">
                         <Plus className="h-5 w-5 text-[#5800AB]" />
@@ -168,25 +178,61 @@ export default function ScreenDetailPage() {
                     <td className="px-5 py-4 text-xs text-slate-400">{idx + 1}</td>
                     <td className="px-5 py-4 font-medium text-gray-900">{item.title}</td>
                     <td className="px-5 py-4">
+                      {item.template ? (
+                        <span className="inline-flex items-center rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700 ring-1 ring-purple-200">
+                          {item.template}
+                        </span>
+                      ) : item.section_key ? (
+                        <span className="text-xs text-slate-600">{item.section_key}</span>
+                      ) : (
+                        <span className="text-xs font-medium text-amber-600">not mapped</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
                       <span className="inline-flex items-center rounded-full bg-[#F4EEFF] px-2.5 py-1 text-xs font-semibold text-[#5800AB] ring-1 ring-[#E7DDF8]">
                         {item.sort_order}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        title="Delete title"
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deletingId === item.id}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-[13px] font-medium text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-50"
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          item.enabled
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                            : "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+                        }`}
                       >
-                        {deletingId === item.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                        Delete
-                      </button>
+                        {item.enabled ? "Visible" : "Hidden"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          title="Edit title"
+                          onClick={() => {
+                            setEditing(item);
+                            setAddOpen(true);
+                          }}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          title="Delete title"
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deletingId === item.id}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-[13px] font-medium text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {deletingId === item.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -198,7 +244,10 @@ export default function ScreenDetailPage() {
       {/* Floating + button */}
       <button
         type="button"
-        onClick={() => setAddOpen(true)}
+        onClick={() => {
+          setEditing(null);
+          setAddOpen(true);
+        }}
         aria-label="Add title"
         className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#5800AB] text-white shadow-[0_12px_28px_rgba(88,0,171,0.4)] transition-transform hover:scale-105 hover:bg-[#4a0090]"
       >
@@ -207,8 +256,12 @@ export default function ScreenDetailPage() {
 
       <AddTitleDialog
         open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onSave={handleAddTitle}
+        editing={editing}
+        onClose={() => {
+          setAddOpen(false);
+          setEditing(null);
+        }}
+        onSave={handleSaveTitle}
       />
     </div>
   );
