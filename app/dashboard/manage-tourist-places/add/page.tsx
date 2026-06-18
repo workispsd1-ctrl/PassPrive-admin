@@ -21,6 +21,32 @@ function slugify(input: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
+const AVAILABLE_ACTIVITIES = [
+  { type: "zipline", label: "Zipline" },
+  { type: "quad_biking_single", label: "Quad Biking (Single)" },
+  { type: "quad_biking_double", label: "Quad Biking (Double)" },
+  { type: "horseback_riding", label: "Horseback Riding" },
+  { type: "guided_hiking", label: "Guided Hiking" },
+  { type: "safari", label: "Safari" },
+  { type: "karting", label: "Karting" },
+  { type: "nepalese_bridge", label: "Nepalese Bridge" },
+  { type: "aviary", label: "Aviary" },
+  { type: "petting_feeding", label: "Petting & Feeding" },
+];
+
+const PREDEFINED_TAGS = [
+  "wild mauritius",
+  "thrills & advantures",
+  "ocean & islands",
+  "beach finder",
+  "natural wonder",
+  "mauritius stories",
+  "teaste mauritius",
+  "golf and leisure",
+  "local finders",
+];
+
+
 async function buildUniqueSlug(baseValue: string) {
   const normalizedBase = slugify(baseValue) || `tourist-${Date.now()}`;
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -43,6 +69,18 @@ export default function AddTouristPlacePage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<{ id: string; file: File; preview: string }[]>([]);
+  const [activities, setActivities] = useState(
+    AVAILABLE_ACTIVITIES.map(act => ({
+      activity_type: act.type,
+      label: act.label,
+      is_enabled: false,
+      price_adult: "0.00",
+      price_child: "",
+      child_age_min: "0",
+      child_age_max: "",
+      child_special_offer: "",
+    }))
+  );
 
   const [openingHours, setOpeningHours] = useState([
     { day_of_week: 1, name: "Monday", open_time: "09:00", close_time: "17:00", is_closed: false },
@@ -83,7 +121,10 @@ export default function AddTouristPlacePage() {
     ad_starts_at: "",
     ad_ends_at: "",
     booking_terms: "",
+    tags: [] as string[],
   });
+
+  const [customTagInput, setCustomTagInput] = useState("");
 
   const togglePaymentOption = (option: string, checked: boolean) => {
     setForm(prev => {
@@ -108,6 +149,24 @@ export default function AddTouristPlacePage() {
       return { ...prev, payment_option: newOptions };
     });
   };
+
+  const toggleTag = (tag: string) => {
+    setForm(prev => {
+      const isSelected = prev.tags.includes(tag);
+      const newTags = isSelected
+        ? prev.tags.filter(t => t !== tag)
+        : [...prev.tags, tag];
+      return { ...prev, tags: newTags };
+    });
+  };
+
+  const handleAddCustomTag = (tagText: string) => {
+    const tag = tagText.trim().toLowerCase();
+    if (tag && !form.tags.includes(tag)) {
+      setForm(prev => ({ ...prev, tags: [...prev.tags, tag] }));
+    }
+  };
+
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
@@ -215,6 +274,7 @@ export default function AddTouristPlacePage() {
           ad_starts_at: parsedAdStarts,
           ad_ends_at: parsedAdEnds,
           booking_terms: parsedBookingTerms,
+          tags: form.tags,
         });
 
       if (insertError) throw insertError;
@@ -268,6 +328,27 @@ export default function AddTouristPlacePage() {
           .insert(assetsPayload);
 
         if (assetsInsertError) throw assetsInsertError;
+      }
+
+      // 7.5. Insert configured activities
+      const enabledActivities = activities.filter(act => act.is_enabled);
+      if (enabledActivities.length > 0) {
+        const activitiesPayload = enabledActivities.map(act => ({
+          tourist_place_id: placeId,
+          activity_type: act.activity_type,
+          price_adult: parseFloat(act.price_adult) || 0,
+          price_child: act.price_child ? parseFloat(act.price_child) : null,
+          child_age_min: act.child_age_min ? parseInt(act.child_age_min, 10) : null,
+          child_age_max: act.child_age_max ? parseInt(act.child_age_max, 10) : null,
+          child_special_offer: act.child_special_offer || null,
+          is_active: true,
+        }));
+
+        const { error: activitiesInsertError } = await supabaseBrowser
+          .from("tourist_place_activities")
+          .insert(activitiesPayload);
+
+        if (activitiesInsertError) throw activitiesInsertError;
       }
 
       showToast({ type: "success", title: "Tourist Place Created Successfully" });
@@ -647,6 +728,202 @@ export default function AddTouristPlacePage() {
                 className="min-h-[80px] rounded-xl border border-gray-300 focus:border-gray-400 focus:ring-0"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Section: Activities & Pricing Tiers */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Activities & Pricing Tiers</h2>
+            <p className="text-xs text-gray-500">Configure custom pricing and age restrictions for specific activities at this place.</p>
+          </div>
+          <div className="space-y-6">
+            {activities.map((act, idx) => (
+              <div key={act.activity_type} className="p-4 rounded-2xl border border-gray-100 hover:border-gray-200 transition space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 block">{act.label}</span>
+                    <span className="text-xs text-gray-500">Enable this activity with custom pricing.</span>
+                  </div>
+                  <Switch
+                    checked={act.is_enabled}
+                    onCheckedChange={(checked) => {
+                      setActivities(prev =>
+                        prev.map((a, i) => (i === idx ? { ...a, is_enabled: checked } : a))
+                      );
+                    }}
+                  />
+                </div>
+
+                {act.is_enabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-gray-50">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700">Adult Price ($) *</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={act.price_adult}
+                        onChange={(e) => {
+                          setActivities(prev =>
+                            prev.map((a, i) => (i === idx ? { ...a, price_adult: e.target.value } : a))
+                          );
+                        }}
+                        className={inputClass}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700">Child Price ($)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Optional"
+                        value={act.price_child}
+                        onChange={(e) => {
+                          setActivities(prev =>
+                            prev.map((a, i) => (i === idx ? { ...a, price_child: e.target.value } : a))
+                          );
+                        }}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700">Child Age Min (Years)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={act.child_age_min}
+                        onChange={(e) => {
+                          setActivities(prev =>
+                            prev.map((a, i) => (i === idx ? { ...a, child_age_min: e.target.value } : a))
+                          );
+                        }}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700">Child Age Max (Years)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Optional"
+                        value={act.child_age_max}
+                        onChange={(e) => {
+                          setActivities(prev =>
+                            prev.map((a, i) => (i === idx ? { ...a, child_age_max: e.target.value } : a))
+                          );
+                        }}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="space-y-1 md:col-span-2 lg:col-span-4">
+                      <label className="text-xs font-semibold text-gray-700">Child Special Offer / Description</label>
+                      <Input
+                        type="text"
+                        placeholder="E.g. Free under 3 years old, includes complimentary drink"
+                        value={act.child_special_offer}
+                        onChange={(e) => {
+                          setActivities(prev =>
+                            prev.map((a, i) => (i === idx ? { ...a, child_special_offer: e.target.value } : a))
+                          );
+                        }}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section: Tags & Categories */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Tags & Categories</h2>
+            <p className="text-xs text-gray-500">Associate predefined or custom tags with this tourist destination.</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-semibold text-gray-700 block mb-2">Predefined Tags</label>
+              <div className="flex flex-wrap gap-2">
+                {PREDEFINED_TAGS.map((tag) => {
+                  const isSelected = form.tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                        isSelected
+                          ? "bg-[#5800AB]/10 text-[#5800AB] border-[#5800AB]"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-50 pt-4 space-y-4">
+              <label className="text-sm font-semibold text-gray-700 block">Add Custom Tag</label>
+              <div className="flex gap-2 max-w-md">
+                <Input
+                  type="text"
+                  placeholder="Enter custom tag..."
+                  value={customTagInput}
+                  onChange={(e) => setCustomTagInput(e.target.value)}
+                  className={inputClass}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCustomTag(customTagInput);
+                      setCustomTagInput("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    handleAddCustomTag(customTagInput);
+                    setCustomTagInput("");
+                  }}
+                  className="bg-gray-900 text-white hover:bg-gray-800 rounded-xl cursor-pointer animate-none"
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {form.tags.length > 0 && (
+              <div className="border-t border-gray-50 pt-4">
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Selected Tags</label>
+                <div className="flex flex-wrap gap-2">
+                  {form.tags.map((tag) => (
+                    <div
+                      key={tag}
+                      className="flex items-center gap-1 bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium border border-gray-200"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className="text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
