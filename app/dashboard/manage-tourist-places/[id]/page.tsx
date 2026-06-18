@@ -128,6 +128,11 @@ export default function EditTouristPlacePage() {
     ad_ends_at: "",
     booking_terms: "",
     tags: [] as string[],
+    price_child: "",
+    price_local_adult: "",
+    price_local_child: "",
+    child_age_min: "0",
+    child_age_max: "",
   });
 
   const [customTagInput, setCustomTagInput] = useState("");
@@ -231,6 +236,11 @@ export default function EditTouristPlacePage() {
           ad_ends_at: formatISOToLocal(data.ad_ends_at),
           booking_terms: Array.isArray(data.booking_terms) ? data.booking_terms.join("\n") : "",
           tags: Array.isArray(data.tags) ? data.tags : [],
+          price_child: data.price_child !== null ? String(data.price_child) : "",
+          price_local_adult: data.price_local_adult !== null ? String(data.price_local_adult) : "",
+          price_local_child: data.price_local_child !== null ? String(data.price_local_child) : "",
+          child_age_min: data.child_age_min !== null ? String(data.child_age_min) : "0",
+          child_age_max: data.child_age_max !== null ? String(data.child_age_max) : "",
         });
 
         // Fetch opening hours
@@ -402,6 +412,12 @@ export default function EditTouristPlacePage() {
 
       // 3. Parse inputs
       const parsedPrice = parseFloat(form.price) || 0;
+      const parsedPriceChild = form.price_child ? parseFloat(form.price_child) : null;
+      const parsedPriceLocalAdult = form.price_local_adult ? parseFloat(form.price_local_adult) : null;
+      const parsedPriceLocalChild = form.price_local_child ? parseFloat(form.price_local_child) : null;
+      const parsedChildAgeMin = form.child_age_min && form.child_age_max ? parseInt(form.child_age_min, 10) : null;
+      const parsedChildAgeMax = form.child_age_min && form.child_age_max ? parseInt(form.child_age_max, 10) : null;
+
       const parsedRating = parseFloat(form.rating) || 5.0;
       const parsedReviewsCount = parseInt(form.reviews_count, 10) || 0;
       const parsedLat = form.latitude ? parseFloat(form.latitude) : null;
@@ -437,6 +453,11 @@ export default function EditTouristPlacePage() {
           longitude: parsedLng,
           payment_option: form.payment_option,
           price: parsedPrice,
+          price_child: parsedPriceChild,
+          price_local_adult: parsedPriceLocalAdult,
+          price_local_child: parsedPriceLocalChild,
+          child_age_min: parsedChildAgeMin,
+          child_age_max: parsedChildAgeMax,
           rating: parsedRating,
           reviews_count: parsedReviewsCount,
           picture_id: finalPictureId,
@@ -857,18 +878,104 @@ export default function EditTouristPlacePage() {
               </div>
             </div>
 
-            <div className="space-y-2 col-span-2 md:col-span-1">
-              <label className="text-sm font-semibold text-gray-700">Price ($)</label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={form.price}
-                onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
-                className={inputClass}
-                disabled={form.payment_option.includes("free")}
-              />
+            <div className="col-span-2 border-t border-gray-50 pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Standard Tourist Prices */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800">Standard / Tourist Pricing</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">Adult Price ($) *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={form.price}
+                      onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
+                      className={inputClass}
+                      disabled={form.payment_option.includes("free")}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">Child Price ($)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Optional"
+                      value={form.price_child}
+                      onChange={(e) => setForm(prev => ({ ...prev, price_child: e.target.value }))}
+                      className={inputClass}
+                      disabled={form.payment_option.includes("free")}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Local Resident Prices */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800">Local Resident Pricing</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">Adult Price ($)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Optional"
+                      value={form.price_local_adult}
+                      onChange={(e) => setForm(prev => ({ ...prev, price_local_adult: e.target.value }))}
+                      className={inputClass}
+                      disabled={form.payment_option.includes("free")}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">Child Price ($)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Optional"
+                      value={form.price_local_child}
+                      onChange={(e) => setForm(prev => ({ ...prev, price_local_child: e.target.value }))}
+                      className={inputClass}
+                      disabled={form.payment_option.includes("free")}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Child Age Group Bounds */}
+              <div className="col-span-2 border-t border-gray-50 pt-4 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800">Child Age Group Parameters</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">Min Age (Years)</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={form.child_age_min}
+                      onChange={(e) => setForm(prev => ({ ...prev, child_age_min: e.target.value }))}
+                      className={inputClass}
+                      disabled={form.payment_option.includes("free")}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 font-medium">Max Age (Years)</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Optional"
+                      value={form.child_age_max}
+                      onChange={(e) => setForm(prev => ({ ...prev, child_age_max: e.target.value }))}
+                      className={inputClass}
+                      disabled={form.payment_option.includes("free")}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-between col-span-2 border-t border-gray-50 pt-4">
