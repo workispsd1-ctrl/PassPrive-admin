@@ -193,6 +193,7 @@ export type RestaurantFlatRecord = {
   ad_starts_at: string | null;
   ad_ends_at: string | null;
   ad_badge_text: string | null;
+  tier: number | null;
   booking_terms: string[] | null;
   on_boarded: boolean;
   created_creds: boolean;
@@ -562,6 +563,7 @@ export function normalizeRestaurantRecord({
     ad_starts_at: toDateTimeLocal(restaurant?.ad_starts_at),
     ad_ends_at: toDateTimeLocal(restaurant?.ad_ends_at),
     ad_badge_text: asString(restaurant?.ad_badge_text),
+    tier: asNumber(restaurant?.tier),
     booking_terms: asStringArray(restaurant?.booking_terms),
     cuisines: tagValues(tags, "cuisine"),
     facilities: tagValues(tags, "facility"),
@@ -824,6 +826,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
+    tier: asNumber(input.tier) ?? 0,
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
     merchant_type: asString(input.merchant_type),
     mdr_rate: asNumber(input.mdr_rate),
@@ -865,6 +868,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
+    tier: asNumber(input.tier),
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
     merchant_type: asString(input.merchant_type),
     mdr_rate: asNumber(input.mdr_rate),

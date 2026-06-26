@@ -199,6 +199,7 @@ export default function AddRestaurantPage() {
     is_advertised: false,
     ad_priority: "",
     ad_badge_text: "",
+    tier: "",
     ad_starts_at: "",
     ad_ends_at: "",
     merchant_type: "" as string,
@@ -387,6 +388,7 @@ export default function AddRestaurantPage() {
         is_advertised: form.is_advertised,
         ad_priority: form.ad_priority ? Number(form.ad_priority) : undefined,
         ad_badge_text: form.ad_badge_text || undefined,
+        tier: form.tier ? Number(form.tier) : 0,
         ad_starts_at: form.ad_starts_at || undefined,
         ad_ends_at: form.ad_ends_at || undefined,
         merchant_type: (form.merchant_type || undefined) as "Verified" | "Preferred" | "Unclaimed" | undefined,
@@ -676,6 +678,16 @@ export default function AddRestaurantPage() {
           <ToggleField label="Advertised" checked={form.is_advertised} onCheckedChange={(value) => setForm((previous) => ({ ...previous, is_advertised: value }))} />
           <Input type="number" className={inputClass} name="ad_priority" placeholder="Ad priority" value={form.ad_priority} onChange={handleChange} />
           <Input className={inputClass} name="ad_badge_text" placeholder="Ad badge text" value={form.ad_badge_text} onChange={handleChange} />
+          <select
+            className={`${inputClass} h-9 rounded-md bg-transparent px-3 text-sm`}
+            name="tier"
+            value={form.tier}
+            onChange={(e) => setForm((previous) => ({ ...previous, tier: e.target.value }))}
+          >
+            <option value="">Limelight tier: General</option>
+            <option value="1">Limelight tier: Tier 1</option>
+            <option value="2">Limelight tier: Tier 2</option>
+          </select>
           <Input type="datetime-local" min={formatDateTimeLocal()} className={inputClass} name="ad_starts_at" value={form.ad_starts_at} onChange={handleChange} />
           <Input type="datetime-local" min={getOfferDateMinimum(form.ad_starts_at)} className={inputClass} name="ad_ends_at" value={form.ad_ends_at} onChange={handleChange} />
         </div>
