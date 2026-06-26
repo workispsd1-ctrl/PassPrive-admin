@@ -521,19 +521,6 @@ export default function RestaurantDetailPage() {
           <Field label="Cost For Two">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.cost_for_two ?? ""} onChange={(e) => setRestaurant({ ...restaurant, cost_for_two: e.target.value ? Number(e.target.value) : null })} />
           </Field>
-          <Field label="Limelight Tier">
-            <select
-              title="Limelight Tier"
-              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
-              disabled={!editMode}
-              value={String(restaurant.tier ?? 0)}
-              onChange={(e) => setRestaurant({ ...restaurant, tier: Number(e.target.value) })}
-            >
-              <option value="0">General</option>
-              <option value="1">Tier 1</option>
-              <option value="2">Tier 2</option>
-            </select>
-          </Field>
           <Field label="Pure Veg">
             <div className="flex items-center gap-3 h-10">
               <Switch checked={restaurant.is_pure_veg} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_pure_veg: value })} />
