@@ -184,9 +184,20 @@ export default function BannerActionFields({
             <option value="TOURIST">Tourist places</option>
           </select>
 
+          <div className="mt-3">
+            <label className={labelClass}>Question shown to the user</label>
+            <input
+              type="text"
+              placeholder="e.g. What kind of experiences are you looking for?"
+              className={inputClass}
+              value={params.question || ""}
+              onChange={e => setParam("question", e.target.value)}
+            />
+          </div>
+
           {entityType === "TOURIST" ? (
             <div className="mt-3">
-              <label className={labelClass}>Questions to ask (tourist categories)</label>
+              <label className={labelClass}>Answer options (tourist categories)</label>
               <div className="flex flex-wrap gap-2">
                 {TOURIST_TAGS.map(tag => {
                   const selected = Array.isArray(params.options) && params.options.includes(tag);
