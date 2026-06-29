@@ -32,12 +32,14 @@ export default function BannerActionFields({
   onChange: (action: BannerAction) => void;
 }) {
   const type = value?.type || "NONE";
-  const params = (value?.params || {}) as Record<string, string> & { options?: string[] };
+  type PrefQuestion = { question: string; options: string[] };
+  const params = (value?.params || {}) as Record<string, string> & { questions?: PrefQuestion[] };
 
   const [collections, setCollections] = useState<Option[]>([]);
   const [restaurantMoods, setRestaurantMoods] = useState<Option[]>([]);
   const [storeMoods, setStoreMoods] = useState<Option[]>([]);
   const [merchants, setMerchants] = useState<Option[]>([]);
+  const [draftOption, setDraftOption] = useState<Record<number, string>>({});
 
   const setType = (next: string) => onChange({ type: next, params: {} });
   const setParam = (key: string, val: string) =>
@@ -175,63 +177,113 @@ export default function BannerActionFields({
         </div>
       )}
 
-      {type === "PERSONALIZED" && (
-        <div>
-          <label className={labelClass}>Ask priorities for</label>
-          <select className={selectClass} value={entityType} onChange={e => setParam("entityType", e.target.value)}>
-            <option value="RESTAURANT">Dining (restaurant moods)</option>
-            <option value="STORE">Stores (store moods)</option>
-            <option value="TOURIST">Tourist places</option>
-          </select>
+      {type === "PERSONALIZED" && (() => {
+        const questions = Array.isArray(params.questions) ? params.questions : [];
+        const setQuestions = (next: PrefQuestion[]) => onChange({ type, params: { ...params, questions: next } });
+        const addOption = (i: number) => {
+          const text = (draftOption[i] || "").trim();
+          if (!text) return;
+          setQuestions(
+            questions.map((qq, idx) => {
+              if (idx !== i) return qq;
+              const opts = Array.isArray(qq.options) ? qq.options : [];
+              return opts.includes(text) ? qq : { ...qq, options: [...opts, text] };
+            })
+          );
+          setDraftOption(d => ({ ...d, [i]: "" }));
+        };
 
-          <div className="mt-3">
-            <label className={labelClass}>Question shown to the user</label>
-            <input
-              type="text"
-              placeholder="e.g. What kind of experiences are you looking for?"
-              className={inputClass}
-              value={params.question || ""}
-              onChange={e => setParam("question", e.target.value)}
-            />
-          </div>
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Ask priorities for</label>
+              <select className={selectClass} value={entityType} onChange={e => setParam("entityType", e.target.value)}>
+                <option value="RESTAURANT">Dining (restaurants)</option>
+                <option value="STORE">Stores</option>
+                <option value="TOURIST">Tourist places</option>
+              </select>
+            </div>
 
-          {entityType === "TOURIST" ? (
-            <div className="mt-3">
-              <label className={labelClass}>Answer options (tourist categories)</label>
-              <div className="flex flex-wrap gap-2">
-                {TOURIST_TAGS.map(tag => {
-                  const selected = Array.isArray(params.options) && params.options.includes(tag);
-                  return (
+            {questions.map((q, i) => (
+              <div key={i} className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-700">Question {i + 1}</span>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-red-500 hover:text-red-600"
+                    onClick={() => setQuestions(questions.filter((_, idx) => idx !== i))}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Question text — e.g. What experiences are you after?"
+                  className={inputClass}
+                  value={q.question || ""}
+                  onChange={e => setQuestions(questions.map((qq, idx) => (idx === i ? { ...qq, question: e.target.value } : qq)))}
+                />
+                <div>
+                  <span className="mb-1 block text-xs font-medium text-slate-500">Answer options (chips)</span>
+                  {Array.isArray(q.options) && q.options.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {q.options.map(opt => (
+                        <span key={opt} className="inline-flex items-center gap-1 rounded-full border border-[#5800AB] bg-[#F2E9FB] px-3 py-1 text-sm text-[#5800AB]">
+                          {opt}
+                          <button
+                            type="button"
+                            className="text-[#5800AB]/70 hover:text-[#5800AB]"
+                            onClick={() => setQuestions(questions.map((qq, idx) => (idx === i ? { ...qq, options: qq.options.filter(o => o !== opt) } : qq)))}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add an option and press Enter"
+                      className={inputClass}
+                      value={draftOption[i] || ""}
+                      onChange={e => setDraftOption(d => ({ ...d, [i]: e.target.value }))}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addOption(i);
+                        }
+                      }}
+                    />
                     <button
                       type="button"
-                      key={tag}
-                      onClick={() => {
-                        const cur = Array.isArray(params.options) ? params.options : [];
-                        const next = selected ? cur.filter(t => t !== tag) : [...cur, tag];
-                        onChange({ type, params: { ...params, options: next } });
-                      }}
-                      className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                        selected
-                          ? "border-[#5800AB] bg-[#F2E9FB] text-[#5800AB]"
-                          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                      }`}
+                      className="shrink-0 rounded border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      onClick={() => addOption(i)}
                     >
-                      {tag}
+                      Add
                     </button>
-                  );
-                })}
+                  </div>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
-                On first tap the app shows the user these categories to pick from, saves their picks, and shows tourist places matching them. (Tourist screens aren&apos;t in the app yet, so this is saved for when they ship.)
-              </p>
-            </div>
-          ) : (
-            <p className="mt-1 text-xs text-slate-500">
-              On first tap the app asks the user to pick from the {entityType === "STORE" ? "store" : "restaurant"} mood categories (managed in Mood Categories), saves it, and filters accordingly.
+            ))}
+
+            {questions.length < 3 && (
+              <button
+                type="button"
+                className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                onClick={() => setQuestions([...questions, { question: "", options: [] }])}
+              >
+                + Add question
+              </button>
+            )}
+
+            <p className="text-xs text-slate-500">
+              On first tap the app asks these question(s); the user&apos;s answers filter the {entityType === "STORE" ? "store" : entityType === "TOURIST" ? "tourist" : "restaurant"} list.
+              {entityType === "TOURIST" ? " (Tourist screens aren't in the app yet — saved for when they ship.)" : ""}
             </p>
-          )}
-        </div>
-      )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
