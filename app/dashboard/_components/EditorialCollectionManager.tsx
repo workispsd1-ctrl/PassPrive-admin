@@ -45,8 +45,6 @@ type EditorialCollection = {
   badge_text?: string | null;
   source_name?: string | null;
   source_url?: string | null;
-  background_color?: string | null;
-  background_color_end?: string | null;
   content_type: CollectionContentType;
   entity_type: CollectionEntityType;
   city?: string | null;
@@ -70,8 +68,6 @@ type FormState = {
   badge_text: string;
   source_name: string;
   source_url: string;
-  background_color: string;
-  background_color_end: string;
   content_type: CollectionContentType;
   entity_type: CollectionEntityType;
   city: string;
@@ -92,8 +88,6 @@ const initialForm: FormState = {
   badge_text: "",
   source_name: "PassPrive",
   source_url: "",
-  background_color: "#0248F6",
-  background_color_end: "#012A90",
   content_type: "LIST",
   entity_type: "BOTH",
   city: "",
@@ -289,7 +283,7 @@ export default function EditorialCollectionManager({
           supabaseBrowser
             .from("editorial_collections")
             .select(
-              "id,slug,title,subtitle,description,cover_image_url,badge_text,source_name,source_url,background_color,background_color_end,content_type,entity_type,city,area,sort_order,is_featured,is_active,starts_at,ends_at,updated_at"
+              "id,slug,title,subtitle,description,cover_image_url,badge_text,source_name,source_url,content_type,entity_type,city,area,sort_order,is_featured,is_active,starts_at,ends_at,updated_at"
             )
             .order("sort_order", { ascending: true }),
           supabaseBrowser.from("editorial_collection_items").select("collection_id"),
@@ -352,8 +346,6 @@ export default function EditorialCollectionManager({
       badge_text: collection.badge_text || "",
       source_name: collection.source_name || "PassPrive",
       source_url: collection.source_url || "",
-      background_color: collection.background_color || "",
-      background_color_end: collection.background_color_end || "",
       content_type: collection.content_type || "LIST",
       entity_type: collection.entity_type || "BOTH",
       city: collection.city || "",
@@ -411,8 +403,6 @@ export default function EditorialCollectionManager({
       badge_text: form.badge_text.trim() || null,
       source_name: form.source_name.trim() || "PassPrive",
       source_url: sourceImageUploadUrl || form.source_url.trim() || null,
-      background_color: form.background_color.trim() || null,
-      background_color_end: form.background_color_end.trim() || null,
       content_type: form.content_type,
       entity_type: form.entity_type,
       city: form.city.trim() || null,
@@ -655,11 +645,11 @@ export default function EditorialCollectionManager({
             <div className="grid gap-4 md:grid-cols-2">
               <ImageUploadField
                 id="collection-cover-image"
-                label="Cover image"
+                label="Card image (full PNG/JPEG)"
                 value={form.cover_image_url}
                 uploadedValue={coverImageUploadUrl}
-                placeholder="Paste a cover image URL if you are not uploading a file"
-                helpText="Upload from your computer or paste an image URL. The uploaded image takes priority until you clear it."
+                placeholder="Paste the full card image URL if you are not uploading a file"
+                helpText="Upload the complete card artwork (the whole card is this image). Title/subtitle/colors are baked into it. Upload from your computer or paste an image URL."
                 onUpload={(value) => {
                   setCoverImageUploadUrl(value);
                   setForm((current) => ({ ...current, cover_image_url: "" }));
@@ -678,27 +668,6 @@ export default function EditorialCollectionManager({
                   value={form.badge_text}
                   onChange={(event) => setForm((current) => ({ ...current, badge_text: event.target.value }))}
                   placeholder="Editors Pick"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="collection-bg-color">Background color</Label>
-                <Input
-                  id="collection-bg-color"
-                  value={form.background_color}
-                  onChange={(event) => setForm((current) => ({ ...current, background_color: event.target.value }))}
-                  placeholder="#0248F6"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="collection-bg-color-end">Gradient end color (optional)</Label>
-                <Input
-                  id="collection-bg-color-end"
-                  value={form.background_color_end}
-                  onChange={(event) => setForm((current) => ({ ...current, background_color_end: event.target.value }))}
-                  placeholder="Leave empty for a solid color"
                 />
               </div>
             </div>
