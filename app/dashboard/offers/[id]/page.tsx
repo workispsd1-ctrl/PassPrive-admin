@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import BannerActionFields, { type BannerAction } from "../../_components/BannerActionFields";
 
 type Offer = {
   id: number;
@@ -14,6 +15,7 @@ type Offer = {
   media_url: string;
   priority: number | null;
   is_active: boolean | null;
+  action: BannerAction;
 };
 
 function buildStoragePath(type: string, fileName: string) {
@@ -43,6 +45,7 @@ export default function EditOfferPage() {
   });
   const [currentMediaUrl, setCurrentMediaUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [action, setAction] = useState<BannerAction>(null);
 
   useEffect(() => {
     const loadOffer = async () => {
@@ -50,7 +53,7 @@ export default function EditOfferPage() {
         setLoading(true);
         const { data, error } = await supabaseBrowser
           .from("homeherooffers")
-          .select("id,title,type,media_url,priority,is_active")
+          .select("id,title,type,media_url,priority,is_active,action")
           .eq("id", Number(id))
           .maybeSingle();
         if (error) throw error;
@@ -64,6 +67,7 @@ export default function EditOfferPage() {
           is_active: offer.is_active ?? true,
         });
         setCurrentMediaUrl(offer.media_url || "");
+        setAction(offer.action ?? null);
       } catch (error) {
         alert(error instanceof Error ? error.message : "Failed to load offer");
         router.push("/dashboard/offers");
@@ -102,6 +106,7 @@ export default function EditOfferPage() {
           title: form.title || null,
           type: form.type,
           media_url: nextMediaUrl,
+          action: action && action.type !== "NONE" ? action : null,
           priority: form.priority,
           is_active: form.is_active,
         })
@@ -211,6 +216,8 @@ export default function EditOfferPage() {
             onChange={(e) => setForm({ ...form, priority: Number(e.target.value) || 1 })}
           />
         </div>
+
+        <BannerActionFields value={action} onChange={setAction} />
 
         <div className="flex items-center gap-3">
           <input

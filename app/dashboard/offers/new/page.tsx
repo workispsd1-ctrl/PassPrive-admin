@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import BannerActionFields, { type BannerAction } from "../../_components/BannerActionFields";
 
 function buildStoragePath(type: string, fileName: string) {
   const extension = fileName.split(".").pop() || "bin";
@@ -23,6 +24,7 @@ export default function AddOfferPage() {
     is_active: true,
   });
   const [file, setFile] = useState<File | null>(null);
+  const [action, setAction] = useState<BannerAction>(null);
 
   const onSubmit = async () => {
     if (!file) {
@@ -46,6 +48,7 @@ export default function AddOfferPage() {
         thumbnail_url: null,
         cta_text: null,
         cta_link: null,
+        action: action && action.type !== "NONE" ? action : null,
         priority: form.priority,
         is_active: form.is_active,
         start_at: null,
@@ -119,6 +122,8 @@ export default function AddOfferPage() {
           value={form.priority}
           onChange={(e) => setForm({ ...form, priority: Number(e.target.value) || 1 })}
         />
+
+        <BannerActionFields value={action} onChange={setAction} />
 
         <button
           onClick={onSubmit}
