@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { TOURIST_TAGS } from "./touristTags";
 
 export type BannerAction = { type: string; params: Record<string, unknown> } | null;
 
@@ -59,7 +60,7 @@ export default function BannerActionFields({
   useEffect(() => {
     if (type !== "MERCHANT") return;
     void (async () => {
-      const table = merchantType === "STORE" ? "stores" : "restaurants";
+      const table = merchantType === "STORE" ? "stores" : merchantType === "TOURIST" ? "tourist_places" : "restaurants";
       const { data } = await supabaseBrowser.from(table).select("id,name").order("name");
       setMerchants(((data as Array<{ id: string; name: string }>) || []).map(m => ({ value: String(m.id), label: m.name })));
     })();
@@ -104,14 +105,13 @@ export default function BannerActionFields({
 
       {type === "TOURIST_PLACE_LIST" && (
         <div>
-          <label className={labelClass}>Category (place type or tag)</label>
-          <input
-            type="text"
-            placeholder="e.g. beach, waterfall, museum"
-            className={inputClass}
-            value={params.categorySlug || ""}
-            onChange={e => setParam("categorySlug", e.target.value)}
-          />
+          <label className={labelClass}>Category</label>
+          <select className={selectClass} value={params.categorySlug || ""} onChange={e => setParam("categorySlug", e.target.value)}>
+            <option value="">Any category</option>
+            {TOURIST_TAGS.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
           <p className="mt-1 text-xs text-slate-500">
             Saved now; the tourist-places screen isn&apos;t in the app yet, so this banner won&apos;t navigate until it ships.
           </p>
@@ -125,6 +125,7 @@ export default function BannerActionFields({
             <select className={selectClass} value={entityType} onChange={e => setParam("entityType", e.target.value)}>
               <option value="RESTAURANT">Restaurants</option>
               <option value="STORE">Stores</option>
+              <option value="TOURIST">Tourist places</option>
             </select>
           </div>
           <div>
@@ -146,10 +147,11 @@ export default function BannerActionFields({
             <select className={selectClass} value={merchantType} onChange={e => onChange({ type, params: { merchantType: e.target.value } })}>
               <option value="RESTAURANT">Restaurant</option>
               <option value="STORE">Store</option>
+              <option value="TOURIST">Tourist place</option>
             </select>
           </div>
           <div>
-            <label className={labelClass}>{merchantType === "STORE" ? "Store" : "Restaurant"}</label>
+            <label className={labelClass}>{merchantType === "STORE" ? "Store" : merchantType === "TOURIST" ? "Tourist place" : "Restaurant"}</label>
             <select className={selectClass} value={params.merchantId || ""} onChange={e => setParam("merchantId", e.target.value)}>
               <option value="">Select…</option>
               {merchants.map(o => (
@@ -179,6 +181,7 @@ export default function BannerActionFields({
           <select className={selectClass} value={entityType} onChange={e => setParam("entityType", e.target.value)}>
             <option value="RESTAURANT">Dining (restaurant moods)</option>
             <option value="STORE">Stores (store moods)</option>
+            <option value="TOURIST">Tourist places</option>
           </select>
           <p className="mt-1 text-xs text-slate-500">
             On first tap the app asks the user to pick from these categories, saves it, and filters accordingly. The options are managed in Mood Categories.
