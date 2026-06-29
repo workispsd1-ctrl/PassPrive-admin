@@ -12,6 +12,7 @@ const ACTION_TYPES: Option[] = [
   { value: "NONE", label: "No action" },
   { value: "RESTAURANT_LIST", label: "Restaurant list (discount % or category)" },
   { value: "STORE_LIST", label: "Store list (discount % or category)" },
+  { value: "TOURIST_PLACE_LIST", label: "Tourist places list (by category)" },
   { value: "COLLECTION", label: "Curated collection" },
   { value: "MERCHANT", label: "Single restaurant / store" },
   { value: "URL", label: "Open a URL" },
@@ -99,6 +100,22 @@ export default function BannerActionFields({
             </select>
           </div>
         </>
+      )}
+
+      {type === "TOURIST_PLACE_LIST" && (
+        <div>
+          <label className={labelClass}>Category (place type or tag)</label>
+          <input
+            type="text"
+            placeholder="e.g. beach, waterfall, museum"
+            className={inputClass}
+            value={params.categorySlug || ""}
+            onChange={e => setParam("categorySlug", e.target.value)}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Saved now; the tourist-places screen isn&apos;t in the app yet, so this banner won&apos;t navigate until it ships.
+          </p>
+        </div>
       )}
 
       {type === "COLLECTION" && (

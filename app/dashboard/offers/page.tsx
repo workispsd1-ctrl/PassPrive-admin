@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import BannerActionFields, { type BannerAction } from "../_components/BannerActionFields";
 
 type BannerRecord = {
   id: number;
@@ -35,6 +36,7 @@ type UploadFormState = {
   type: string;
   priority: number;
   is_active: boolean;
+  action: BannerAction;
 };
 
 const initialUploadForm: UploadFormState = {
@@ -42,6 +44,7 @@ const initialUploadForm: UploadFormState = {
   type: "image",
   priority: 1,
   is_active: true,
+  action: null,
 };
 
 const bannerConfigs: BannerConfig[] = [
@@ -209,6 +212,10 @@ function UploadPanel({
             onChange={(e) => onChange({ priority: Number(e.target.value) || 1 })}
             className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500"
           />
+        </div>
+
+        <div className="md:col-span-2">
+          <BannerActionFields value={form.action} onChange={(action) => onChange({ action })} />
         </div>
 
         <div className="md:col-span-2">
@@ -420,6 +427,7 @@ export default function OffersPage() {
         thumbnail_url: null,
         cta_text: null,
         cta_link: null,
+        action: form.action && form.action.type !== "NONE" ? form.action : null,
         priority: form.priority,
         is_active: form.is_active,
         start_at: null,
