@@ -32,7 +32,7 @@ export default function BannerActionFields({
   onChange: (action: BannerAction) => void;
 }) {
   const type = value?.type || "NONE";
-  const params = (value?.params || {}) as Record<string, string>;
+  const params = (value?.params || {}) as Record<string, string> & { options?: string[] };
 
   const [collections, setCollections] = useState<Option[]>([]);
   const [restaurantMoods, setRestaurantMoods] = useState<Option[]>([]);
@@ -183,9 +183,42 @@ export default function BannerActionFields({
             <option value="STORE">Stores (store moods)</option>
             <option value="TOURIST">Tourist places</option>
           </select>
-          <p className="mt-1 text-xs text-slate-500">
-            On first tap the app asks the user to pick from these categories, saves it, and filters accordingly. The options are managed in Mood Categories.
-          </p>
+
+          {entityType === "TOURIST" ? (
+            <div className="mt-3">
+              <label className={labelClass}>Questions to ask (tourist categories)</label>
+              <div className="flex flex-wrap gap-2">
+                {TOURIST_TAGS.map(tag => {
+                  const selected = Array.isArray(params.options) && params.options.includes(tag);
+                  return (
+                    <button
+                      type="button"
+                      key={tag}
+                      onClick={() => {
+                        const cur = Array.isArray(params.options) ? params.options : [];
+                        const next = selected ? cur.filter(t => t !== tag) : [...cur, tag];
+                        onChange({ type, params: { ...params, options: next } });
+                      }}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                        selected
+                          ? "border-[#5800AB] bg-[#F2E9FB] text-[#5800AB]"
+                          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                On first tap the app shows the user these categories to pick from, saves their picks, and shows tourist places matching them. (Tourist screens aren&apos;t in the app yet, so this is saved for when they ship.)
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500">
+              On first tap the app asks the user to pick from the {entityType === "STORE" ? "store" : "restaurant"} mood categories (managed in Mood Categories), saves it, and filters accordingly.
+            </p>
+          )}
         </div>
       )}
     </div>
