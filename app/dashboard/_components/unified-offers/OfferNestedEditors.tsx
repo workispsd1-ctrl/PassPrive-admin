@@ -61,8 +61,8 @@ export function OfferTargetsEditor({
     draftType === "STORE"
       ? storeOptions
       : draftType === "RESTAURANT"
-      ? restaurantOptions
-      : [];
+        ? restaurantOptions
+        : [];
 
   async function addTarget() {
     if (draftType !== "ALL" && !draftValue.trim()) {

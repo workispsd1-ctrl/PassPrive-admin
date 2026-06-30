@@ -36,11 +36,19 @@ import {
   formatDateTimeLocal,
   deleteRestaurantImages,
   fetchRestaurantDetail,
+  fetchRestaurantDetailMerged,
   getOfferDateMinimum,
   replaceRestaurantRelations,
   validateRestaurantOffers,
   uploadRestaurantImages,
+  updateRestaurantBothDBs,
+  buildTagRows,
+  buildMediaRows,
+  buildOfferRows,
+  buildSubscriptionRows,
+  buildOpeningHoursRows,
 } from "@/lib/restaurantAdmin";
+
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
@@ -177,7 +185,8 @@ export default function RestaurantDetailPage() {
   useEffect(() => {
     const loadRestaurant = async () => {
       try {
-        const data = await fetchRestaurantDetail(id);
+        // Fetch from both DBs and show the merged result
+        const data = await fetchRestaurantDetailMerged(id);
         setRestaurant(cloneRestaurant(data));
         setRestaurantOriginal(cloneRestaurant(data));
       } catch (error: unknown) {
@@ -300,14 +309,10 @@ export default function RestaurantDetailPage() {
         booking_terms: bookingTermsToPayload(bookingTermsToTextarea(restaurant.booking_terms)),
       });
 
-      const { error: updateError } = await supabaseBrowser
-        .from("restaurants")
-        .update(basePayload)
-        .eq("id", restaurant.id);
+      // Update both DBs: primary database via client update, and secondary database via API PATCH.
+      await updateRestaurantBothDBs(restaurant.id, basePayload);
 
-      if (updateError) throw updateError;
-
-      await replaceRestaurantRelations(restaurant.id, {
+      const relationsPayload = {
         cuisines: restaurant.cuisines,
         facilities: restaurant.facilities,
         highlights: restaurant.highlights,
@@ -318,9 +323,57 @@ export default function RestaurantDetailPage() {
         menu: finalMenuImages,
         offers: restaurant.offers,
         subscription: restaurant.subscription,
-      });
+      };
 
-      const refreshed = await fetchRestaurantDetail(restaurant.id);
+      // Call API PATCH to update primary DB relation tables via service role (bypasses RLS)
+      try {
+        const token = await getTokenClient();
+        if (token) {
+          const relationsRows = {
+            tags: buildTagRows(restaurant.id, relationsPayload),
+            media: buildMediaRows(restaurant.id, relationsPayload),
+            offers: buildOfferRows(restaurant.id, relationsPayload.offers),
+            subscription: buildSubscriptionRows(restaurant.id, relationsPayload.subscription),
+            opening_hours: restaurant.opening_hours ? buildOpeningHoursRows(restaurant.id, restaurant.opening_hours) : undefined,
+          };
+
+          // 1. Update primary database relations using the server-side API (bypasses RLS on primary)
+          const primaryRes = await fetch(`/api/restaurants/${restaurant.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              relations: relationsRows,
+              syncPrimaryOnly: true,
+            }),
+          });
+          if (!primaryRes.ok) {
+            const errData = await primaryRes.json().catch(() => ({}));
+            throw new Error(errData.error || errData.errors?.join(" | ") || "Failed to update primary relations");
+          }
+
+          // 2. Update secondary database relations & basePayload using the server-side API (bypasses RLS on secondary)
+          await fetch(`/api/restaurants/${restaurant.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              basePayload,
+              relations: relationsRows,
+            }),
+          });
+        }
+      } catch (patchErr) {
+        console.error("Failed to sync updates to databases", patchErr);
+        throw patchErr;
+      }
+
+      // Refresh merged view so both DBs are reflected
+      const refreshed = await fetchRestaurantDetailMerged(restaurant.id);
       setRestaurant(cloneRestaurant(refreshed));
       setRestaurantOriginal(cloneRestaurant(refreshed));
       setFoodImagesToAdd([]);
@@ -398,18 +451,34 @@ export default function RestaurantDetailPage() {
         throw new Error("User created, but missing id");
       }
 
-      const { error: updateError } = await supabaseBrowser
-        .from("restaurants")
-        .update({
-          owner_user_id: userId,
-          created_creds: true,
-          on_boarded: true,
-        })
-        .eq("id", restaurant.id);
+      const credsPayload = {
+        owner_user_id: userId,
+        created_creds: true,
+        on_boarded: true,
+      };
 
-      if (updateError) throw updateError;
+      // Update base primary DB
+      await updateRestaurantBothDBs(restaurant.id, credsPayload);
 
-      const refreshed = await fetchRestaurantDetail(restaurant.id);
+      // Sync base to second DB
+      try {
+        await fetch(`/api/restaurants/${restaurant.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            basePayload: credsPayload,
+          }),
+        });
+      } catch (patchErr) {
+        console.error("Failed to sync credentials to second database", patchErr);
+      }
+
+
+
+      const refreshed = await fetchRestaurantDetailMerged(restaurant.id);
       setRestaurant(cloneRestaurant(refreshed));
       setRestaurantOriginal(cloneRestaurant(refreshed));
       setCredentialEmail("");

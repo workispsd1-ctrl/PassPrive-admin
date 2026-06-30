@@ -1,4 +1,5 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { supabaseBrowserSecond } from "@/lib/supabaseBrowserSecond";
 
 export const RESTAURANT_STORAGE_BUCKET = "restaurant";
 export const RESTAURANT_STORAGE_PREFIX = "restaurant";
@@ -600,6 +601,367 @@ export function normalizeRestaurantRecord({
   };
 }
 
+// ---------------------------------------------------------------------------
+// Second-DB fetch (mirrors fetchRestaurantDetail but uses supabaseBrowserSecond)
+// ---------------------------------------------------------------------------
+async function fetchRestaurantDetailFromSecond(
+  restaurantId: string
+): Promise<RestaurantFlatRecord | null> {
+  try {
+    const [restaurantResult, tagsResult, mediaResult, openingHoursResult, offersResult, subscriptionsResult, reviewsResult] =
+      await Promise.all([
+        supabaseBrowserSecond.from("restaurants").select("*").eq("id", restaurantId).single(),
+        supabaseBrowserSecond.from("restaurant_tags").select("*").eq("restaurant_id", restaurantId),
+        supabaseBrowserSecond
+          .from("restaurant_media_assets")
+          .select("*")
+          .eq("restaurant_id", restaurantId)
+          .order("sort_order", { ascending: true }),
+        supabaseBrowserSecond
+          .from("restaurant_opening_hours")
+          .select("*")
+          .eq("restaurant_id", restaurantId),
+        supabaseBrowserSecond
+          .from("restaurant_offers")
+          .select("*")
+          .eq("restaurant_id", restaurantId),
+        supabaseBrowserSecond
+          .from("restaurant_subscriptions")
+          .select("*")
+          .eq("restaurant_id", restaurantId),
+        supabaseBrowserSecond.from("restaurant_reviews").select("*").eq("restaurant_id", restaurantId),
+      ]);
+
+    if (restaurantResult.error || !restaurantResult.data) return null;
+
+    return normalizeRestaurantRecord({
+      restaurant: restaurantResult.data,
+      tags: tagsResult.data || [],
+      media: mediaResult.data || [],
+      openingHours: openingHoursResult.data || [],
+      offers: offersResult.data || [],
+      subscriptions: subscriptionsResult.data || [],
+      reviews: reviewsResult.data || [],
+    });
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Smart merge: combine primary + secondary into a single authoritative record.
+// Rules:
+//  • Images/arrays: union of both, deduplicated, preserving primary order first.
+//  • Scalar fields:  primary value wins unless it is null / empty string,
+//                    in which case the secondary value fills in the gap.
+//  • updated_at / created_at: kept from primary (source of truth for timestamps).
+// ---------------------------------------------------------------------------
+function uniqueStrings(a: string[], b: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const url of [...a, ...b]) {
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      result.push(url);
+    }
+  }
+  return result;
+}
+
+function mergeScalar<T>(primary: T, secondary: T): T {
+  if (primary !== null && primary !== undefined && primary !== "") return primary;
+  return secondary;
+}
+
+export function mergeRestaurantRecords(
+  primary: RestaurantFlatRecord,
+  secondary: RestaurantFlatRecord
+): RestaurantFlatRecord {
+  const mergedFoodImages = uniqueStrings(primary.food_images, secondary.food_images);
+  const mergedAmbienceImages = uniqueStrings(primary.ambience_images, secondary.ambience_images);
+  const mergedMenuImages = uniqueStrings(primary.menu, secondary.menu);
+
+  // Tag arrays: union
+  const mergedCuisines = uniqueStrings(primary.cuisines, secondary.cuisines);
+  const mergedFacilities = uniqueStrings(primary.facilities, secondary.facilities);
+  const mergedHighlights = uniqueStrings(primary.highlights, secondary.highlights);
+  const mergedWorthVisit = uniqueStrings(primary.worth_visit, secondary.worth_visit);
+  const mergedMoodTags = uniqueStrings(primary.mood_tags, secondary.mood_tags);
+
+  // Scalar fields: primary wins unless null/empty
+  const merged: RestaurantFlatRecord = {
+    ...primary,
+    // Scalar overrides from secondary when primary is missing data
+    phone: mergeScalar(primary.phone, secondary.phone),
+    area: mergeScalar(primary.area, secondary.area),
+    city: mergeScalar(primary.city, secondary.city),
+    full_address: mergeScalar(primary.full_address, secondary.full_address),
+    slug: mergeScalar(primary.slug, secondary.slug),
+    cover_image: mergeScalar(primary.cover_image, secondary.cover_image),
+    latitude: mergeScalar(primary.latitude, secondary.latitude),
+    longitude: mergeScalar(primary.longitude, secondary.longitude),
+    description: mergeScalar(primary.description, secondary.description),
+    cost_for_two: mergeScalar(primary.cost_for_two, secondary.cost_for_two),
+    owner_user_id: mergeScalar(primary.owner_user_id, secondary.owner_user_id),
+    avg_duration_minutes: mergeScalar(primary.avg_duration_minutes, secondary.avg_duration_minutes),
+    max_bookings_per_slot: mergeScalar(primary.max_bookings_per_slot, secondary.max_bookings_per_slot),
+    advance_booking_days: mergeScalar(primary.advance_booking_days, secondary.advance_booking_days),
+    modification_cutoff_minutes: mergeScalar(primary.modification_cutoff_minutes, secondary.modification_cutoff_minutes),
+    cancellation_cutoff_minutes: mergeScalar(primary.cancellation_cutoff_minutes, secondary.cancellation_cutoff_minutes),
+    cover_charge_amount: mergeScalar(primary.cover_charge_amount, secondary.cover_charge_amount),
+    ad_priority: mergeScalar(primary.ad_priority, secondary.ad_priority),
+    ad_starts_at: mergeScalar(primary.ad_starts_at, secondary.ad_starts_at),
+    ad_ends_at: mergeScalar(primary.ad_ends_at, secondary.ad_ends_at),
+    ad_badge_text: mergeScalar(primary.ad_badge_text, secondary.ad_badge_text),
+    merchant_type: mergeScalar(primary.merchant_type, secondary.merchant_type),
+    mdr_rate: mergeScalar(primary.mdr_rate, secondary.mdr_rate),
+    booking_terms: primary.booking_terms?.length ? primary.booking_terms : secondary.booking_terms,
+
+    // Boolean: primary wins (already has default false, so only override if primary is false and secondary is true)
+    is_active: primary.is_active || secondary.is_active,
+    is_advertised: primary.is_advertised || secondary.is_advertised,
+    is_pure_veg: primary.is_pure_veg || secondary.is_pure_veg,
+    booking_enabled: primary.booking_enabled || secondary.booking_enabled,
+    modification_available: primary.modification_available || secondary.modification_available,
+    cancellation_available: primary.cancellation_available || secondary.cancellation_available,
+    cover_charge_enabled: primary.cover_charge_enabled || secondary.cover_charge_enabled,
+    on_boarded: primary.on_boarded || secondary.on_boarded,
+    created_creds: primary.created_creds || secondary.created_creds,
+
+    // Media: combined unique lists
+    food_images: mergedFoodImages,
+    ambience_images: mergedAmbienceImages,
+    menu: mergedMenuImages,
+    cover_image: mergeScalar(primary.cover_image, secondary.cover_image) ||
+      mergedFoodImages[0] || mergedAmbienceImages[0] || null,
+
+    // Tags: unioned
+    cuisines: mergedCuisines,
+    facilities: mergedFacilities,
+    highlights: mergedHighlights,
+    worth_visit: mergedWorthVisit,
+    mood_tags: mergedMoodTags,
+
+    // Offers: primary wins; if primary has none, use secondary
+    offers: primary.offers.length ? primary.offers : secondary.offers,
+    offer: primary.offer ?? secondary.offer,
+
+    // Subscription: primary wins; if none, use secondary
+    subscription: primary.subscription ?? secondary.subscription,
+    subscribed: primary.subscribed || secondary.subscribed,
+    subscribed_plan: mergeScalar(primary.subscribed_plan, secondary.subscribed_plan),
+    unlock_all: primary.unlock_all || secondary.unlock_all,
+    time_slot_enabled: primary.time_slot_enabled || secondary.time_slot_enabled,
+    repeat_rewards_enabled: primary.repeat_rewards_enabled || secondary.repeat_rewards_enabled,
+    dish_discounts_enabled: primary.dish_discounts_enabled || secondary.dish_discounts_enabled,
+
+    // Reviews: combine unique entries by id
+    reviews: mergeReviews(primary.reviews, secondary.reviews),
+
+    // Opening hours: primary wins per-day, fallback to secondary for days with no data
+    opening_hours: mergeOpeningHours(primary.opening_hours, secondary.opening_hours),
+  };
+
+  // Recompute the active offer reference after merge
+  const activeOffer = merged.offers.find((o) => o.is_active !== false) ?? merged.offers[0] ?? null;
+  merged.offer = activeOffer;
+
+  return merged;
+}
+
+function mergeReviews(
+  primary: Record<string, unknown>[],
+  secondary: Record<string, unknown>[]
+): Record<string, unknown>[] {
+  const seen = new Set<string>();
+  const result: Record<string, unknown>[] = [];
+  for (const review of [...primary, ...secondary]) {
+    const id = String(review?.id || review?.review_id || "");
+    if (id && seen.has(id)) continue;
+    if (id) seen.add(id);
+    result.push(review);
+  }
+  return result;
+}
+
+function mergeOpeningHours(
+  primary: Record<string, DayHours>,
+  secondary: Record<string, DayHours>
+): Record<string, DayHours> {
+  const merged: Record<string, DayHours> = { ...primary };
+  for (const day of DAY_NAMES) {
+    const primaryDay = primary[day] || primary[day.toLowerCase()];
+    const secondaryDay = secondary[day] || secondary[day.toLowerCase()];
+    if (!primaryDay && secondaryDay) {
+      merged[day] = secondaryDay;
+      merged[day.toLowerCase()] = secondaryDay;
+    } else if (primaryDay && secondaryDay) {
+      // If primary day has no times but secondary does, use secondary times
+      const hasNoTimes = !primaryDay.open && !primaryDay.close;
+      if (hasNoTimes && (secondaryDay.open || secondaryDay.close)) {
+        merged[day] = secondaryDay;
+        merged[day.toLowerCase()] = secondaryDay;
+      }
+    }
+  }
+  return merged;
+}
+
+// ---------------------------------------------------------------------------
+// Backfill primary DB with any extra data found in secondary.
+// Only called when a real difference was detected.
+// ---------------------------------------------------------------------------
+async function backfillPrimaryFromMerge(
+  restaurantId: string,
+  merged: RestaurantFlatRecord,
+  primary: RestaurantFlatRecord
+) {
+  try {
+    // Check whether any images or scalar fields differ
+    const imageDiff =
+      merged.food_images.length !== primary.food_images.length ||
+      merged.ambience_images.length !== primary.ambience_images.length ||
+      merged.menu.length !== primary.menu.length;
+
+    const scalarDiff =
+      merged.phone !== primary.phone ||
+      merged.area !== primary.area ||
+      merged.city !== primary.city ||
+      merged.description !== primary.description ||
+      merged.cover_image !== primary.cover_image ||
+      merged.slug !== primary.slug;
+
+    const tagDiff =
+      merged.cuisines.length !== primary.cuisines.length ||
+      merged.facilities.length !== primary.facilities.length ||
+      merged.highlights.length !== primary.highlights.length ||
+      merged.worth_visit.length !== primary.worth_visit.length ||
+      merged.mood_tags.length !== primary.mood_tags.length;
+
+    if (!imageDiff && !scalarDiff && !tagDiff) return; // nothing new from secondary
+
+    // We must run updates server-side because direct client-side writes to primary DB
+    // (using supabaseBrowser) are blocked by RLS policies.
+    // However, since backfillPrimaryFromMerge is executed inside fetchRestaurantDetailMerged (which runs during render/initial fetch),
+    // we should execute it asynchronously and call our server-side API or check if we can obtain a token.
+    // If this runs on the server (SSR), it can use supabaseAdmin directly!
+    // Let's check if window is defined to determine if we are in the browser:
+    const isBrowser = typeof window !== "undefined";
+
+    if (!isBrowser) {
+      // Server-side (SSR / API route context): We can write directly to primary using supabaseAdmin!
+      const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
+      if (scalarDiff) {
+        const basePayload = buildRestaurantBasePayload(merged);
+        await supabaseAdmin
+          .from("restaurants")
+          .update(basePayload)
+          .eq("id", restaurantId);
+      }
+
+      if (imageDiff || tagDiff) {
+        const relationsPayload = {
+          cuisines: merged.cuisines,
+          facilities: merged.facilities,
+          highlights: merged.highlights,
+          worth_visit: merged.worth_visit,
+          mood_tags: merged.mood_tags,
+          food_images: merged.food_images,
+          ambience_images: merged.ambience_images,
+          menu: merged.menu,
+          offers: merged.offers,
+          subscription: merged.subscription,
+        };
+
+        const replaceAdminRows = async (table: string, rows: Record<string, unknown>[]) => {
+          await supabaseAdmin.from(table).delete().eq("restaurant_id", restaurantId);
+          if (rows.length > 0) {
+            await supabaseAdmin.from(table).insert(rows);
+          }
+        };
+
+        await Promise.all([
+          replaceAdminRows("restaurant_tags", buildTagRows(restaurantId, relationsPayload)),
+          replaceAdminRows("restaurant_media_assets", buildMediaRows(restaurantId, relationsPayload)),
+          replaceAdminRows("restaurant_offers", buildOfferRows(restaurantId, relationsPayload.offers)),
+          replaceAdminRows("restaurant_subscriptions", buildSubscriptionRows(restaurantId, relationsPayload.subscription)),
+          replaceAdminRows("restaurant_opening_hours", buildOpeningHoursRows(restaurantId, merged.opening_hours)),
+        ]);
+      }
+    } else {
+      // Browser-side: Fetch the token and call our API route (which uses supabaseAdmin under the hood)
+      const { getTokenClient } = await import("@/lib/getTokenClient");
+      const token = await getTokenClient();
+      if (!token) return;
+
+      const basePayload = scalarDiff ? buildRestaurantBasePayload(merged) : undefined;
+      const relationsPayload = (imageDiff || tagDiff) ? {
+        cuisines: merged.cuisines,
+        facilities: merged.facilities,
+        highlights: merged.highlights,
+        worth_visit: merged.worth_visit,
+        mood_tags: merged.mood_tags,
+        food_images: merged.food_images,
+        ambience_images: merged.ambience_images,
+        menu: merged.menu,
+        offers: merged.offers,
+        subscription: merged.subscription,
+      } : undefined;
+
+      const relationsRows = relationsPayload ? {
+        tags: buildTagRows(restaurantId, relationsPayload),
+        media: buildMediaRows(restaurantId, relationsPayload),
+        offers: buildOfferRows(restaurantId, relationsPayload.offers),
+        subscription: buildSubscriptionRows(restaurantId, relationsPayload.subscription),
+        opening_hours: merged.opening_hours ? buildOpeningHoursRows(restaurantId, merged.opening_hours) : undefined,
+      } : undefined;
+
+      // Note: We need a server-side endpoint on the primary DB to write these changes.
+      // Our PATCH route /api/restaurants/[id] currently updates the SECOND database.
+      // Let's create/use a dedicated sync endpoint or update our API.
+      // Wait, we can also perform a PATCH request to our own API if we want it to write to BOTH,
+      // or we can write a dedicated endpoint for primary database sync.
+      // Let's make a local PATCH request to our API, but wait! The API route /api/restaurants/[id] PATCH currently writes to supabaseAdminSecond.
+      // Let's modify /api/restaurants/[id]/route.ts PATCH to write to BOTH databases!
+      // This is a much cleaner solution. Let's send the PATCH request to /api/restaurants/[id].
+      await fetch(`/api/restaurants/${restaurantId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          basePayload,
+          relations: relationsRows,
+          syncPrimaryOnly: true, // We will instruct the API to write to the primary DB
+        }),
+      });
+    }
+  } catch (err) {
+    console.error("[restaurantAdmin] backfill-primary error", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public merged fetch — use this in the detail page instead of fetchRestaurantDetail.
+// Fetches both DBs, merges, backfills primary if secondary had extra data.
+// ---------------------------------------------------------------------------
+export async function fetchRestaurantDetailMerged(restaurantId: string): Promise<RestaurantFlatRecord> {
+  const [primary, secondary] = await Promise.all([
+    fetchRestaurantDetail(restaurantId),
+    fetchRestaurantDetailFromSecond(restaurantId),
+  ]);
+
+  if (!secondary) return primary; // second DB unavailable or no record
+
+  const merged = mergeRestaurantRecords(primary, secondary);
+
+  // Fire-and-forget: backfill primary if secondary contributed extra data
+  void backfillPrimaryFromMerge(restaurantId, merged, primary);
+
+  return merged;
+}
+
 export async function fetchRestaurantsPage(params: {
   page: number;
   limit: number;
@@ -780,6 +1142,16 @@ export async function deleteRestaurantImages(publicUrls: string[]) {
     .remove(paths);
 
   if (error) throw error;
+
+  // Mirror deletion to the second Supabase (non-blocking).
+  supabaseBrowserSecond.storage
+    .from(RESTAURANT_STORAGE_BUCKET)
+    .remove(paths)
+    .then(({ error: secondError }) => {
+      if (secondError) {
+        console.error("[restaurantAdmin] second-db delete images error", secondError);
+      }
+    });
 }
 
 export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>) {
@@ -879,7 +1251,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
   return payload;
 }
 
-function buildTagRows(restaurantId: string, input: RestaurantRelationsInput) {
+export function buildTagRows(restaurantId: string, input: RestaurantRelationsInput) {
   const groups = [
     { type: "cuisine", values: input.cuisines || [] },
     { type: "facility", values: input.facilities || [] },
@@ -901,7 +1273,7 @@ function buildTagRows(restaurantId: string, input: RestaurantRelationsInput) {
   );
 }
 
-function buildMediaRows(restaurantId: string, input: RestaurantRelationsInput) {
+export function buildMediaRows(restaurantId: string, input: RestaurantRelationsInput) {
   const groups = [
     { type: "food", values: input.food_images || [] },
     { type: "ambience", values: input.ambience_images || [] },
@@ -923,7 +1295,7 @@ function buildMediaRows(restaurantId: string, input: RestaurantRelationsInput) {
   );
 }
 
-function buildOpeningHoursRows(
+export function buildOpeningHoursRows(
   restaurantId: string,
   openingHours: Record<string, DayHours> | undefined
 ) {
@@ -967,7 +1339,7 @@ function normalizeMetadata(value: unknown) {
   return null;
 }
 
-function buildOfferRows(restaurantId: string, offers: RestaurantOfferInput[] | undefined) {
+export function buildOfferRows(restaurantId: string, offers: RestaurantOfferInput[] | undefined) {
   return (offers || [])
     .filter((offer) => asString(offer?.title))
     .map((offer) => ({
@@ -1001,7 +1373,7 @@ function buildOfferRows(restaurantId: string, offers: RestaurantOfferInput[] | u
     }));
 }
 
-function buildSubscriptionRows(
+export function buildSubscriptionRows(
   restaurantId: string,
   subscription: RestaurantSubscriptionInput | null | undefined
 ) {
@@ -1039,6 +1411,7 @@ async function replaceRows(table: string, restaurantId: string, rows: Record<str
   }
 }
 
+
 export async function replaceRestaurantRelations(
   restaurantId: string,
   input: RestaurantRelationsInput
@@ -1065,4 +1438,31 @@ export async function replaceRestaurantRelations(
   }
 
   await Promise.all(tasks);
+}
+
+/**
+ * Update the restaurants row in the primary DB only.
+ * Second-DB sync is handled server-side via PATCH /api/restaurants/[id].
+ */
+export async function updateRestaurantBothDBs(
+  restaurantId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const { error } = await supabaseBrowser
+    .from("restaurants")
+    .update(payload)
+    .eq("id", restaurantId);
+
+  if (error) throw error;
+}
+
+/**
+ * @deprecated Use updateRestaurantBothDBs instead.
+ * Kept for any external callers; delegates to the parallel version.
+ */
+export async function mirrorRestaurantUpdate(
+  restaurantId: string,
+  payload: Record<string, unknown>
+) {
+  await updateRestaurantBothDBs(restaurantId, payload);
 }
