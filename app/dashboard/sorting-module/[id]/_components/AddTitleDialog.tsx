@@ -8,6 +8,8 @@ import { X } from "lucide-react";
 // the app — see SECTION_CMS.md.
 const NATIVE_KEYS = [
   "foodie-frontrow",
+  "offers-for-you",
+  "foodie-frontrow-classic",
   "more-with-passprive",
   "shop-this-weekend",
   "family-feast",
@@ -16,6 +18,13 @@ const NATIVE_KEYS = [
   "now-trending",
   "whats-hot",
 ];
+// Friendly labels shown to admins. The section_key stays the stable app↔CMS
+// contract; only the displayed name changes.
+const NATIVE_LABELS: Record<string, string> = {
+  "foodie-frontrow": "In the Limelight",
+  "offers-for-you": "Offers for you",
+  "foodie-frontrow-classic": "Foodie Frontrow",
+};
 const TEMPLATES = ["restaurant_rail"];
 
 export type TitleRow = {
@@ -165,7 +174,7 @@ export default function AddTitleDialog({ open, onClose, onSave, editing }: AddTi
               <select value={sectionKey} onChange={(e) => setSectionKey(e.target.value)} className={inputClass}>
                 {NATIVE_KEYS.map((k) => (
                   <option key={k} value={k}>
-                    {k}
+                    {NATIVE_LABELS[k] ?? k}
                   </option>
                 ))}
               </select>

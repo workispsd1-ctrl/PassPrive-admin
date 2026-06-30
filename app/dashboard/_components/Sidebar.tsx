@@ -67,6 +67,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Offers", href: "/dashboard/unified-offers", iconSrc: "/request_quote.png" },
   { title: "Spotlight", href: "/dashboard/spotlight", iconSrc: "/highlight.png" },
   { title: "Editorial Collections", href: "/dashboard/editorial-collections", iconSrc: "/highlight.png" },
+  { title: "Offers for you", href: "/dashboard/offers-for-you", iconSrc: "/request_quote.png" },
   { title: "Gift Events", href: "/dashboard/gift-events", icon: Gift },
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
   //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
