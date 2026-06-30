@@ -45,8 +45,14 @@ type PromotionalCollection = {
   starts_at?: string | null;
   ends_at?: string | null;
   updated_at?: string;
-  restaurant_mood_categories?: { title: string } | null;
+  restaurant_mood_categories?: { title: string } | { title: string }[] | null;
 };
+
+function categoryTitle(c: PromotionalCollection): string {
+  const rel = c.restaurant_mood_categories;
+  if (Array.isArray(rel)) return rel[0]?.title || "";
+  return rel?.title || "";
+}
 
 type FormState = {
   slug: string;
@@ -196,7 +202,7 @@ export default function PromotionalCollectionManager() {
       ]);
       if (error) throw error;
       if (catError) throw catError;
-      setCollections((rows as PromotionalCollection[] | null) || []);
+      setCollections((rows as unknown as PromotionalCollection[] | null) || []);
       setCategories((catRows as MoodCategory[] | null) || []);
     } catch (error: unknown) {
       showToast({ type: "error", title: "Failed to load promotional cards", description: error instanceof Error ? error.message : "Unable to fetch." });
@@ -353,8 +359,8 @@ export default function PromotionalCollectionManager() {
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${c.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                                 {c.is_active ? "Active" : "Inactive"}
                               </span>
-                              {c.restaurant_mood_categories?.title ? (
-                                <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-violet-700">{c.restaurant_mood_categories.title}</span>
+                              {categoryTitle(c) ? (
+                                <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-violet-700">{categoryTitle(c)}</span>
                               ) : null}
                             </div>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.slug}</p>
