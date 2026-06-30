@@ -56,6 +56,7 @@ const pathName: Record<string, string> = {
   "/dashboard/transactions": "Transactions",
   "/dashboard/editorial-collections": "Editorial Collections",
   "/dashboard/editorial-collections/[id]": "Editorial Collection",
+  "/dashboard/promotional-cards": "Promotional Cards",
   "/dashboard/corporate-membership": "Corporate Membership",
 };
 
@@ -70,6 +71,7 @@ const pathDescription: Record<string, string> = {
   "/dashboard/mood-categories": "Create, edit, and organize restaurant category cards shown in the app.",
   "/dashboard/store-mood-categories": "Create, edit, and organize store category cards shown in the app.",
   "/dashboard/editorial-collections": "Create and manage editorial collections shown in the app.",
+  "/dashboard/promotional-cards": "Create themed promo banners that feature every restaurant in a chosen category.",
   "/dashboard/corporate-membership": "Configure corporate accounts, simulate pass pricing & cashbacks, and generate promo codes.",
 };
 
