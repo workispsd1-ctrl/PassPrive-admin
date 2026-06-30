@@ -732,8 +732,6 @@ export function mergeRestaurantRecords(
     food_images: mergedFoodImages,
     ambience_images: mergedAmbienceImages,
     menu: mergedMenuImages,
-    cover_image: mergeScalar(primary.cover_image, secondary.cover_image) ||
-      mergedFoodImages[0] || mergedAmbienceImages[0] || null,
 
     // Tags: unioned
     cuisines: mergedCuisines,
