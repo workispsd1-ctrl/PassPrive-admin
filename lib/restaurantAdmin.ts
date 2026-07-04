@@ -178,6 +178,8 @@ export type RestaurantFlatRecord = {
   booking_enabled: boolean;
   merchant_type: MerchantType | null;
   mdr_rate: number | null;
+  merchant_total_rate: number | null;
+  merchant_reward_rate: number | null;
   avg_duration_minutes: number | null;
   max_bookings_per_slot: number | null;
   advance_booking_days: number | null;
@@ -598,6 +600,8 @@ export function normalizeRestaurantRecord({
     reviews: Array.isArray(reviews) ? reviews : [],
     merchant_type: (asString(restaurant?.merchant_type) as MerchantType | null) ?? null,
     mdr_rate: asNumber(restaurant?.mdr_rate),
+    merchant_total_rate: asNumber(restaurant?.merchant_total_rate),
+    merchant_reward_rate: asNumber(restaurant?.merchant_reward_rate),
   };
 }
 
@@ -715,6 +719,8 @@ export function mergeRestaurantRecords(
     ad_badge_text: mergeScalar(primary.ad_badge_text, secondary.ad_badge_text),
     merchant_type: mergeScalar(primary.merchant_type, secondary.merchant_type),
     mdr_rate: mergeScalar(primary.mdr_rate, secondary.mdr_rate),
+    merchant_total_rate: mergeScalar(primary.merchant_total_rate, secondary.merchant_total_rate),
+    merchant_reward_rate: mergeScalar(primary.merchant_reward_rate, secondary.merchant_reward_rate),
     booking_terms: primary.booking_terms?.length ? primary.booking_terms : secondary.booking_terms,
 
     // Boolean: primary wins (already has default false, so only override if primary is false and secondary is true)
@@ -1197,6 +1203,8 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
     merchant_type: asString(input.merchant_type),
     mdr_rate: asNumber(input.mdr_rate),
+    merchant_total_rate: asNumber(input.merchant_total_rate),
+    merchant_reward_rate: asNumber(input.merchant_reward_rate),
   };
 }
 
@@ -1238,6 +1246,8 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
     merchant_type: asString(input.merchant_type),
     mdr_rate: asNumber(input.mdr_rate),
+    merchant_total_rate: asNumber(input.merchant_total_rate),
+    merchant_reward_rate: asNumber(input.merchant_reward_rate),
   };
 
   for (const [key, value] of Object.entries(optionalValues)) {

@@ -203,6 +203,8 @@ export default function AddRestaurantPage() {
     ad_ends_at: "",
     merchant_type: "" as string,
     mdr_rate: "" as string,
+    merchant_total_rate: "" as string,
+    merchant_reward_rate: "" as string,
   });
 
   const handleChange = (
@@ -391,6 +393,8 @@ export default function AddRestaurantPage() {
         ad_ends_at: form.ad_ends_at || undefined,
         merchant_type: (form.merchant_type || undefined) as "Verified" | "Preferred" | "Unclaimed" | undefined,
         mdr_rate: form.mdr_rate ? Number(form.mdr_rate) : undefined,
+        merchant_total_rate: form.merchant_total_rate ? Number(form.merchant_total_rate) : undefined,
+        merchant_reward_rate: form.merchant_reward_rate ? Number(form.merchant_reward_rate) : undefined,
       });
 
       console.log("[AddRestaurant] restaurant insert payload", basePayload);
@@ -519,14 +523,45 @@ export default function AddRestaurantPage() {
               value={form.mdr_rate}
               onChange={(e) => setForm((prev) => ({ ...prev, mdr_rate: e.target.value }))}
             />
-            {form.merchant_type === "verified_pay_partner" && (
+            {form.merchant_type === "Verified" && (
               <p className="text-xs text-muted-foreground">Standard rate — default 2.5%, configurable</p>
             )}
-            {form.merchant_type === "preferred_partner" && (
-              <p className="text-xs text-muted-foreground">All-inclusive preferred rate — typically 3.5%–5%</p>
+            {form.merchant_type === "Preferred" && (
+              <p className="text-xs text-muted-foreground">CIM MDR on the transaction</p>
             )}
           </div>
         </div>
+
+        {form.merchant_type === "Preferred" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Total Rate charged to merchant (%)</label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                className={inputClass}
+                placeholder="e.g. 4.0"
+                value={form.merchant_total_rate}
+                onChange={(e) => setForm((prev) => ({ ...prev, merchant_total_rate: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">All-inclusive preferred rate — typically 3.5%–5%</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Merchant reward contribution (%)</label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                className={inputClass}
+                placeholder="e.g. 2.0"
+                value={form.merchant_reward_rate}
+                onChange={(e) => setForm((prev) => ({ ...prev, merchant_reward_rate: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">Merchant-funded cashback credited to the customer (14-day expiry)</p>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-4 border-b py-8">

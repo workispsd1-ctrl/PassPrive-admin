@@ -628,6 +628,32 @@ export default function RestaurantDetailPage() {
               onChange={(e) => setRestaurant({ ...restaurant, mdr_rate: e.target.value ? Number(e.target.value) : null })}
             />
           </Field>
+          {restaurant.merchant_type === "Preferred" && (
+            <>
+              <Field label="Total Rate charged to merchant (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={restaurant.merchant_total_rate ?? ""}
+                  onChange={(e) => setRestaurant({ ...restaurant, merchant_total_rate: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="Merchant reward contribution (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={restaurant.merchant_reward_rate ?? ""}
+                  onChange={(e) => setRestaurant({ ...restaurant, merchant_reward_rate: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+            </>
+          )}
         </Grid>
         <Field label="Full Address">
           <Textarea className={inputClass} disabled={!editMode} value={restaurant.full_address ?? ""} onChange={(e) => setRestaurant({ ...restaurant, full_address: e.target.value })} />
@@ -746,8 +772,8 @@ export default function RestaurantDetailPage() {
       </Section>
 
       <Section title="Media">
-        <EditableImageSection title="Food Images" images={restaurant.food_images.filter((url) => !foodImagesToDelete.includes(url))} files={foodImagesToAdd} setFiles={setFoodImagesToAdd} onDelete={(url) => setFoodImagesToDelete((previous) => [...previous, url])} disabled={!editMode} />
-        <EditableImageSection title="Ambience Images" images={restaurant.ambience_images.filter((url) => !ambienceImagesToDelete.includes(url))} files={ambienceImagesToAdd} setFiles={setAmbienceImagesToAdd} onDelete={(url) => setAmbienceImagesToDelete((previous) => [...previous, url])} disabled={!editMode} />
+        <EditableImageSection title="Food Images" images={restaurant.food_images.filter((url) => !foodImagesToDelete.includes(url))} files={foodImagesToAdd} setFiles={setFoodImagesToAdd} onDelete={(url) => setFoodImagesToDelete((previous) => [...previous, url])} disabled={!editMode} coverImage={restaurant.cover_image} onSetCover={(url) => setRestaurant({ ...restaurant, cover_image: url })} />
+        <EditableImageSection title="Ambience Images" images={restaurant.ambience_images.filter((url) => !ambienceImagesToDelete.includes(url))} files={ambienceImagesToAdd} setFiles={setAmbienceImagesToAdd} onDelete={(url) => setAmbienceImagesToDelete((previous) => [...previous, url])} disabled={!editMode} coverImage={restaurant.cover_image} onSetCover={(url) => setRestaurant({ ...restaurant, cover_image: url })} />
         <EditableImageSection title="Menu Images" images={restaurant.menu.filter((url) => !menuImagesToDelete.includes(url))} files={menuImagesToAdd} setFiles={setMenuImagesToAdd} onDelete={(url) => setMenuImagesToDelete((previous) => [...previous, url])} disabled={!editMode} />
       </Section>
 
@@ -874,6 +900,8 @@ function EditableImageSection({
   setFiles,
   onDelete,
   disabled,
+  coverImage,
+  onSetCover,
 }: {
   title: string;
   images: string[];
@@ -881,22 +909,35 @@ function EditableImageSection({
   setFiles: Dispatch<SetStateAction<File[]>>;
   onDelete: (url: string) => void;
   disabled: boolean;
+  coverImage?: string | null;
+  onSetCover?: (url: string) => void;
 }) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium">{title}</h3>
       <div className="grid grid-cols-4 gap-3">
         {images.length ? (
-          images.map((src, index) => (
-            <div key={`${src}-${index}`} className="relative h-32 rounded-md overflow-hidden border">
+          images.map((src, index) => {
+            const isCover = !!onSetCover && src === coverImage;
+            return (
+            <div key={`${src}-${index}`} className={`relative h-32 rounded-md overflow-hidden border ${isCover ? "ring-2 ring-orange-500" : ""}`}>
               <img src={src} className="w-full h-full object-cover" alt={`${title} ${index + 1}`} />
+              {isCover && (
+                <span className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-semibold rounded px-1.5 py-0.5">Cover</span>
+              )}
+              {!disabled && onSetCover && !isCover && (
+                <button type="button" onClick={() => onSetCover(src)} className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] rounded px-1.5 py-0.5 hover:bg-black">
+                  Set as cover
+                </button>
+              )}
               {!disabled && (
                 <button type="button" onClick={() => onDelete(src)} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black">
                   <X size={14} />
                 </button>
               )}
             </div>
-          ))
+            );
+          })
         ) : (
           <p className="text-sm text-gray-400">No images</p>
         )}
