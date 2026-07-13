@@ -124,8 +124,12 @@ export default function MoodCategoryManager({
     );
   }, [categories, query]);
 
-  function isServiceCategoriesRoute(path: string) {
-    return String(path || "").trim() === "/api/service-categories";
+  function usesServerWriteApi(path: string) {
+    return new Set([
+      "/api/service-categories",
+      "/api/moodcategories",
+      "/api/storemoodcategories",
+    ]).has(String(path || "").trim());
   }
 
   async function getAccessToken() {
@@ -149,7 +153,7 @@ export default function MoodCategoryManager({
         return;
       }
 
-      const url = isServiceCategoriesRoute(apiPath) ? apiPath : `${API_BASE}${apiPath}`;
+      const url = usesServerWriteApi(apiPath) ? apiPath : `${API_BASE}${apiPath}`;
       const response = await fetch(url, { method: "GET", cache: "no-store" });
       if (!response.ok) throw new Error("Failed to load categories.");
       const payload = (await response.json()) as MoodCategoryRecord[] | { items?: MoodCategoryRecord[] };
@@ -327,7 +331,7 @@ export default function MoodCategoryManager({
         selection_type: "MULTI" as const,
       };
 
-      if (isServiceCategoriesRoute(apiPath)) {
+      if (usesServerWriteApi(apiPath)) {
         // Call server-side API (uses service role) to bypass RLS
         const token = await getAccessToken();
         const url = editingId ? `${apiPath}/${editingId}` : apiPath;
@@ -369,7 +373,7 @@ export default function MoodCategoryManager({
 
     try {
       setDeletingId(id);
-      if (isServiceCategoriesRoute(apiPath)) {
+      if (usesServerWriteApi(apiPath)) {
         const token = await getAccessToken();
         const res = await fetch(`${apiPath}/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
         const json = await res.json().catch(() => ({}));
