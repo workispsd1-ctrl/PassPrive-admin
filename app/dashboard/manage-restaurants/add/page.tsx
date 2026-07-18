@@ -341,7 +341,7 @@ export default function AddRestaurantPage() {
       });
 
       const partner = await createPartnerViaBackend({
-        email: partnerEmail.trim(),
+        email: partnerEmail.trim().toLowerCase(),
         password: partnerPassword,
         full_name: form.name.trim(),
         phone: form.phone || undefined,

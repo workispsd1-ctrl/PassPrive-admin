@@ -121,11 +121,15 @@ export async function PATCH(request: NextRequest) {
     const userId = sanitizeString(body.user_id);
     const email = sanitizeString(body.email)?.toLowerCase();
     const password = String(body.password || "");
+    const role = body.role ? normalizeAssignableRole(body.role) : null;
 
     if (!userId) {
       return NextResponse.json({ error: "user_id is required" }, { status: 400 });
     }
-    if (!email && !password) {
+    if (role && !ALLOWED_ASSIGNABLE_ROLES.has(role)) {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
+    if (!email && !password && !role) {
       return NextResponse.json(
         { error: "Provide a new email or password to update" },
         { status: 400 }
@@ -138,21 +142,33 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const { data: current } = await supabaseAdmin.auth.admin.getUserById(userId);
+
     const updates: Record<string, unknown> = {};
     if (email) {
       updates.email = email;
       updates.email_confirm = true;
     }
     if (password) updates.password = password;
+    if (role) {
+      updates.user_metadata = {
+        ...(current?.user?.user_metadata || {}),
+        role,
+      };
+    }
 
     const { data: updated, error: updateError } =
       await supabaseAdmin.auth.admin.updateUserById(userId, updates);
     if (updateError) throw updateError;
 
-    if (email) {
+    const profilePatch: Record<string, unknown> = {};
+    if (email) profilePatch.email = email;
+    if (role) profilePatch.role = role;
+
+    if (Object.keys(profilePatch).length) {
       const { error: profileError } = await supabaseAdmin
         .from("users")
-        .update({ email })
+        .update(profilePatch)
         .eq("id", userId);
       if (profileError) throw profileError;
     }

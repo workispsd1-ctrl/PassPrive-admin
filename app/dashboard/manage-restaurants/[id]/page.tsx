@@ -461,6 +461,7 @@ export default function RestaurantDetailPage() {
           user_id: restaurant.owner_user_id,
           email: email || undefined,
           password: credentialPassword || undefined,
+          role: "restaurantpartner",
         }),
       });
 
