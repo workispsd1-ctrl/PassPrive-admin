@@ -89,6 +89,84 @@ async function authorizeManager(request: NextRequest) {
   return { error: null, role: requesterRole };
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await authorizeManager(request);
+    if (auth.error) return auth.error;
+
+    const userId = sanitizeString(request.nextUrl.searchParams.get("user_id"));
+    if (!userId) {
+      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (error) throw error;
+
+    return NextResponse.json({
+      ok: true,
+      user: data.user ? { id: data.user.id, email: data.user.email } : null,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load user";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const auth = await authorizeManager(request);
+    if (auth.error) return auth.error;
+
+    const body = (await request.json()) as AdminUserPayload & { user_id?: string };
+    const userId = sanitizeString(body.user_id);
+    const email = sanitizeString(body.email)?.toLowerCase();
+    const password = String(body.password || "");
+
+    if (!userId) {
+      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+    }
+    if (!email && !password) {
+      return NextResponse.json(
+        { error: "Provide a new email or password to update" },
+        { status: 400 }
+      );
+    }
+    if (password && password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters long" },
+        { status: 400 }
+      );
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (email) {
+      updates.email = email;
+      updates.email_confirm = true;
+    }
+    if (password) updates.password = password;
+
+    const { data: updated, error: updateError } =
+      await supabaseAdmin.auth.admin.updateUserById(userId, updates);
+    if (updateError) throw updateError;
+
+    if (email) {
+      const { error: profileError } = await supabaseAdmin
+        .from("users")
+        .update({ email })
+        .eq("id", userId);
+      if (profileError) throw profileError;
+    }
+
+    return NextResponse.json({
+      ok: true,
+      user: { id: userId, email: updated.user?.email ?? email ?? null },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update user";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await authorizeManager(request);

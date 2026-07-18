@@ -174,6 +174,7 @@ export default function RestaurantDetailPage() {
   const [creatingCredentials, setCreatingCredentials] = useState(false);
   const [credentialEmail, setCredentialEmail] = useState("");
   const [credentialPassword, setCredentialPassword] = useState("");
+  const [existingCredEmail, setExistingCredEmail] = useState<string | null>(null);
 
   const [foodImagesToAdd, setFoodImagesToAdd] = useState<File[]>([]);
   const [ambienceImagesToAdd, setAmbienceImagesToAdd] = useState<File[]>([]);
@@ -201,6 +202,33 @@ export default function RestaurantDetailPage() {
 
     void loadRestaurant();
   }, [id]);
+
+  useEffect(() => {
+    const ownerId = restaurant?.owner_user_id;
+    if (!ownerId) {
+      setExistingCredEmail(null);
+      return;
+    }
+
+    const loadCredentialEmail = async () => {
+      try {
+        const token = await getTokenClient();
+        if (!token) return;
+        const res = await fetch(`/api/admin-users?user_id=${ownerId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = await res.json().catch(() => null);
+        if (res.ok && payload?.user?.email) {
+          setExistingCredEmail(payload.user.email);
+          setCredentialEmail(payload.user.email);
+        }
+      } catch {
+        // non-fatal: admin can still type a new email
+      }
+    };
+
+    void loadCredentialEmail();
+  }, [restaurant?.owner_user_id]);
 
   useEffect(() => {
     const loadMoodCategories = async () => {
@@ -401,6 +429,62 @@ export default function RestaurantDetailPage() {
     }
   };
 
+  const handleUpdateCredentials = async () => {
+    if (!restaurant?.owner_user_id) return;
+
+    const email = credentialEmail.trim().toLowerCase();
+    if (email && !email.includes("@")) {
+      showToast({ type: "error", title: "Valid email is required" });
+      return;
+    }
+    if (credentialPassword && credentialPassword.length < 6) {
+      showToast({ type: "error", title: "Password must be at least 6 characters" });
+      return;
+    }
+    if (!email && !credentialPassword) {
+      showToast({ type: "error", title: "Enter a new email or password to update" });
+      return;
+    }
+
+    setCreatingCredentials(true);
+    try {
+      const token = await getTokenClient();
+      if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+
+      const response = await fetch("/api/admin-users", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: restaurant.owner_user_id,
+          email: email || undefined,
+          password: credentialPassword || undefined,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to update credentials");
+      }
+
+      if (payload?.user?.email) setExistingCredEmail(payload.user.email);
+      setCredentialPassword("");
+
+      showToast({
+        type: "success",
+        title: "Credentials updated",
+        description: "Partner login details have been changed.",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update credentials";
+      showToast({ type: "error", title: "Update credentials failed", description: message });
+    } finally {
+      setCreatingCredentials(false);
+    }
+  };
+
   const handleCreateCredentials = async () => {
     if (!restaurant) return;
 
@@ -538,11 +622,15 @@ export default function RestaurantDetailPage() {
             </Field>
           )}
         </Grid>
-        {!restaurant.created_creds && (
+        {(
           <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-amber-900">Create Partner Credentials</h3>
+            <h3 className="text-sm font-semibold text-amber-900">
+              {restaurant.owner_user_id ? "Update Partner Credentials" : "Create Partner Credentials"}
+            </h3>
             <p className="text-xs text-amber-800">
-              This restaurant is not onboarded yet. Create credentials to add user records in auth and public users.
+              {restaurant.owner_user_id
+                ? `This restaurant already has a partner login${existingCredEmail ? ` (${existingCredEmail})` : ""}. Change the email and/or set a new password.`
+                : "This restaurant is not onboarded yet. Create credentials to add user records in auth and public users."}
             </p>
             <Grid>
               <Field label="Partner Email">
@@ -554,7 +642,13 @@ export default function RestaurantDetailPage() {
                   placeholder="partner@example.com"
                 />
               </Field>
-              <Field label="Partner Password">
+              <Field
+                label={
+                  restaurant.owner_user_id
+                    ? "New Password (leave blank to keep current)"
+                    : "Partner Password"
+                }
+              >
                 <Input
                   className={inputClass}
                   type="password"
@@ -565,8 +659,19 @@ export default function RestaurantDetailPage() {
               </Field>
             </Grid>
             <div>
-              <Button onClick={handleCreateCredentials} disabled={creatingCredentials}>
-                {creatingCredentials ? "Creating..." : "Create Credentials"}
+              <Button
+                onClick={
+                  restaurant.owner_user_id ? handleUpdateCredentials : handleCreateCredentials
+                }
+                disabled={creatingCredentials}
+              >
+                {creatingCredentials
+                  ? restaurant.owner_user_id
+                    ? "Updating..."
+                    : "Creating..."
+                  : restaurant.owner_user_id
+                    ? "Update Credentials"
+                    : "Create Credentials"}
               </Button>
             </div>
           </div>
