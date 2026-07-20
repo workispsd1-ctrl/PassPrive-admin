@@ -33,6 +33,14 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type MoodCategory = { id: string; title: string; slug: string };
 
+const SCREEN_OPTIONS = [
+  { key: "home", label: "Home" },
+  { key: "dinein", label: "DineinHome" },
+  { key: "shopping", label: "ShoppingHome" },
+  { key: "wellness", label: "WellnessHome" },
+  { key: "tourist", label: "TouristHome" },
+] as const;
+
 type PromotionalCollection = {
   id: string;
   slug: string;
@@ -42,6 +50,7 @@ type PromotionalCollection = {
   mood_category_id?: string | null;
   sort_order: number;
   is_active: boolean;
+  screens?: string[] | null;
   starts_at?: string | null;
   ends_at?: string | null;
   updated_at?: string;
@@ -62,6 +71,7 @@ type FormState = {
   mood_category_id: string;
   sort_order: string;
   is_active: boolean;
+  screens: string[];
   starts_at: string;
   ends_at: string;
 };
@@ -74,6 +84,7 @@ const initialForm: FormState = {
   mood_category_id: "",
   sort_order: "100",
   is_active: true,
+  screens: ["home"],
   starts_at: "",
   ends_at: "",
 };
@@ -179,12 +190,16 @@ export default function PromotionalCollectionManager() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [bannerUploadUrl, setBannerUploadUrl] = useState("");
   const [query, setQuery] = useState("");
+  const [activeScreen, setActiveScreen] = useState<string>("home");
 
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase();
-    if (!search) return collections;
-    return collections.filter((c) => [c.title, c.slug, c.subtitle || ""].join(" ").toLowerCase().includes(search));
-  }, [collections, query]);
+    return collections.filter((c) => {
+      if (!(c.screens || []).includes(activeScreen)) return false;
+      if (!search) return true;
+      return [c.title, c.slug, c.subtitle || ""].join(" ").toLowerCase().includes(search);
+    });
+  }, [collections, query, activeScreen]);
 
   const load = useCallback(async () => {
     try {
@@ -192,7 +207,7 @@ export default function PromotionalCollectionManager() {
       const [{ data: rows, error }, { data: catRows, error: catError }] = await Promise.all([
         supabaseBrowser
           .from("promotional_collections")
-          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,sort_order,is_active,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
+          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
           .order("sort_order", { ascending: true }),
         supabaseBrowser
           .from("restaurant_mood_categories")
@@ -218,7 +233,7 @@ export default function PromotionalCollectionManager() {
 
   function openCreate() {
     setEditing(null);
-    setForm(initialForm);
+    setForm({ ...initialForm, screens: [activeScreen] });
     setBannerUploadUrl("");
     setDialogOpen(true);
   }
@@ -234,6 +249,7 @@ export default function PromotionalCollectionManager() {
       mood_category_id: c.mood_category_id || "",
       sort_order: String(c.sort_order ?? 100),
       is_active: Boolean(c.is_active),
+      screens: c.screens || [],
       starts_at: toDateTimeLocal(c.starts_at),
       ends_at: toDateTimeLocal(c.ends_at),
     });
@@ -244,6 +260,7 @@ export default function PromotionalCollectionManager() {
     if (!form.slug.trim()) return showToast({ type: "error", title: "Slug is required" });
     if (!form.title.trim()) return showToast({ type: "error", title: "Title is required" });
     if (!form.mood_category_id) return showToast({ type: "error", title: "Pick a restaurant category" });
+    if (form.screens.length === 0) return showToast({ type: "error", title: "Pick at least one screen" });
     const sortOrder = Number(form.sort_order);
     if (!Number.isFinite(sortOrder)) return showToast({ type: "error", title: "Sort order must be a number" });
 
@@ -263,6 +280,7 @@ export default function PromotionalCollectionManager() {
       mood_category_id: form.mood_category_id,
       sort_order: sortOrder,
       is_active: form.is_active,
+      screens: form.screens,
       ends_at: endsAtIso,
       updated_at: new Date().toISOString(),
       ...(startsAtIso ? { starts_at: startsAtIso } : editing?.starts_at ? { starts_at: editing.starts_at } : {}),
@@ -331,6 +349,23 @@ export default function PromotionalCollectionManager() {
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by title or slug" className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-sm" />
               </div>
+              <div className="flex flex-wrap gap-2">
+                {SCREEN_OPTIONS.map((s) => {
+                  const active = activeScreen === s.key;
+                  const count = collections.filter((c) => (c.screens || []).includes(s.key)).length;
+                  return (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() => setActiveScreen(s.key)}
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${active ? "bg-[#5800AB] text-white shadow-[0_6px_16px_rgba(88,0,171,0.22)]" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {s.label}
+                      <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </CardHeader>
 
             <CardContent className="px-4 py-4 sm:px-5">
@@ -365,6 +400,13 @@ export default function PromotionalCollectionManager() {
                             </div>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.slug}</p>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.subtitle || "No subtitle added yet."}</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {(c.screens || []).map((sk) => (
+                                <span key={sk} className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-cyan-700">
+                                  {SCREEN_OPTIONS.find((s) => s.key === sk)?.label || sk}
+                                </span>
+                              ))}
+                            </div>
                             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] leading-4 text-slate-400">
                               <span>Sort: {c.sort_order ?? 0}</span>
                               <span>Updated: {formatDate(c.updated_at)}</span>
@@ -429,6 +471,31 @@ export default function PromotionalCollectionManager() {
                 ))}
               </select>
               <p className="text-xs text-slate-500">The app shows every restaurant tagged with this category (e.g. &quot;Drink &amp; dine&quot; for the football card).</p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Show on screens</Label>
+              <div className="flex flex-wrap gap-2">
+                {SCREEN_OPTIONS.map((s) => {
+                  const checked = form.screens.includes(s.key);
+                  return (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          screens: checked ? f.screens.filter((k) => k !== s.key) : [...f.screens, s.key],
+                        }))
+                      }
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-500">Pick one or more screens. A card can appear on multiple screens at once.</p>
             </div>
 
             <BannerUploadField
