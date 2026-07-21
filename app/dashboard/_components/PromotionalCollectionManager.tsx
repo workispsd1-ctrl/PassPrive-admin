@@ -41,12 +41,28 @@ const CATEGORY_GROUPS = [
   { type: "wellness", label: "Wellness", table: "service_categories" },
 ] as const;
 
+const DISCOUNT_TYPES = [
+  { key: "percent", label: "Percentage off" },
+  { key: "flat", label: "Flat amount off" },
+] as const;
+
 const SORT_OPTIONS = [
   { key: "distance", label: "Nearest first" },
   { key: "rating_desc", label: "Top rated" },
   { key: "discount_desc", label: "Biggest discount" },
   { key: "popularity", label: "Most reviewed" },
 ] as const;
+
+function discountLabel(c: PromotionalCollection): string {
+  const min = c.min_discount_value;
+  const max = c.max_discount_value;
+  if (min == null && max == null) return "";
+  const unit = c.discount_type === "flat" ? "MUR " : "";
+  const suffix = c.discount_type === "flat" ? " off" : "% off";
+  if (min != null && max != null) return `${unit}${min}-${max}${suffix}`;
+  if (min != null) return `${unit}${min}+${suffix}`;
+  return `up to ${unit}${max}${suffix}`;
+}
 
 function sameRef(a: CategoryRef, b: CategoryRef) {
   return a.type === b.type && a.value === b.value;
@@ -68,8 +84,10 @@ type PromotionalCollection = {
   banner_image_url?: string | null;
   mood_category_id?: string | null;
   category_refs?: CategoryRef[] | null;
-  sort_mode?: string | null;
-  min_discount_percent?: number | null;
+  sort_modes?: string[] | null;
+  discount_type?: string | null;
+  min_discount_value?: number | null;
+  max_discount_value?: number | null;
   sort_order: number;
   is_active: boolean;
   screens?: string[] | null;
@@ -92,8 +110,10 @@ type FormState = {
   banner_image_url: string;
   mood_category_id: string;
   category_refs: CategoryRef[];
-  sort_mode: string;
-  min_discount_percent: string;
+  sort_modes: string[];
+  discount_type: string;
+  min_discount_value: string;
+  max_discount_value: string;
   sort_order: string;
   is_active: boolean;
   screens: string[];
@@ -108,8 +128,10 @@ const initialForm: FormState = {
   banner_image_url: "",
   mood_category_id: "",
   category_refs: [],
-  sort_mode: "distance",
-  min_discount_percent: "",
+  sort_modes: ["distance"],
+  discount_type: "percent",
+  min_discount_value: "",
+  max_discount_value: "",
   sort_order: "100",
   is_active: true,
   screens: ["home"],
@@ -267,7 +289,7 @@ export default function PromotionalCollectionManager() {
       ] = await Promise.all([
         supabaseBrowser
           .from("promotional_collections")
-          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,category_refs,sort_mode,min_discount_percent,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
+          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,category_refs,sort_modes,discount_type,min_discount_value,max_discount_value,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
           .order("sort_order", { ascending: true }),
         catQuery("restaurant_mood_categories"),
         catQuery("store_mood_categories"),
@@ -318,8 +340,10 @@ export default function PromotionalCollectionManager() {
       banner_image_url: c.banner_image_url || "",
       mood_category_id: c.mood_category_id || "",
       category_refs: Array.isArray(c.category_refs) ? c.category_refs : [],
-      sort_mode: c.sort_mode || "distance",
-      min_discount_percent: c.min_discount_percent == null ? "" : String(c.min_discount_percent),
+      sort_modes: Array.isArray(c.sort_modes) && c.sort_modes.length ? c.sort_modes : ["distance"],
+      discount_type: c.discount_type || "percent",
+      min_discount_value: c.min_discount_value == null ? "" : String(c.min_discount_value),
+      max_discount_value: c.max_discount_value == null ? "" : String(c.max_discount_value),
       sort_order: String(c.sort_order ?? 100),
       is_active: Boolean(c.is_active),
       screens: c.screens || [],
@@ -337,10 +361,30 @@ export default function PromotionalCollectionManager() {
     const sortOrder = Number(form.sort_order);
     if (!Number.isFinite(sortOrder)) return showToast({ type: "error", title: "Sort order must be a number" });
 
-    const trimmedDiscount = form.min_discount_percent.trim();
-    const minDiscount = trimmedDiscount ? Number(trimmedDiscount) : null;
-    if (minDiscount != null && (!Number.isFinite(minDiscount) || minDiscount < 0 || minDiscount > 100)) {
-      return showToast({ type: "error", title: "Minimum discount must be between 0 and 100" });
+    if (form.sort_modes.length === 0) return showToast({ type: "error", title: "Pick at least one sort order" });
+
+    const isPercent = form.discount_type === "percent";
+    const ceiling = isPercent ? 100 : Number.POSITIVE_INFINITY;
+    const parseDiscount = (raw: string, label: string): number | null | "invalid" => {
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > ceiling) {
+        showToast({
+          type: "error",
+          title: isPercent ? `${label} discount must be between 0 and 100` : `${label} discount must be 0 or more`,
+        });
+        return "invalid";
+      }
+      return parsed;
+    };
+
+    const minDiscount = parseDiscount(form.min_discount_value, "Minimum");
+    if (minDiscount === "invalid") return;
+    const maxDiscount = parseDiscount(form.max_discount_value, "Maximum");
+    if (maxDiscount === "invalid") return;
+    if (minDiscount != null && maxDiscount != null && maxDiscount < minDiscount) {
+      return showToast({ type: "error", title: "Maximum discount must be at least the minimum" });
     }
 
     const startsAtIso = toIsoOrNull(form.starts_at);
@@ -358,8 +402,10 @@ export default function PromotionalCollectionManager() {
       banner_image_url: bannerUploadUrl || form.banner_image_url.trim() || null,
       mood_category_id: form.category_refs.find((r) => r.type === "restaurant")?.value || null,
       category_refs: form.category_refs,
-      sort_mode: form.sort_mode,
-      min_discount_percent: minDiscount,
+      sort_modes: form.sort_modes,
+      discount_type: form.discount_type,
+      min_discount_value: minDiscount,
+      max_discount_value: maxDiscount,
       sort_order: sortOrder,
       is_active: form.is_active,
       screens: form.screens,
@@ -479,8 +525,8 @@ export default function PromotionalCollectionManager() {
                               {refLabels(c).map((label) => (
                                 <span key={label} className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium capitalize leading-4 text-violet-700">{label}</span>
                               ))}
-                              {c.min_discount_percent != null ? (
-                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-amber-700">{c.min_discount_percent}%+ off</span>
+                              {discountLabel(c) ? (
+                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-amber-700">{discountLabel(c)}</span>
                               ) : null}
                             </div>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.slug}</p>
@@ -614,33 +660,78 @@ export default function PromotionalCollectionManager() {
               <p className="text-xs text-slate-500">Pick one or more categories, from any mix of verticals — e.g. &quot;Drink &amp; dine&quot; plus a Shopping category on the same card.</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="promo-sort-mode">Order results by</Label>
-                <select
-                  id="promo-sort-mode"
-                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
-                  value={form.sort_mode}
-                  onChange={(e) => setForm((f) => ({ ...f, sort_mode: e.target.value }))}
-                >
-                  {SORT_OPTIONS.map((o) => (
-                    <option key={o.key} value={o.key}>{o.label}</option>
-                  ))}
-                </select>
+            <div className="grid gap-2">
+              <Label>Order results by</Label>
+              <div className="flex flex-wrap gap-2">
+                {SORT_OPTIONS.map((o) => {
+                  const index = form.sort_modes.indexOf(o.key);
+                  const checked = index >= 0;
+                  return (
+                    <button
+                      key={o.key}
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          sort_modes: checked
+                            ? f.sort_modes.filter((k) => k !== o.key)
+                            : [...f.sort_modes, o.key],
+                        }))
+                      }
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {checked ? `${index + 1}. ` : ""}{o.label}
+                    </button>
+                  );
+                })}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="promo-min-discount">Minimum discount %</Label>
-                <Input
-                  id="promo-min-discount"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.min_discount_percent}
-                  onChange={(e) => setForm((f) => ({ ...f, min_discount_percent: e.target.value }))}
-                  placeholder="e.g. 50"
-                />
-                <p className="text-xs text-slate-500">Leave blank for no discount filter. Set 50 to show only 50%-off or better.</p>
+              <p className="text-xs text-slate-500">Pick one or more — they apply in the order you tap them, e.g. 1. Nearest first, 2. Top rated.</p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Discount filter</Label>
+              <div className="flex flex-wrap gap-2">
+                {DISCOUNT_TYPES.map((t) => {
+                  const checked = form.discount_type === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, discount_type: t.key }))}
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
               </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="promo-min-discount">Minimum {form.discount_type === "percent" ? "%" : "MUR"}</Label>
+                  <Input
+                    id="promo-min-discount"
+                    type="number"
+                    min={0}
+                    max={form.discount_type === "percent" ? 100 : undefined}
+                    value={form.min_discount_value}
+                    onChange={(e) => setForm((f) => ({ ...f, min_discount_value: e.target.value }))}
+                    placeholder={form.discount_type === "percent" ? "e.g. 50" : "e.g. 200"}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="promo-max-discount">Maximum {form.discount_type === "percent" ? "%" : "MUR"}</Label>
+                  <Input
+                    id="promo-max-discount"
+                    type="number"
+                    min={0}
+                    max={form.discount_type === "percent" ? 100 : undefined}
+                    value={form.max_discount_value}
+                    onChange={(e) => setForm((f) => ({ ...f, max_discount_value: e.target.value }))}
+                    placeholder={form.discount_type === "percent" ? "e.g. 70" : "e.g. 500"}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">Leave both blank for no discount filter. Min only = &quot;50% off or better&quot;; both = a band.</p>
             </div>
 
             <div className="grid gap-2">
