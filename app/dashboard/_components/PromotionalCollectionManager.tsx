@@ -41,6 +41,13 @@ const CATEGORY_GROUPS = [
   { type: "wellness", label: "Wellness", table: "service_categories" },
 ] as const;
 
+const SORT_OPTIONS = [
+  { key: "distance", label: "Nearest first" },
+  { key: "rating_desc", label: "Top rated" },
+  { key: "discount_desc", label: "Biggest discount" },
+  { key: "popularity", label: "Most reviewed" },
+] as const;
+
 function sameRef(a: CategoryRef, b: CategoryRef) {
   return a.type === b.type && a.value === b.value;
 }
@@ -61,6 +68,8 @@ type PromotionalCollection = {
   banner_image_url?: string | null;
   mood_category_id?: string | null;
   category_refs?: CategoryRef[] | null;
+  sort_mode?: string | null;
+  min_discount_percent?: number | null;
   sort_order: number;
   is_active: boolean;
   screens?: string[] | null;
@@ -83,6 +92,8 @@ type FormState = {
   banner_image_url: string;
   mood_category_id: string;
   category_refs: CategoryRef[];
+  sort_mode: string;
+  min_discount_percent: string;
   sort_order: string;
   is_active: boolean;
   screens: string[];
@@ -97,6 +108,8 @@ const initialForm: FormState = {
   banner_image_url: "",
   mood_category_id: "",
   category_refs: [],
+  sort_mode: "distance",
+  min_discount_percent: "",
   sort_order: "100",
   is_active: true,
   screens: ["home"],
@@ -254,7 +267,7 @@ export default function PromotionalCollectionManager() {
       ] = await Promise.all([
         supabaseBrowser
           .from("promotional_collections")
-          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,category_refs,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
+          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,category_refs,sort_mode,min_discount_percent,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
           .order("sort_order", { ascending: true }),
         catQuery("restaurant_mood_categories"),
         catQuery("store_mood_categories"),
@@ -305,6 +318,8 @@ export default function PromotionalCollectionManager() {
       banner_image_url: c.banner_image_url || "",
       mood_category_id: c.mood_category_id || "",
       category_refs: Array.isArray(c.category_refs) ? c.category_refs : [],
+      sort_mode: c.sort_mode || "distance",
+      min_discount_percent: c.min_discount_percent == null ? "" : String(c.min_discount_percent),
       sort_order: String(c.sort_order ?? 100),
       is_active: Boolean(c.is_active),
       screens: c.screens || [],
@@ -322,6 +337,12 @@ export default function PromotionalCollectionManager() {
     const sortOrder = Number(form.sort_order);
     if (!Number.isFinite(sortOrder)) return showToast({ type: "error", title: "Sort order must be a number" });
 
+    const trimmedDiscount = form.min_discount_percent.trim();
+    const minDiscount = trimmedDiscount ? Number(trimmedDiscount) : null;
+    if (minDiscount != null && (!Number.isFinite(minDiscount) || minDiscount < 0 || minDiscount > 100)) {
+      return showToast({ type: "error", title: "Minimum discount must be between 0 and 100" });
+    }
+
     const startsAtIso = toIsoOrNull(form.starts_at);
     const endsAtIso = toIsoOrNull(form.ends_at);
     if (form.starts_at.trim() && !startsAtIso) return showToast({ type: "error", title: "Start date/time is invalid" });
@@ -337,6 +358,8 @@ export default function PromotionalCollectionManager() {
       banner_image_url: bannerUploadUrl || form.banner_image_url.trim() || null,
       mood_category_id: form.category_refs.find((r) => r.type === "restaurant")?.value || null,
       category_refs: form.category_refs,
+      sort_mode: form.sort_mode,
+      min_discount_percent: minDiscount,
       sort_order: sortOrder,
       is_active: form.is_active,
       screens: form.screens,
@@ -456,6 +479,9 @@ export default function PromotionalCollectionManager() {
                               {refLabels(c).map((label) => (
                                 <span key={label} className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium capitalize leading-4 text-violet-700">{label}</span>
                               ))}
+                              {c.min_discount_percent != null ? (
+                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-amber-700">{c.min_discount_percent}%+ off</span>
+                              ) : null}
                             </div>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.slug}</p>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.subtitle || "No subtitle added yet."}</p>
@@ -586,6 +612,35 @@ export default function PromotionalCollectionManager() {
               ) : null}
 
               <p className="text-xs text-slate-500">Pick one or more categories, from any mix of verticals — e.g. &quot;Drink &amp; dine&quot; plus a Shopping category on the same card.</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="promo-sort-mode">Order results by</Label>
+                <select
+                  id="promo-sort-mode"
+                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                  value={form.sort_mode}
+                  onChange={(e) => setForm((f) => ({ ...f, sort_mode: e.target.value }))}
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.key} value={o.key}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="promo-min-discount">Minimum discount %</Label>
+                <Input
+                  id="promo-min-discount"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={form.min_discount_percent}
+                  onChange={(e) => setForm((f) => ({ ...f, min_discount_percent: e.target.value }))}
+                  placeholder="e.g. 50"
+                />
+                <p className="text-xs text-slate-500">Leave blank for no discount filter. Set 50 to show only 50%-off or better.</p>
+              </div>
             </div>
 
             <div className="grid gap-2">
