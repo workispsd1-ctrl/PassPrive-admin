@@ -3,28 +3,70 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 
-// Native sections the mobile app ships (PassPrive HomeContent NATIVE registry).
-// Templates the app ships (HomeContent TEMPLATES registry). Keep in sync with
-// the app — see SECTION_CMS.md.
-const NATIVE_KEYS = [
-  "foodie-frontrow",
-  "offers-for-you",
-  "foodie-frontrow-classic",
-  "more-with-passprive",
-  "shop-this-weekend",
-  "family-feast",
-  "new-kick-in-stores",
-  "plan-your-salon-visit",
-  "now-trending",
-  "whats-hot",
-];
-// Friendly labels shown to admins. The section_key stays the stable app↔CMS
-// contract; only the displayed name changes.
-const NATIVE_LABELS: Record<string, string> = {
-  "foodie-frontrow": "In the Limelight",
-  "offers-for-you": "Offers for you",
-  "foodie-frontrow-classic": "Foodie Frontrow",
+// Native sections the mobile app ships, per screen. The section_key is the
+// stable app↔CMS contract (must match the screen's registry in the app);
+// the label is only the displayed name. Keep in sync with the app — see
+// SECTION_CMS.md.
+type ScreenCatalog = { keys: string[]; labels: Record<string, string> };
+const SCREEN_SECTIONS: Record<string, ScreenCatalog> = {
+  "Home Screen": {
+    keys: [
+      "foodie-frontrow",
+      "offers-for-you",
+      "foodie-frontrow-classic",
+      "more-with-passprive",
+      "shop-this-weekend",
+      "family-feast",
+      "new-kick-in-stores",
+      "plan-your-salon-visit",
+      "now-trending",
+      "whats-hot",
+    ],
+    labels: {
+      "foodie-frontrow": "In the Limelight",
+      "offers-for-you": "Offers for you",
+      "foodie-frontrow-classic": "Foodie Frontrow",
+    },
+  },
+  DineinHome: {
+    keys: [
+      "promotional-cards",
+      "now-trending",
+      "in-your-passprive",
+      "popular-chains",
+      "bank-offers",
+      "recommendations",
+    ],
+    labels: {
+      "promotional-cards": "Promotional Cards",
+      "now-trending": "Now Trending",
+      "in-your-passprive": "In Your PassPrivé",
+      "popular-chains": "Popular Chains",
+      "bank-offers": "Bank Offers",
+      recommendations: "Recommendations",
+    },
+  },
+  ShoppingHome: {
+    keys: [
+      "trending-now",
+      "bank-offers",
+      "in-your-district",
+      "discover-top-brands",
+      "on-the-shelves",
+      "store-promo",
+    ],
+    labels: {
+      "trending-now": "Trending Now",
+      "bank-offers": "Bank Offers",
+      "in-your-district": "In Your District",
+      "discover-top-brands": "Discover Top Brands",
+      "on-the-shelves": "On The Shelves",
+      "store-promo": "Store Promotional Cards",
+    },
+  },
+  Wellness: { keys: [], labels: {} },
 };
+const DEFAULT_SCREEN = "Home Screen";
 const TEMPLATES = ["restaurant_rail"];
 
 export type TitleRow = {
@@ -59,17 +101,22 @@ interface AddTitleDialogProps {
   onClose: () => void;
   onSave: (payload: TitlePayload) => void;
   editing?: TitleRow | null;
+  screenName?: string | null;
 }
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100";
 
-export default function AddTitleDialog({ open, onClose, onSave, editing }: AddTitleDialogProps) {
+export default function AddTitleDialog({ open, onClose, onSave, editing, screenName }: AddTitleDialogProps) {
   const isEditing = !!editing?.id;
-  const [type, setType] = useState<"native" | "template">("native");
+  const catalog = SCREEN_SECTIONS[screenName ?? ""] ?? SCREEN_SECTIONS[DEFAULT_SCREEN];
+  const nativeKeys = catalog.keys;
+  const nativeLabels = catalog.labels;
+  const hasNative = nativeKeys.length > 0;
+  const [type, setType] = useState<"native" | "template">(hasNative ? "native" : "template");
   const [title, setTitle] = useState("");
   const [sortOrder, setSortOrder] = useState<number | "">("");
-  const [sectionKey, setSectionKey] = useState<string>(NATIVE_KEYS[0]);
+  const [sectionKey, setSectionKey] = useState<string>(nativeKeys[0] ?? "");
   const [template, setTemplate] = useState<string>(TEMPLATES[0]);
   const [dataSource, setDataSource] = useState("restaurants");
   const [paramsText, setParamsText] = useState('{\n  "limit": 12\n}');
@@ -81,10 +128,10 @@ export default function AddTitleDialog({ open, onClose, onSave, editing }: AddTi
   // Re-seed fields whenever the dialog opens / the edited row changes.
   useEffect(() => {
     if (!open) return;
-    setType(editing?.template ? "template" : "native");
+    setType(editing?.template ? "template" : hasNative ? "native" : "template");
     setTitle(editing?.title ?? "");
     setSortOrder(editing?.sort_order ?? "");
-    setSectionKey(editing?.section_key ?? NATIVE_KEYS[0]);
+    setSectionKey(editing?.section_key ?? nativeKeys[0] ?? "");
     setTemplate(editing?.template ?? TEMPLATES[0]);
     setDataSource(editing?.data_source ?? "restaurants");
     setParamsText(editing?.params ? JSON.stringify(editing.params, null, 2) : '{\n  "limit": 12\n}');
@@ -144,7 +191,7 @@ export default function AddTitleDialog({ open, onClose, onSave, editing }: AddTi
         <div className="space-y-4 overflow-y-auto px-6 py-5">
           {/* Type toggle */}
           <div className="flex gap-2">
-            {(["native", "template"] as const).map((t) => (
+            {(["native", "template"] as const).filter((t) => t !== "native" || hasNative).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -172,9 +219,9 @@ export default function AddTitleDialog({ open, onClose, onSave, editing }: AddTi
             <div className="space-y-2">
               <label className="text-xs font-medium text-gray-600">Section</label>
               <select value={sectionKey} onChange={(e) => setSectionKey(e.target.value)} className={inputClass}>
-                {NATIVE_KEYS.map((k) => (
+                {nativeKeys.map((k) => (
                   <option key={k} value={k}>
-                    {NATIVE_LABELS[k] ?? k}
+                    {nativeLabels[k] ?? k}
                   </option>
                 ))}
               </select>

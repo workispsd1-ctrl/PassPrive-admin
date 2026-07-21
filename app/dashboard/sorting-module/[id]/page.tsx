@@ -257,6 +257,7 @@ export default function ScreenDetailPage() {
       <AddTitleDialog
         open={addOpen}
         editing={editing}
+        screenName={screen?.name}
         onClose={() => {
           setAddOpen(false);
           setEditing(null);

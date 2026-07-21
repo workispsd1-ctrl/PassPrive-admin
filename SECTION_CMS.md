@@ -49,6 +49,30 @@ Defined in `PassPrive/components/Home/HomeContent.jsx`:
 Adding a new template id requires an **app release** (new renderer); the admin
 dropdown should only offer template ids the shipped app knows.
 
+## Per-screen native section catalogs
+
+Each screen has its **own** set of native `section_key`s (a screen only renders
+its own registry; keys are scoped per screen name). The admin `AddTitleDialog`
+(`SCREEN_SECTIONS`) offers the catalog matching the screen's `name`. Only the
+top rails are reorderable — banners / category tiles stay pinned at the top and
+the filters + full list stay at the bottom.
+
+**`DineinHome`** — `PassPrive/components/DininHome/DineinHome.jsx` (`DINEIN_SECTION_TYPES`):
+`promotional-cards`, `now-trending`, `in-your-passprive`, `popular-chains`,
+`bank-offers`, `recommendations`.
+
+**`ShoppingHome`** — `PassPrive/components/StoresHome/StoreHome.jsx` (`STORE_SECTION_TYPES`):
+`trending-now`, `bank-offers`, `in-your-district`, `discover-top-brands`,
+`on-the-shelves`, `store-promo` (store-promo ships disabled by default).
+
+**`Wellness`** — no app screen yet, so no native sections. The screen exists in
+the admin (template sections only) until a WellnessHome renderer ships.
+
+> These screens read the CMS via `useSectionOrder("<name>")` but **ignore the
+> row `title`** (the section components carry their own headings); only
+> `section_key`, `sort_order`, and `enabled` affect them. If the table has no
+> rows for the screen, the app falls back to its built-in default order.
+
 ## How the app reads it
 
 `useSectionOrder("Home Screen")` (`PassPrive/src/hooks/useStores.js`):
