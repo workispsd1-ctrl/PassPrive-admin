@@ -33,6 +33,18 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type MoodCategory = { id: string; title: string; slug: string };
 
+type CategoryRef = { type: string; value: string };
+
+const CATEGORY_GROUPS = [
+  { type: "restaurant", label: "Restaurants", table: "restaurant_mood_categories" },
+  { type: "store", label: "Shopping", table: "store_mood_categories" },
+  { type: "wellness", label: "Wellness", table: "service_categories" },
+] as const;
+
+function sameRef(a: CategoryRef, b: CategoryRef) {
+  return a.type === b.type && a.value === b.value;
+}
+
 const SCREEN_OPTIONS = [
   { key: "home", label: "Home" },
   { key: "dinein", label: "DineinHome" },
@@ -48,6 +60,7 @@ type PromotionalCollection = {
   subtitle?: string | null;
   banner_image_url?: string | null;
   mood_category_id?: string | null;
+  category_refs?: CategoryRef[] | null;
   sort_order: number;
   is_active: boolean;
   screens?: string[] | null;
@@ -69,6 +82,7 @@ type FormState = {
   subtitle: string;
   banner_image_url: string;
   mood_category_id: string;
+  category_refs: CategoryRef[];
   sort_order: string;
   is_active: boolean;
   screens: string[];
@@ -82,6 +96,7 @@ const initialForm: FormState = {
   subtitle: "",
   banner_image_url: "",
   mood_category_id: "",
+  category_refs: [],
   sort_order: "100",
   is_active: true,
   screens: ["home"],
@@ -182,6 +197,9 @@ function BannerUploadField({
 export default function PromotionalCollectionManager() {
   const [collections, setCollections] = useState<PromotionalCollection[]>([]);
   const [categories, setCategories] = useState<MoodCategory[]>([]);
+  const [storeCategories, setStoreCategories] = useState<MoodCategory[]>([]);
+  const [wellnessCategories, setWellnessCategories] = useState<MoodCategory[]>([]);
+  const [touristTags, setTouristTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -191,6 +209,22 @@ export default function PromotionalCollectionManager() {
   const [bannerUploadUrl, setBannerUploadUrl] = useState("");
   const [query, setQuery] = useState("");
   const [activeScreen, setActiveScreen] = useState<string>("home");
+
+  const refLabels = useCallback(
+    (c: PromotionalCollection) => {
+      const refs = Array.isArray(c.category_refs) ? c.category_refs : [];
+      if (refs.length === 0) return categoryTitle(c) ? [categoryTitle(c)] : [];
+      return refs
+        .map((ref) => {
+          if (ref.type === "tourist") return ref.value;
+          const pool =
+            ref.type === "store" ? storeCategories : ref.type === "wellness" ? wellnessCategories : categories;
+          return pool.find((cat) => cat.id === ref.value)?.title || "";
+        })
+        .filter(Boolean);
+    },
+    [categories, storeCategories, wellnessCategories],
+  );
 
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -204,21 +238,44 @@ export default function PromotionalCollectionManager() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [{ data: rows, error }, { data: catRows, error: catError }] = await Promise.all([
+      const catQuery = (table: string) =>
         supabaseBrowser
-          .from("promotional_collections")
-          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
-          .order("sort_order", { ascending: true }),
-        supabaseBrowser
-          .from("restaurant_mood_categories")
+          .from(table)
           .select("id,title,slug")
           .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+
+      const [
+        { data: rows, error },
+        { data: catRows, error: catError },
+        { data: storeRows },
+        { data: wellnessRows },
+        { data: touristRows },
+      ] = await Promise.all([
+        supabaseBrowser
+          .from("promotional_collections")
+          .select("id,slug,title,subtitle,banner_image_url,mood_category_id,category_refs,sort_order,is_active,screens,starts_at,ends_at,updated_at,restaurant_mood_categories(title)")
           .order("sort_order", { ascending: true }),
+        catQuery("restaurant_mood_categories"),
+        catQuery("store_mood_categories"),
+        catQuery("service_categories"),
+        supabaseBrowser.from("tourist_places").select("tags").eq("is_active", true),
       ]);
       if (error) throw error;
       if (catError) throw catError;
       setCollections((rows as unknown as PromotionalCollection[] | null) || []);
       setCategories((catRows as MoodCategory[] | null) || []);
+      setStoreCategories((storeRows as MoodCategory[] | null) || []);
+      setWellnessCategories((wellnessRows as MoodCategory[] | null) || []);
+      setTouristTags(
+        Array.from(
+          new Set(
+            ((touristRows as { tags: string[] | null }[] | null) || [])
+              .flatMap((r) => r.tags || [])
+              .filter(Boolean),
+          ),
+        ).sort(),
+      );
     } catch (error: unknown) {
       showToast({ type: "error", title: "Failed to load promotional cards", description: error instanceof Error ? error.message : "Unable to fetch." });
       setCollections([]);
@@ -247,6 +304,7 @@ export default function PromotionalCollectionManager() {
       subtitle: c.subtitle || "",
       banner_image_url: c.banner_image_url || "",
       mood_category_id: c.mood_category_id || "",
+      category_refs: Array.isArray(c.category_refs) ? c.category_refs : [],
       sort_order: String(c.sort_order ?? 100),
       is_active: Boolean(c.is_active),
       screens: c.screens || [],
@@ -259,7 +317,7 @@ export default function PromotionalCollectionManager() {
   async function save() {
     if (!form.slug.trim()) return showToast({ type: "error", title: "Slug is required" });
     if (!form.title.trim()) return showToast({ type: "error", title: "Title is required" });
-    if (!form.mood_category_id) return showToast({ type: "error", title: "Pick a restaurant category" });
+    if (form.category_refs.length === 0) return showToast({ type: "error", title: "Pick at least one category" });
     if (form.screens.length === 0) return showToast({ type: "error", title: "Pick at least one screen" });
     const sortOrder = Number(form.sort_order);
     if (!Number.isFinite(sortOrder)) return showToast({ type: "error", title: "Sort order must be a number" });
@@ -277,7 +335,8 @@ export default function PromotionalCollectionManager() {
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || null,
       banner_image_url: bannerUploadUrl || form.banner_image_url.trim() || null,
-      mood_category_id: form.mood_category_id,
+      mood_category_id: form.category_refs.find((r) => r.type === "restaurant")?.value || null,
+      category_refs: form.category_refs,
       sort_order: sortOrder,
       is_active: form.is_active,
       screens: form.screens,
@@ -394,9 +453,9 @@ export default function PromotionalCollectionManager() {
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium leading-4 ${c.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                                 {c.is_active ? "Active" : "Inactive"}
                               </span>
-                              {categoryTitle(c) ? (
-                                <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-violet-700">{categoryTitle(c)}</span>
-                              ) : null}
+                              {refLabels(c).map((label) => (
+                                <span key={label} className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium capitalize leading-4 text-violet-700">{label}</span>
+                              ))}
                             </div>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.slug}</p>
                             <p className="mt-1 text-[12px] leading-5 text-slate-500">{c.subtitle || "No subtitle added yet."}</p>
@@ -437,7 +496,7 @@ export default function PromotionalCollectionManager() {
         <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit promotional card" : "Create promotional card"}</DialogTitle>
-            <DialogDescription>Set the banner, then pick the restaurant category to feature.</DialogDescription>
+            <DialogDescription>Set the banner, then pick the categories to feature.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
@@ -457,20 +516,76 @@ export default function PromotionalCollectionManager() {
               <Textarea id="promo-subtitle" value={form.subtitle} onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))} placeholder="Enjoy FIFA 2026 screenings while also getting exclusive offers!" className="min-h-[70px]" />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="promo-category">Restaurant category</Label>
-              <select
-                id="promo-category"
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
-                value={form.mood_category_id}
-                onChange={(e) => setForm((f) => ({ ...f, mood_category_id: e.target.value }))}
-              >
-                <option value="">Select a category…</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.title}</option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-500">The app shows every restaurant tagged with this category (e.g. &quot;Drink &amp; dine&quot; for the football card).</p>
+            <div className="grid gap-3">
+              <Label>Categories</Label>
+              {CATEGORY_GROUPS.map((group) => {
+                const options =
+                  group.type === "restaurant"
+                    ? categories
+                    : group.type === "store"
+                      ? storeCategories
+                      : wellnessCategories;
+                if (options.length === 0) return null;
+                return (
+                  <div key={group.type} className="grid gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {options.map((cat) => {
+                        const ref: CategoryRef = { type: group.type, value: cat.id };
+                        const checked = form.category_refs.some((r) => sameRef(r, ref));
+                        return (
+                          <button
+                            key={`${group.type}-${cat.id}`}
+                            type="button"
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                category_refs: checked
+                                  ? f.category_refs.filter((r) => !sameRef(r, ref))
+                                  : [...f.category_refs, ref],
+                              }))
+                            }
+                            className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                          >
+                            {cat.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {touristTags.length > 0 ? (
+                <div className="grid gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tourist</p>
+                  <div className="flex flex-wrap gap-2">
+                    {touristTags.map((tag) => {
+                      const ref: CategoryRef = { type: "tourist", value: tag };
+                      const checked = form.category_refs.some((r) => sameRef(r, ref));
+                      return (
+                        <button
+                          key={`tourist-${tag}`}
+                          type="button"
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              category_refs: checked
+                                ? f.category_refs.filter((r) => !sameRef(r, ref))
+                                : [...f.category_refs, ref],
+                            }))
+                          }
+                          className={`h-9 rounded-xl px-4 text-[13px] font-medium capitalize transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              <p className="text-xs text-slate-500">Pick one or more categories, from any mix of verticals — e.g. &quot;Drink &amp; dine&quot; plus a Shopping category on the same card.</p>
             </div>
 
             <div className="grid gap-2">
