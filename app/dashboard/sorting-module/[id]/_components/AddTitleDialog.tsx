@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 // Native sections the mobile app ships, per screen. The section_key is the
 // stable app↔CMS contract (must match the screen's registry in the app);
@@ -69,6 +70,18 @@ const SCREEN_SECTIONS: Record<string, ScreenCatalog> = {
 const DEFAULT_SCREEN = "Home Screen";
 const TEMPLATES = ["restaurant_rail"];
 
+// Promo sections can be bound to ONE promotional collection via params.collection_id
+// so multiple can be placed independently on a screen.
+const PROMO_SECTION_KEYS = new Set(["store-promo", "promotional-cards"]);
+const SCREEN_TO_COLLECTION_KEY: Record<string, string> = {
+  "Home Screen": "home",
+  DineinHome: "dinein",
+  ShoppingHome: "shopping",
+  Wellness: "wellness",
+};
+
+type PromoCollection = { id: string; title: string };
+
 export type TitleRow = {
   id?: string;
   title: string;
@@ -124,6 +137,10 @@ export default function AddTitleDialog({ open, onClose, onSave, editing, screenN
   const [titleColor, setTitleColor] = useState("");
   const [background, setBackground] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [collectionId, setCollectionId] = useState<string>("");
+  const [collections, setCollections] = useState<PromoCollection[]>([]);
+
+  const isPromoSection = type === "native" && PROMO_SECTION_KEYS.has(sectionKey);
 
   // Re-seed fields whenever the dialog opens / the edited row changes.
   useEffect(() => {
@@ -139,7 +156,25 @@ export default function AddTitleDialog({ open, onClose, onSave, editing, screenN
     setTitleColor(editing?.title_color ?? "");
     setBackground(editing?.background ?? "");
     setEnabled(editing?.enabled ?? true);
+    const editedCollection = (editing?.params as { collection_id?: string } | null)?.collection_id;
+    setCollectionId(typeof editedCollection === "string" ? editedCollection : "");
   }, [open, editing]);
+
+  // Load this screen's promotional collections for the picker.
+  useEffect(() => {
+    if (!open) return;
+    const screenKey = SCREEN_TO_COLLECTION_KEY[screenName ?? ""];
+    if (!screenKey) { setCollections([]); return; }
+    let alive = true;
+    supabaseBrowser
+      .from("promotional_collections")
+      .select("id,title")
+      .eq("is_active", true)
+      .contains("screens", [screenKey])
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => { if (alive) setCollections((data as PromoCollection[]) ?? []); });
+    return () => { alive = false; };
+  }, [open, screenName]);
 
   const parsedParams = useMemo(() => {
     if (type !== "template") return {};
@@ -163,7 +198,12 @@ export default function AddTitleDialog({ open, onClose, onSave, editing, screenN
       section_key: type === "native" ? sectionKey : null,
       template: type === "template" ? template : null,
       data_source: type === "template" ? dataSource.trim() || null : null,
-      params: type === "template" ? (parsedParams as Record<string, unknown>) : {},
+      params:
+        type === "template"
+          ? (parsedParams as Record<string, unknown>)
+          : PROMO_SECTION_KEYS.has(sectionKey) && collectionId
+            ? { collection_id: collectionId }
+            : {},
       style_variant: styleVariant.trim() || null,
       title_color: titleColor.trim() || null,
       background: background.trim() || null,
@@ -225,6 +265,25 @@ export default function AddTitleDialog({ open, onClose, onSave, editing, screenN
                   </option>
                 ))}
               </select>
+
+              {isPromoSection && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-medium text-gray-600">Promotional collection</label>
+                  <select
+                    value={collectionId}
+                    onChange={(e) => setCollectionId(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">All collections (stacked)</option>
+                    {collections.map((c) => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    Pick one collection to place it as its own section, or leave &quot;All&quot; to stack every collection here.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <>
