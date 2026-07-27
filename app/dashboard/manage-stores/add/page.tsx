@@ -172,6 +172,11 @@ function AddStorePageInner() {
   const [partnerEmail, setPartnerEmail] = useState("");
   const [partnerPassword, setPartnerPassword] = useState("");
 
+  // Cashback + repeat rewards (parity with restaurants)
+  const [merchantType, setMerchantType] = useState("");
+  const [merchantRewardRate, setMerchantRewardRate] = useState("");
+  const [repeatRewardsEnabled, setRepeatRewardsEnabled] = useState(false);
+
   // Media
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [coverMediaFile, setCoverMediaFile] = useState<File | null>(null); // video OR image
@@ -571,9 +576,20 @@ function AddStorePageInner() {
         ...baseStorePayload,
         logo_url: null,
         cover_image: null,
+        merchant_type: merchantType || null,
+        merchant_reward_rate: merchantRewardRate ? Number(merchantRewardRate) : null,
       };
       const { error: createError } = await supabaseBrowser.from("stores").insert(storePayload);
       if (createError) throw createError;
+
+      // Repeat-rewards subscription (parity with restaurants)
+      const { error: subError } = await supabaseBrowser.from("store_subscriptions").insert({
+        store_id: storeId,
+        status: "active",
+        repeat_rewards_enabled: repeatRewardsEnabled,
+        starts_at: new Date().toISOString(),
+      });
+      if (subError) throw subError;
 
       const [logoUrl, coverMediaUrl, galleryUrls] = await Promise.all([
         uploadSingle(storeId, logoFile, "logo"),
@@ -742,6 +758,49 @@ function AddStorePageInner() {
               disabled={loading}
             />
           </div>
+        </div>
+
+        <div className="mt-6 border-t pt-4">
+          <h3 className="text-sm font-semibold text-slate-900">Cashback & Rewards</h3>
+          <p className="text-xs text-slate-500 mb-3">Merchant-funded cashback and repeat-visit rewards (same as restaurants).</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Merchant type</label>
+              <select
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+                value={merchantType}
+                onChange={(e) => setMerchantType(e.target.value)}
+                disabled={loading}
+              >
+                <option value="">None</option>
+                <option value="verified">Verified</option>
+                <option value="preferred">Preferred</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Merchant reward contribution (%)</label>
+              <Input
+                type="number"
+                min={0}
+                step="0.1"
+                value={merchantRewardRate}
+                onChange={(e) => setMerchantRewardRate(e.target.value)}
+                placeholder="e.g. 2"
+                disabled={loading}
+              />
+              <p className="text-[11px] text-slate-400">Merchant-funded cashback credited to the customer (14-day expiry)</p>
+            </div>
+          </div>
+          <label className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300"
+              checked={repeatRewardsEnabled}
+              onChange={(e) => setRepeatRewardsEnabled(e.target.checked)}
+              disabled={loading}
+            />
+            Repeat rewards enabled (stamp sheet / visit rewards)
+          </label>
         </div>
       </div>
 
