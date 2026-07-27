@@ -17,7 +17,7 @@ type BannerRecord = {
   priority?: number;
 };
 
-type BannerKind = "homehero" | "dinein" | "store";
+type BannerKind = "homehero" | "dinein" | "store" | "wellness" | "tourist";
 
 type BannerConfig = {
   key: BannerKind;
@@ -79,6 +79,28 @@ const bannerConfigs: BannerConfig[] = [
     storageBucket: "StoresHomeBanners",
     emptyLabel: "No store home banners available yet.",
     addLabel: "Add Store Banner",
+    supportsEdit: false,
+  },
+  {
+    key: "wellness",
+    title: "Wellness Home Banners",
+    description: "Promotional banners shown in the wellness home section.",
+    collectionLabel: "Wellness banners",
+    table: "wellnesshomebanners",
+    storageBucket: "WellnessHomeBanners",
+    emptyLabel: "No wellness home banners available yet.",
+    addLabel: "Add Wellness Banner",
+    supportsEdit: false,
+  },
+  {
+    key: "tourist",
+    title: "Explore Home Banners",
+    description: "Promotional banners shown in the explore (tourist) home section.",
+    collectionLabel: "Explore banners",
+    table: "touristhomebanners",
+    storageBucket: "TouristHomeBanners",
+    emptyLabel: "No explore home banners available yet.",
+    addLabel: "Add Explore Banner",
     supportsEdit: false,
   },
 ];
@@ -294,28 +316,38 @@ export default function OffersPage() {
     homehero: [],
     dinein: [],
     store: [],
+    wellness: [],
+    tourist: [],
   });
   const [loading, setLoading] = useState<Record<BannerKind, boolean>>({
     homehero: true,
     dinein: true,
     store: true,
+    wellness: true,
+    tourist: true,
   });
   const [deleting, setDeleting] = useState<string | null>(null);
   const [saving, setSaving] = useState<Record<BannerKind, boolean>>({
     homehero: false,
     dinein: false,
     store: false,
+    wellness: false,
+    tourist: false,
   });
   const [openForm, setOpenForm] = useState<BannerKind | null>(null);
   const [forms, setForms] = useState<Record<BannerKind, UploadFormState>>({
     homehero: { ...initialUploadForm },
     dinein: { ...initialUploadForm },
     store: { ...initialUploadForm },
+    wellness: { ...initialUploadForm },
+    tourist: { ...initialUploadForm },
   });
   const [files, setFiles] = useState<Record<BannerKind, File | null>>({
     homehero: null,
     dinein: null,
     store: null,
+    wellness: null,
+    tourist: null,
   });
 
   const summary = useMemo(
