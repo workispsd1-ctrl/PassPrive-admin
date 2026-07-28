@@ -592,6 +592,7 @@ function AddStorePageInner() {
       // Repeat-rewards subscription (parity with restaurants)
       const { error: subError } = await supabaseBrowser.from("store_subscriptions").insert({
         store_id: storeId,
+        plan_code: "store",
         status: "active",
         repeat_rewards_enabled: repeatRewardsEnabled,
         starts_at: new Date().toISOString(),
