@@ -37,6 +37,7 @@ export type StoreSubscriptionInput = {
   plan_code?: string | null;
   status?: string | null;
   pickup_premium_enabled?: boolean;
+  repeat_rewards_enabled?: boolean;
   starts_at?: string | null;
   expires_at?: string | null;
 };
@@ -449,6 +450,7 @@ function normalizeSubscription(rows: DatabaseRow[]): StoreSubscriptionInput | nu
     plan_code: asString(row.plan_code),
     status: asString(row.status),
     pickup_premium_enabled: asBoolean(row.pickup_premium_enabled),
+    repeat_rewards_enabled: asBoolean(row.repeat_rewards_enabled),
     starts_at: asString(row.starts_at),
     expires_at: asString(row.expires_at),
   };
@@ -718,6 +720,10 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("logo_url", asString(store.logo_url));
   assign("cover_image", asString(store.cover_image));
   assign("owner_user_id", asString(store.owner_user_id));
+  assign("merchant_type", asString(store.merchant_type));
+  assign("mdr_rate", asNumber(store.mdr_rate));
+  assign("merchant_total_rate", asNumber(store.merchant_total_rate));
+  assign("merchant_reward_rate", asNumber(store.merchant_reward_rate));
   assign("created_by", asString(store.created_by));
   assign("is_featured", typeof store.is_featured === "boolean" ? store.is_featured : undefined);
   assign("is_active", typeof store.is_active === "boolean" ? store.is_active : undefined);
@@ -843,14 +849,20 @@ function buildStoreSubscriptionRows(
   storeId: string,
   subscription: StoreRelationsInput["subscription"]
 ) {
-  if (!subscription || !hasValue(subscription.plan_code)) return [];
+  if (!subscription) return [];
+  const hasAny =
+    hasValue(subscription.plan_code) ||
+    Boolean(subscription.repeat_rewards_enabled) ||
+    Boolean(subscription.pickup_premium_enabled);
+  if (!hasAny) return [];
 
   return [
     {
       store_id: storeId,
-      plan_code: asString(subscription.plan_code),
-      status: asString(subscription.status),
+      plan_code: asString(subscription.plan_code) || "store",
+      status: asString(subscription.status) || "active",
       pickup_premium_enabled: Boolean(subscription.pickup_premium_enabled),
+      repeat_rewards_enabled: Boolean(subscription.repeat_rewards_enabled),
       starts_at: asString(subscription.starts_at),
       expires_at: asString(subscription.expires_at),
     },

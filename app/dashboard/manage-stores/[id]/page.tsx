@@ -10,6 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { MERCHANT_TYPE_OPTIONS } from "@/lib/restaurantAdmin";
+
+const STORE_API_BASE =
+  (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+
+async function storeGetAccessToken() {
+  const { data } = await supabaseBrowser.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not logged in. Please login as admin/superadmin.");
+  return token;
+}
 import {
   buildStorePayload,
   deleteStoreImages,
@@ -117,6 +128,56 @@ export default function StoreDetailPage() {
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Partner login creation for an already-added (not-yet-onboarded) store
+  const [partnerEmail, setPartnerEmail] = useState("");
+  const [partnerPassword, setPartnerPassword] = useState("");
+  const [creatingLogin, setCreatingLogin] = useState(false);
+
+  const handleCreateStoreLogin = async () => {
+    if (!store) return;
+    if (!partnerEmail.trim()) {
+      showToast({ type: "error", title: "Login email is required" });
+      return;
+    }
+    if (!partnerPassword || partnerPassword.length < 6) {
+      showToast({ type: "error", title: "Password must be at least 6 characters" });
+      return;
+    }
+    try {
+      setCreatingLogin(true);
+      const token = await storeGetAccessToken();
+      const res = await fetch(`${STORE_API_BASE}/api/auth/create-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          email: partnerEmail.trim().toLowerCase(),
+          password: partnerPassword,
+          full_name: (store.name as string) || undefined,
+          phone: (store.phone as string) || undefined,
+          role: "storepartner",
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || "Failed to create store partner login");
+      const newUserId = json?.user?.id;
+      if (!newUserId) throw new Error("User created but missing id");
+
+      const { error } = await supabaseBrowser
+        .from("stores")
+        .update({ owner_user_id: newUserId })
+        .eq("id", String(id));
+      if (error) throw error;
+
+      setStore({ ...store, owner_user_id: newUserId });
+      setPartnerPassword("");
+      showToast({ title: "Store Login Created", description: `Login: ${partnerEmail.trim().toLowerCase()}` });
+    } catch (e) {
+      showToast({ type: "error", title: e instanceof Error ? e.message : "Failed to create login" });
+    } finally {
+      setCreatingLogin(false);
+    }
+  };
 
   // ✅ Image management state
   const [logoToAdd, setLogoToAdd] = useState<File | null>(null);
@@ -451,6 +512,112 @@ export default function StoreDetailPage() {
               onCheckedChange={(v) => setStore({ ...store, is_featured: v })}
             />
           </div>
+        </div>
+      </Section>
+
+      {/* MERCHANT PLAN & REWARDS */}
+      <Section title="Merchant Plan & Rewards">
+        <Grid>
+          <Field label="Merchant Type">
+            <select
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+              disabled={!editMode}
+              value={(store.merchant_type as string) ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                const option = MERCHANT_TYPE_OPTIONS.find((o) => o.value === val);
+                setStore({
+                  ...store,
+                  merchant_type: val || null,
+                  mdr_rate: option?.defaultMdr ?? store.mdr_rate,
+                });
+              }}
+            >
+              {MERCHANT_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="MDR Rate (%)">
+            <Input
+              className={inputClass}
+              type="number"
+              min={0}
+              step="0.01"
+              disabled={!editMode}
+              value={(store.mdr_rate as number | string) ?? ""}
+              onChange={(e) => setStore({ ...store, mdr_rate: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
+          {store.merchant_type === "Preferred" && (
+            <>
+              <Field label="Total Rate charged to merchant (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={(store.merchant_total_rate as number | string) ?? ""}
+                  onChange={(e) => setStore({ ...store, merchant_total_rate: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="Merchant reward contribution (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={(store.merchant_reward_rate as number | string) ?? ""}
+                  onChange={(e) => setStore({ ...store, merchant_reward_rate: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+            </>
+          )}
+          <Field label="Repeat rewards enabled">
+            <Switch
+              disabled={!editMode}
+              checked={!!store.subscription?.repeat_rewards_enabled}
+              onCheckedChange={(value) =>
+                setStore({
+                  ...store,
+                  subscription: { ...(store.subscription || {}), repeat_rewards_enabled: value },
+                })
+              }
+            />
+          </Field>
+        </Grid>
+
+        <div className="mt-4 rounded-lg border bg-slate-50 p-3">
+          {store.owner_user_id ? (
+            <div className="text-xs text-slate-600">
+              Partner login owner: <span className="font-mono">{String(store.owner_user_id)}</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-800">Create Store Partner Login</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  type="email"
+                  placeholder="owner@store.com"
+                  value={partnerEmail}
+                  onChange={(e) => setPartnerEmail(e.target.value)}
+                  disabled={creatingLogin}
+                />
+                <Input
+                  type="password"
+                  placeholder="Min 6 characters"
+                  value={partnerPassword}
+                  onChange={(e) => setPartnerPassword(e.target.value)}
+                  disabled={creatingLogin}
+                />
+              </div>
+              <Button type="button" onClick={handleCreateStoreLogin} disabled={creatingLogin}>
+                {creatingLogin ? "Creating..." : "Create Partner Login"}
+              </Button>
+            </div>
+          )}
         </div>
       </Section>
 
