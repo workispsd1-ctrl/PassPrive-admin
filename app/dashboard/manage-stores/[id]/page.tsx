@@ -134,16 +134,18 @@ export default function StoreDetailPage() {
   const [partnerPassword, setPartnerPassword] = useState("");
   const [creatingLogin, setCreatingLogin] = useState(false);
 
-  // Existing partner login: show email + change password
+  // Existing partner login: edit email + change password
   const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const [ownerEmailDraft, setOwnerEmailDraft] = useState("");
   const [ownerEmailChecked, setOwnerEmailChecked] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [updatingLogin, setUpdatingLogin] = useState(false);
 
   const ownerId = store?.owner_user_id;
   useEffect(() => {
     if (!ownerId) {
       setOwnerEmail(null);
+      setOwnerEmailDraft("");
       setOwnerEmailChecked(false);
       return;
     }
@@ -154,7 +156,10 @@ export default function StoreDetailPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const payload = await res.json().catch(() => null);
-        if (res.ok && payload?.user?.email) setOwnerEmail(payload.user.email);
+        if (res.ok && payload?.user?.email) {
+          setOwnerEmail(payload.user.email);
+          setOwnerEmailDraft(payload.user.email);
+        }
       } catch {
         // non-fatal
       } finally {
@@ -163,32 +168,61 @@ export default function StoreDetailPage() {
     })();
   }, [ownerId]);
 
-  const handleUpdateStorePassword = async () => {
+  const trimmedOwnerEmail = ownerEmailDraft.trim().toLowerCase();
+  const emailChanged = Boolean(
+    trimmedOwnerEmail && trimmedOwnerEmail !== (ownerEmail || "").toLowerCase()
+  );
+
+  const handleUpdateStoreLogin = async () => {
     if (!store?.owner_user_id) return;
-    if (!newPassword || newPassword.length < 6) {
+    if (!emailChanged && !newPassword) {
+      showToast({ type: "error", title: "Change the email or enter a new password" });
+      return;
+    }
+    if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedOwnerEmail)) {
+      showToast({ type: "error", title: "Enter a valid login email" });
+      return;
+    }
+    if (newPassword && newPassword.length < 6) {
       showToast({ type: "error", title: "Password must be at least 6 characters" });
       return;
     }
     try {
-      setUpdatingPassword(true);
+      setUpdatingLogin(true);
       const token = await storeGetAccessToken();
       const res = await fetch("/api/admin-users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           user_id: store.owner_user_id,
-          password: newPassword,
+          ...(emailChanged ? { email: trimmedOwnerEmail } : {}),
+          ...(newPassword ? { password: newPassword } : {}),
           role: "storepartner",
         }),
       });
       const payload = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(payload?.error || "Failed to update password");
+      if (!res.ok) throw new Error(payload?.error || "Failed to update store login");
+
+      const savedEmail = payload?.user?.email || (emailChanged ? trimmedOwnerEmail : ownerEmail);
+      if (savedEmail) {
+        setOwnerEmail(savedEmail);
+        setOwnerEmailDraft(savedEmail);
+      }
       setNewPassword("");
-      showToast({ type: "success", title: "Password updated", description: "Store login password changed." });
+      showToast({
+        type: "success",
+        title: "Store login updated",
+        description:
+          emailChanged && newPassword
+            ? "Email and password changed."
+            : emailChanged
+              ? `Login email changed to ${savedEmail}.`
+              : "Store login password changed.",
+      });
     } catch (e) {
-      showToast({ type: "error", title: e instanceof Error ? e.message : "Failed to update password" });
+      showToast({ type: "error", title: e instanceof Error ? e.message : "Failed to update store login" });
     } finally {
-      setUpdatingPassword(false);
+      setUpdatingLogin(false);
     }
   };
 
@@ -649,22 +683,44 @@ export default function StoreDetailPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-500">Login Email</label>
-                  <Input value={ownerEmail ?? ""} disabled readOnly placeholder={ownerEmailChecked ? "No login email on file" : "Loading…"} />
+                  <Input
+                    type="email"
+                    value={ownerEmailDraft}
+                    onChange={(e) => setOwnerEmailDraft(e.target.value)}
+                    disabled={updatingLogin || !ownerEmailChecked}
+                    placeholder={ownerEmailChecked ? "owner@store.com" : "Loading…"}
+                  />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500">New Password</label>
                   <Input
                     type="password"
-                    placeholder="Min 6 characters"
+                    placeholder="Leave blank to keep current"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={updatingPassword}
+                    disabled={updatingLogin}
                   />
                 </div>
               </div>
-              <Button type="button" onClick={handleUpdateStorePassword} disabled={updatingPassword}>
-                {updatingPassword ? "Updating…" : "Change Password"}
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={handleUpdateStoreLogin}
+                  disabled={updatingLogin || (!emailChanged && !newPassword)}
+                >
+                  {updatingLogin ? "Updating…" : "Save Login Changes"}
+                </Button>
+                {emailChanged && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setOwnerEmailDraft(ownerEmail ?? "")}
+                    disabled={updatingLogin}
+                  >
+                    Reset Email
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-2">
