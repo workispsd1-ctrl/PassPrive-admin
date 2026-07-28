@@ -409,16 +409,6 @@ function AddStorePageInner() {
       setOpenSectionStable("location");
       return;
     }
-    if (!payment.legal_business_name.trim()) {
-      showToast({
-        type: "error",
-        title: "Legal business name is required",
-        description: "Required for settlement & invoicing.",
-      });
-      setOpenSectionStable("payment");
-      return;
-    }
-
     if (coverMediaFile && !isImage(coverMediaFile) && !isVideo(coverMediaFile)) {
       showToast({
         type: "error",

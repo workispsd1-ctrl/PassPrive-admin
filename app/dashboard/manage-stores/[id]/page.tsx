@@ -134,6 +134,60 @@ export default function StoreDetailPage() {
   const [partnerPassword, setPartnerPassword] = useState("");
   const [creatingLogin, setCreatingLogin] = useState(false);
 
+  // Existing partner login: show email + change password
+  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  const ownerId = store?.owner_user_id;
+  useEffect(() => {
+    if (!ownerId) {
+      setOwnerEmail(null);
+      return;
+    }
+    (async () => {
+      try {
+        const token = await storeGetAccessToken();
+        const res = await fetch(`/api/admin-users?user_id=${ownerId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = await res.json().catch(() => null);
+        if (res.ok && payload?.user?.email) setOwnerEmail(payload.user.email);
+      } catch {
+        // non-fatal
+      }
+    })();
+  }, [ownerId]);
+
+  const handleUpdateStorePassword = async () => {
+    if (!store?.owner_user_id) return;
+    if (!newPassword || newPassword.length < 6) {
+      showToast({ type: "error", title: "Password must be at least 6 characters" });
+      return;
+    }
+    try {
+      setUpdatingPassword(true);
+      const token = await storeGetAccessToken();
+      const res = await fetch("/api/admin-users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          user_id: store.owner_user_id,
+          password: newPassword,
+          role: "storepartner",
+        }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || "Failed to update password");
+      setNewPassword("");
+      showToast({ type: "success", title: "Password updated", description: "Store login password changed." });
+    } catch (e) {
+      showToast({ type: "error", title: e instanceof Error ? e.message : "Failed to update password" });
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
   const handleCreateStoreLogin = async () => {
     if (!store) return;
     if (!partnerEmail.trim()) {
@@ -591,8 +645,27 @@ export default function StoreDetailPage() {
 
         <div className="mt-4 rounded-lg border bg-slate-50 p-3">
           {store.owner_user_id ? (
-            <div className="text-xs text-slate-600">
-              Partner login owner: <span className="font-mono">{String(store.owner_user_id)}</span>
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-800">Store Partner Login</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Login Email</label>
+                  <Input value={ownerEmail ?? ""} disabled readOnly placeholder="Loading…" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">New Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Min 6 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={updatingPassword}
+                  />
+                </div>
+              </div>
+              <Button type="button" onClick={handleUpdateStorePassword} disabled={updatingPassword || !newPassword}>
+                {updatingPassword ? "Updating…" : "Change Password"}
+              </Button>
             </div>
           ) : (
             <div className="space-y-2">
