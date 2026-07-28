@@ -177,6 +177,10 @@ function AddStorePageInner() {
   const [merchantRewardRate, setMerchantRewardRate] = useState("");
   const [repeatRewardsEnabled, setRepeatRewardsEnabled] = useState(false);
 
+  // Onboarded = create a partner login for this store. When off, the store is
+  // added with no partner account (no email/password required).
+  const [onboarded, setOnboarded] = useState(false);
+
   // Media
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [coverMediaFile, setCoverMediaFile] = useState<File | null>(null); // video OR image
@@ -357,7 +361,7 @@ function AddStorePageInner() {
   /* ---------------------------------------------
      ✅ STORE OWNER ID RESOLUTION
   --------------------------------------------- */
-  const resolveStoreOwnerId = async (): Promise<string> => {
+  const resolveStoreOwnerId = async (): Promise<string | null> => {
     const fromQuery =
       searchParams.get("storeOwnerId") ||
       searchParams.get("store_owner_id") ||
@@ -365,6 +369,9 @@ function AddStorePageInner() {
       searchParams.get("store_id");
 
     if (fromQuery) return fromQuery;
+
+    // Only create a partner login when the store is being onboarded.
+    if (!onboarded) return null;
 
     const created = await createStorePartnerAccount();
     showToast({
@@ -437,7 +444,7 @@ function AddStorePageInner() {
         searchParams.get("store_id")
       );
 
-    if (!hasOwnerInQuery) {
+    if (!hasOwnerInQuery && onboarded) {
       if (!partnerEmail.trim()) {
         showToast({ type: "error", title: "Store Login Email is required" });
         return;
@@ -676,7 +683,9 @@ function AddStorePageInner() {
           cover_video_url: coverType === "video" ? coverMediaUrl : null,
         }),
         upsertStorePaymentDetails(storeId, paymentDetails),
-        upsertStoreMember(storeId, ownerUserId, "manager"),
+        ownerUserId
+          ? upsertStoreMember(storeId, ownerUserId, "manager")
+          : Promise.resolve(),
         syncStoreCatalogueAdmin({
           storeId,
           categories: categoriesPayload,
@@ -731,34 +740,46 @@ function AddStorePageInner() {
           <div>
             <div className="text-sm font-semibold">Store Partner Login</div>
             <div className="text-xs text-muted-foreground">
-              This creates the login account for the store owner.
+              Enable to create a login account for the store owner.
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Login Email</label>
-            <Input
-              type="email"
-              value={partnerEmail}
-              onChange={(e) => setPartnerEmail(e.target.value)}
-              placeholder="owner@store.com"
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300"
+              checked={onboarded}
+              onChange={(e) => setOnboarded(e.target.checked)}
               disabled={loading}
             />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Login Password</label>
-            <Input
-              type="password"
-              value={partnerPassword}
-              onChange={(e) => setPartnerPassword(e.target.value)}
-              placeholder="Min 6 characters"
-              disabled={loading}
-            />
-          </div>
+            Onboarded
+          </label>
         </div>
+
+        {onboarded && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Login Email</label>
+              <Input
+                type="email"
+                value={partnerEmail}
+                onChange={(e) => setPartnerEmail(e.target.value)}
+                placeholder="owner@store.com"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Login Password</label>
+              <Input
+                type="password"
+                value={partnerPassword}
+                onChange={(e) => setPartnerPassword(e.target.value)}
+                placeholder="Min 6 characters"
+                disabled={loading}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 border-t pt-4">
           <h3 className="text-sm font-semibold text-slate-900">Cashback & Rewards</h3>
