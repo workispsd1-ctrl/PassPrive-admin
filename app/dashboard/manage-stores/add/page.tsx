@@ -15,6 +15,7 @@ import {
   upsertStoreMember,
   upsertStorePaymentDetails,
 } from "@/lib/storeAdmin";
+import { MERCHANT_TYPE_OPTIONS } from "@/lib/restaurantAdmin";
 
 import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
 
@@ -172,8 +173,10 @@ function AddStorePageInner() {
   const [partnerEmail, setPartnerEmail] = useState("");
   const [partnerPassword, setPartnerPassword] = useState("");
 
-  // Cashback + repeat rewards (parity with restaurants)
+  // Merchant plan + cashback + repeat rewards (parity with restaurants)
   const [merchantType, setMerchantType] = useState("");
+  const [mdrRate, setMdrRate] = useState("");
+  const [merchantTotalRate, setMerchantTotalRate] = useState("");
   const [merchantRewardRate, setMerchantRewardRate] = useState("");
   const [repeatRewardsEnabled, setRepeatRewardsEnabled] = useState(false);
 
@@ -584,6 +587,8 @@ function AddStorePageInner() {
         logo_url: null,
         cover_image: null,
         merchant_type: merchantType || null,
+        mdr_rate: mdrRate ? Number(mdrRate) : null,
+        merchant_total_rate: merchantTotalRate ? Number(merchantTotalRate) : null,
         merchant_reward_rate: merchantRewardRate ? Number(merchantRewardRate) : null,
       };
       const { error: createError } = await supabaseBrowser.from("stores").insert(storePayload);
@@ -783,37 +788,79 @@ function AddStorePageInner() {
         )}
 
         <div className="mt-6 border-t pt-4">
-          <h3 className="text-sm font-semibold text-slate-900">Cashback & Rewards</h3>
-          <p className="text-xs text-slate-500 mb-3">Merchant-funded cashback and repeat-visit rewards (same as restaurants).</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <h3 className="text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Merchant Plan</h3>
+          <div className="grid grid-cols-2 gap-4 mt-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium">Merchant type</label>
+              <label className="text-sm font-medium">Merchant Type</label>
               <select
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                 value={merchantType}
-                onChange={(e) => setMerchantType(e.target.value)}
+                onChange={(e) => {
+                  const selected = MERCHANT_TYPE_OPTIONS.find((o) => o.value === e.target.value);
+                  setMerchantType(e.target.value);
+                  if (selected?.defaultMdr != null) setMdrRate(String(selected.defaultMdr));
+                }}
                 disabled={loading}
               >
-                <option value="">None</option>
-                <option value="verified">Verified</option>
-                <option value="preferred">Preferred</option>
+                {MERCHANT_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium">Merchant reward contribution (%)</label>
+              <label className="text-sm font-medium">MDR Rate (%)</label>
               <Input
                 type="number"
                 min={0}
-                step="0.1"
-                value={merchantRewardRate}
-                onChange={(e) => setMerchantRewardRate(e.target.value)}
-                placeholder="e.g. 2"
+                step="0.01"
+                placeholder="e.g. 2.5"
+                value={mdrRate}
+                onChange={(e) => setMdrRate(e.target.value)}
                 disabled={loading}
               />
-              <p className="text-[11px] text-slate-400">Merchant-funded cashback credited to the customer (14-day expiry)</p>
+              {merchantType === "Verified" && (
+                <p className="text-xs text-muted-foreground">Standard rate — default 2.5%, configurable</p>
+              )}
+              {merchantType === "Preferred" && (
+                <p className="text-xs text-muted-foreground">CIM MDR on the transaction</p>
+              )}
             </div>
           </div>
-          <label className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+
+          {merchantType === "Preferred" && (
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Total Rate charged to merchant (%)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="e.g. 4.0"
+                  value={merchantTotalRate}
+                  onChange={(e) => setMerchantTotalRate(e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">All-inclusive preferred rate — typically 3.5%–5%</p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Merchant reward contribution (%)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="e.g. 2.0"
+                  value={merchantRewardRate}
+                  onChange={(e) => setMerchantRewardRate(e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">Merchant-funded cashback credited to the customer (14-day expiry)</p>
+              </div>
+            </div>
+          )}
+
+          <label className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               className="h-4 w-4 rounded border-slate-300"
