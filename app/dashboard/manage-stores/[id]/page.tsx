@@ -136,6 +136,7 @@ export default function StoreDetailPage() {
 
   // Existing partner login: show email + change password
   const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
+  const [ownerEmailChecked, setOwnerEmailChecked] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
@@ -143,6 +144,7 @@ export default function StoreDetailPage() {
   useEffect(() => {
     if (!ownerId) {
       setOwnerEmail(null);
+      setOwnerEmailChecked(false);
       return;
     }
     (async () => {
@@ -155,6 +157,8 @@ export default function StoreDetailPage() {
         if (res.ok && payload?.user?.email) setOwnerEmail(payload.user.email);
       } catch {
         // non-fatal
+      } finally {
+        setOwnerEmailChecked(true);
       }
     })();
   }, [ownerId]);
@@ -333,14 +337,6 @@ export default function StoreDetailPage() {
   const handleSave = async () => {
     if (!store?.name) {
       showToast({ type: "error", title: "Store name is required" });
-      return;
-    }
-    if (!payment.legal_business_name.trim()) {
-      showToast({
-        type: "error",
-        title: "Legal business name is required",
-        description: "Required for settlement & invoicing.",
-      });
       return;
     }
 
@@ -642,15 +638,18 @@ export default function StoreDetailPage() {
             />
           </Field>
         </Grid>
+      </Section>
 
-        <div className="mt-4 rounded-lg border bg-slate-50 p-3">
+      {/* STORE PARTNER LOGIN */}
+      <Section title="Store Partner Login">
+        <div className="rounded-lg border bg-slate-50 p-3">
           {store.owner_user_id ? (
             <div className="space-y-2">
               <div className="text-sm font-medium text-slate-800">Store Partner Login</div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-500">Login Email</label>
-                  <Input value={ownerEmail ?? ""} disabled readOnly placeholder="Loading…" />
+                  <Input value={ownerEmail ?? ""} disabled readOnly placeholder={ownerEmailChecked ? "No login email on file" : "Loading…"} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500">New Password</label>
@@ -663,7 +662,7 @@ export default function StoreDetailPage() {
                   />
                 </div>
               </div>
-              <Button type="button" onClick={handleUpdateStorePassword} disabled={updatingPassword || !newPassword}>
+              <Button type="button" onClick={handleUpdateStorePassword} disabled={updatingPassword}>
                 {updatingPassword ? "Updating…" : "Change Password"}
               </Button>
             </div>
