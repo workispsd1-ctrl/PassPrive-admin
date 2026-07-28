@@ -59,6 +59,17 @@ const cleanObject = (obj: Record<string, unknown>) => {
   return out;
 };
 
+const asTrimmedString = (value: unknown) => {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  return trimmed.length ? trimmed : null;
+};
+
+const asNullableNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const emptyPaymentDetails = (): PaymentDetails => ({
   legal_business_name: "",
   display_name_on_invoice: "",
@@ -446,6 +457,19 @@ export default function StoreDetailPage() {
         logo_url: finalLogoUrl || null,
         cover_image: finalCoverUrl || null,
       });
+
+      // Merchant plan fields are set directly so clearing them persists —
+      // buildStorePayload drops null/empty values from the payload.
+      const merchantType = asTrimmedString(store.merchant_type);
+      const isPreferred = merchantType === "Preferred";
+      basePayload.merchant_type = merchantType;
+      basePayload.mdr_rate = asNullableNumber(store.mdr_rate);
+      basePayload.merchant_total_rate = isPreferred
+        ? asNullableNumber(store.merchant_total_rate)
+        : null;
+      basePayload.merchant_reward_rate = isPreferred
+        ? asNullableNumber(store.merchant_reward_rate)
+        : null;
 
       const normalizedOffers: StoreOfferInput[] = (store.offers || [])
         .filter((offer) => Boolean(offer?.title))
