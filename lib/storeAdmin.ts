@@ -595,6 +595,7 @@ function normalizeStore({
     created_by: asString(store.created_by),
     is_featured: asBoolean(store.is_featured),
     is_active: asBoolean(store.is_active, true),
+    on_boarded: asBoolean(store.on_boarded),
     is_top_brand: asBoolean(store.is_top_brand),
     sort_order: asNumber(store.sort_order),
     store_type: asString(store.store_type),
@@ -731,6 +732,7 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("created_by", asString(store.created_by));
   assign("is_featured", typeof store.is_featured === "boolean" ? store.is_featured : undefined);
   assign("is_active", typeof store.is_active === "boolean" ? store.is_active : undefined);
+  assign("on_boarded", typeof store.on_boarded === "boolean" ? store.on_boarded : undefined);
   assign("is_top_brand", typeof store.is_top_brand === "boolean" ? store.is_top_brand : undefined);
   assign("sort_order", asNumber(store.sort_order));
   assign("store_type", asString(store.store_type));

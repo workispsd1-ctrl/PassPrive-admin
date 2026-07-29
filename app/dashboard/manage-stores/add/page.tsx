@@ -577,6 +577,7 @@ function AddStorePageInner() {
         logo_url: null,
         cover_image: null,
         merchant_type: merchantType || null,
+        on_boarded: onboarded,
         mdr_rate: mdrRate ? Number(mdrRate) : null,
         merchant_total_rate: merchantTotalRate ? Number(merchantTotalRate) : null,
         merchant_reward_rate: merchantRewardRate ? Number(merchantRewardRate) : null,

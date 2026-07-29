@@ -454,6 +454,7 @@ export default function StoreDetailPage() {
         google_place_id: store.google_place_id || null,
         is_active: !!store.is_active,
         is_featured: !!store.is_featured,
+        on_boarded: !!store.on_boarded,
         logo_url: finalLogoUrl || null,
         cover_image: finalCoverUrl || null,
       });
@@ -618,6 +619,15 @@ export default function StoreDetailPage() {
               checked={!!store.is_featured}
               disabled={!editMode}
               onCheckedChange={(v) => setStore({ ...store, is_featured: v })}
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span>Onboarded</span>
+            <Switch
+              checked={!!store.on_boarded}
+              disabled={!editMode}
+              onCheckedChange={(v) => setStore({ ...store, on_boarded: v })}
             />
           </div>
         </div>
