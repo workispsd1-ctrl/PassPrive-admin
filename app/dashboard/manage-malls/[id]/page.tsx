@@ -99,8 +99,15 @@ export default function EditMallPage() {
       </div>
 
       <div className="space-y-4">
-        <MallForm value={mall} onChange={onChange} disabled={saving} />
         <MallStoresManager mallId={id} />
+        <details className="rounded-xl border border-gray-100 bg-white" open>
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-gray-800">
+            Mall details
+          </summary>
+          <div className="border-t border-gray-100 p-4">
+            <MallForm value={mall} onChange={onChange} disabled={saving} />
+          </div>
+        </details>
       </div>
     </div>
   );

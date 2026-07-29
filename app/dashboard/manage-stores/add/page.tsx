@@ -691,6 +691,22 @@ function AddStorePageInner() {
         }),
       ]);
 
+      // If we arrived here from a mall ("+ Add new store" inside a mall), link
+      // the freshly-created store to that mall and return to the mall.
+      const mallId = searchParams.get("mallId");
+      if (mallId && createdStoreId) {
+        const { error: linkError } = await supabaseBrowser
+          .from("mall_stores")
+          .upsert({ mall_id: mallId, store_id: createdStoreId }, { onConflict: "mall_id,store_id" });
+        if (linkError) {
+          showToast({ type: "error", title: "Store saved, but linking to mall failed", description: linkError.message });
+        } else {
+          showToast({ type: "success", title: "Store created and added to mall" });
+        }
+        router.push(`/dashboard/manage-malls/${mallId}`);
+        return;
+      }
+
       showToast({ type: "success", title: "Store saved successfully" });
       router.push("/dashboard/manage-stores");
     } catch (err: unknown) {

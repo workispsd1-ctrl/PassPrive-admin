@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Search, Plus, Trash2, Store, Loader2 } from "lucide-react";
+import { Search, Plus, Trash2, Store, Loader2, PackagePlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showToast } from "@/hooks/useToast";
@@ -17,8 +18,11 @@ import {
 } from "@/lib/mallAdmin";
 
 export default function MallStoresManager({ mallId }: { mallId: string }) {
+  const router = useRouter();
   const [links, setLinks] = useState<MallStoreLink[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [showPicker, setShowPicker] = useState(false);
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<MallStoreInfo[]>([]);
   const [searching, setSearching] = useState(false);
@@ -43,19 +47,27 @@ export default function MallStoresManager({ mallId }: { mallId: string }) {
 
   const linkedIds = useMemo(() => new Set(links.map((l) => l.store_id)), [links]);
 
+  const doSearch = async (q: string) => {
+    setSearching(true);
+    try {
+      setResults(await searchStoresForMall(q));
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const runSearch = (q: string) => {
     setTerm(q);
     if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        setResults(await searchStoresForMall(q));
-      } catch {
-        setResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
+    debounce.current = setTimeout(() => doSearch(q), 300);
+  };
+
+  const openPicker = () => {
+    const next = !showPicker;
+    setShowPicker(next);
+    if (next) doSearch(term);
   };
 
   const add = async (store: MallStoreInfo) => {
@@ -94,51 +106,73 @@ export default function MallStoresManager({ mallId }: { mallId: string }) {
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-4 md:p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <Store className="h-4 w-4 text-gray-700" />
-        <h2 className="text-sm font-semibold text-gray-800">Stores in this mall</h2>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{links.length}</span>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Store className="h-4 w-4 text-gray-700" />
+          <h2 className="text-sm font-semibold text-gray-800">Stores in this mall</h2>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{links.length}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant={showPicker ? "default" : "outline"} className="gap-1.5" onClick={openPicker}>
+            <Plus className="h-3.5 w-3.5" /> Pick existing store
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-[#5800AB] hover:bg-[#4a0090]"
+            onClick={() => router.push(`/dashboard/manage-stores/add?mallId=${mallId}`)}
+          >
+            <PackagePlus className="h-3.5 w-3.5" /> Create new store
+          </Button>
+        </div>
       </div>
 
-      {/* Search / add */}
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <Input className="pl-9" placeholder="Search stores to add…" value={term} onChange={(e) => runSearch(e.target.value)} />
-      </div>
-      {(term.trim() || searching) && (
-        <div className="mb-4 max-h-64 overflow-auto rounded-lg border border-gray-100">
-          {searching ? (
-            <div className="flex items-center gap-2 p-3 text-xs text-gray-500">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
-            </div>
-          ) : results.length === 0 ? (
-            <div className="p-3 text-xs text-gray-500">No stores found.</div>
-          ) : (
-            results.map((s) => {
-              const already = linkedIds.has(s.id);
-              return (
-                <div key={s.id} className="flex items-center gap-3 border-b border-gray-50 p-2.5 last:border-0">
-                  <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded bg-gray-100">
-                    {(s.logo_url || s.cover_image) && (
-                      <Image src={(s.logo_url || s.cover_image) as string} alt={s.name} fill className="object-cover" sizes="32px" />
-                    )}
+      {/* Option 1: pick from already-added stores */}
+      {showPicker && (
+        <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              className="pl-9"
+              placeholder="Search existing stores by name…"
+              value={term}
+              autoFocus
+              onChange={(e) => runSearch(e.target.value)}
+            />
+          </div>
+          <div className="max-h-72 overflow-auto rounded-lg border border-gray-100 bg-white">
+            {searching ? (
+              <div className="flex items-center gap-2 p-3 text-xs text-gray-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+              </div>
+            ) : results.length === 0 ? (
+              <div className="p-3 text-xs text-gray-500">No stores found.</div>
+            ) : (
+              results.map((s) => {
+                const already = linkedIds.has(s.id);
+                return (
+                  <div key={s.id} className="flex items-center gap-3 border-b border-gray-50 p-2.5 last:border-0">
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded bg-gray-100">
+                      {(s.logo_url || s.cover_image) && (
+                        <Image src={(s.logo_url || s.cover_image) as string} alt={s.name} fill className="object-cover" sizes="32px" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-gray-800">{s.name}</p>
+                      <p className="truncate text-xs text-gray-500">{[s.category, s.city].filter(Boolean).join(" · ") || "—"}</p>
+                    </div>
+                    <Button size="sm" variant={already ? "outline" : "default"} disabled={already || busyId === s.id} className="gap-1" onClick={() => add(s)}>
+                      {busyId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                      {already ? "Added" : "Add"}
+                    </Button>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-gray-800">{s.name}</p>
-                    <p className="truncate text-xs text-gray-500">{[s.category, s.city].filter(Boolean).join(" · ") || "—"}</p>
-                  </div>
-                  <Button size="sm" variant={already ? "outline" : "default"} disabled={already || busyId === s.id} className="gap-1" onClick={() => add(s)}>
-                    {busyId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                    {already ? "Added" : "Add"}
-                  </Button>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       )}
 
-      {/* Current stores */}
+      {/* Current stores in the mall */}
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -146,7 +180,10 @@ export default function MallStoresManager({ mallId }: { mallId: string }) {
           ))}
         </div>
       ) : links.length === 0 ? (
-        <p className="py-6 text-center text-sm text-gray-500">No stores added to this mall yet.</p>
+        <div className="rounded-lg border border-dashed border-gray-200 py-8 text-center text-sm text-gray-500">
+          No stores in this mall yet. Use <span className="font-medium">Pick existing store</span> or{" "}
+          <span className="font-medium">Create new store</span> above.
+        </div>
       ) : (
         <div className="divide-y divide-gray-100">
           {links.map((l) => (
@@ -158,27 +195,17 @@ export default function MallStoresManager({ mallId }: { mallId: string }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-gray-900">{l.store?.name || "Unknown store"}</p>
-                <p className="truncate text-xs text-gray-500">
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                   {l.store?.category ? (
                     <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">{l.store.category}</span>
                   ) : (
-                    "No category"
+                    <span>No category</span>
                   )}
-                  {l.store?.city ? <span className="ml-2">{l.store.city}</span> : null}
-                </p>
+                  {l.store?.city ? <span>{l.store.city}</span> : null}
+                </div>
               </div>
-              <Input
-                className="h-8 w-20"
-                placeholder="Floor"
-                defaultValue={l.floor ?? ""}
-                onBlur={(e) => saveField(l, { floor: e.target.value.trim() || null })}
-              />
-              <Input
-                className="h-8 w-24"
-                placeholder="Unit"
-                defaultValue={l.unit_number ?? ""}
-                onBlur={(e) => saveField(l, { unit_number: e.target.value.trim() || null })}
-              />
+              <Input className="h-8 w-20" placeholder="Floor" defaultValue={l.floor ?? ""} onBlur={(e) => saveField(l, { floor: e.target.value.trim() || null })} />
+              <Input className="h-8 w-24" placeholder="Unit" defaultValue={l.unit_number ?? ""} onBlur={(e) => saveField(l, { unit_number: e.target.value.trim() || null })} />
               <Button
                 variant="ghost"
                 size="sm"
