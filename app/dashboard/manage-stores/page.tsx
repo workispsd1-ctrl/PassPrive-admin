@@ -9,8 +9,15 @@ import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Store, Building2 } from "lucide-react";
 import { StoreTable } from "@/components/storesComponents/StoreTable";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import MallList from "@/app/dashboard/manage-malls/_components/MallList";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -97,6 +104,7 @@ function StoresTableSkeleton() {
 export default function StoresPage() {
   const router = useRouter();
 
+  const [view, setView] = useState<"stores" | "malls">("stores");
   const [searchTerm, setSearchTerm] = useState("");
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,49 +169,84 @@ export default function StoresPage() {
     <>
       <div className="min-h-full w-full space-y-4">
       <div className="min-h-full space-y-6 p-6">
-        <SearchAndFilter
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          variant="search-only"
-          placeholder="Search stores by name, category, city, or location..."
-        />
-
-        <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
-          {loading ? (
-            <div className="p-6">
-              <StoresTableSkeleton />
-            </div>
-          ) : stores.length === 0 ? (
-            <div className="p-6">
-              <ComingSoon />
-            </div>
-          ) : (
-            <StoreTable
-              stores={stores}
-              page={page}
-              setPage={setPage}
-              totalPages={totalPages}
-              totalRecord={total}
-              limit={limit}
-              setLimit={setLimit}
-              setRefresh={setRefresh}
-              onRowClick={(id: string) =>
-                router.push(`/dashboard/manage-stores/${id}`)
-              }
-            />
-          )}
+        {/* Stores / Malls toggle */}
+        <div className="inline-flex rounded-full border border-gray-200 bg-white p-1">
+          <button
+            onClick={() => setView("stores")}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              view === "stores" ? "bg-[#5800AB] text-white" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Store className="h-4 w-4" /> Stores
+          </button>
+          <button
+            onClick={() => setView("malls")}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              view === "malls" ? "bg-[#5800AB] text-white" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Building2 className="h-4 w-4" /> Malls
+          </button>
         </div>
+
+        {view === "malls" ? (
+          <MallList />
+        ) : (
+          <>
+            <SearchAndFilter
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              variant="search-only"
+              placeholder="Search stores by name, category, city, or location..."
+            />
+
+            <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+              {loading ? (
+                <div className="p-6">
+                  <StoresTableSkeleton />
+                </div>
+              ) : stores.length === 0 ? (
+                <div className="p-6">
+                  <ComingSoon />
+                </div>
+              ) : (
+                <StoreTable
+                  stores={stores}
+                  page={page}
+                  setPage={setPage}
+                  totalPages={totalPages}
+                  totalRecord={total}
+                  limit={limit}
+                  setLimit={setLimit}
+                  setRefresh={setRefresh}
+                  onRowClick={(id: string) =>
+                    router.push(`/dashboard/manage-stores/${id}`)
+                  }
+                />
+              )}
+            </div>
+          </>
+        )}
       </div>
       </div>
 
 
-      {/* Floating Add Button */}
-      <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
-        onClick={() => router.push("/dashboard/manage-stores/add")}
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      {/* Floating Add Button — asks Store or Mall */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]">
+            <Plus className="h-6 w-6" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="top" className="w-44">
+          <DropdownMenuItem className="gap-2" onClick={() => router.push("/dashboard/manage-stores/add")}>
+            <Store className="h-4 w-4" /> Add Store
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2" onClick={() => router.push("/dashboard/manage-malls/add")}>
+            <Building2 className="h-4 w-4" /> Add Mall
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 }
