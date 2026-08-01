@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { MERCHANT_PLAN_OPTIONS, SERVICE_LEVEL_OPTIONS } from "@/lib/restaurantAdmin";
+import { MERCHANT_PLAN_OPTIONS, type ServiceLevel } from "@/lib/restaurantAdmin";
+import ServiceSwitches from "@/components/ServiceSwitches";
 
 const STORE_API_BASE =
   (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
@@ -650,17 +651,11 @@ export default function StoreDetailPage() {
             </select>
           </Field>
           <Field label="Services enabled">
-            <select
-              title="Services enabled"
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
+            <ServiceSwitches
+              value={(store.service_level as ServiceLevel) ?? "discoverable"}
               disabled={!editMode}
-              value={(store.service_level as string) ?? "discoverable"}
-              onChange={(e) => setStore({ ...store, service_level: e.target.value })}
-            >
-              {SERVICE_LEVEL_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              onChange={(next) => setStore({ ...store, service_level: next })}
+            />
           </Field>
           {store.merchant_plan === "paid" && (
             <>

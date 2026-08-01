@@ -15,9 +15,9 @@ import {
   upsertStoreMember,
   upsertStorePaymentDetails,
 } from "@/lib/storeAdmin";
+import ServiceSwitches from "@/components/ServiceSwitches";
 import {
   MERCHANT_PLAN_OPTIONS,
-  SERVICE_LEVEL_OPTIONS,
   type MerchantPlan,
   type ServiceLevel,
 } from "@/lib/restaurantAdmin";
@@ -846,25 +846,13 @@ function AddStorePageInner() {
           )}
 
           <h3 className="mt-6 text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Services enabled</h3>
-          <div className="mt-3 space-y-2">
-            {SERVICE_LEVEL_OPTIONS.map((option) => (
-              <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
-                <input
-                  type="radio"
-                  name="store_service_level"
-                  className="mt-1"
-                  checked={serviceLevel === option.value}
-                  onChange={() => setServiceLevel(option.value)}
-                  disabled={loading}
-                />
-                <span>
-                  <span className="block text-sm font-medium">{option.label}</span>
-                  <span className="block text-xs text-muted-foreground">{option.hint}</span>
-                </span>
-              </label>
-            ))}
+          <div className="mt-3">
+            <ServiceSwitches
+              value={serviceLevel}
+              disabled={loading}
+              onChange={setServiceLevel}
+            />
           </div>
-
 
           <label className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-700">
             <input

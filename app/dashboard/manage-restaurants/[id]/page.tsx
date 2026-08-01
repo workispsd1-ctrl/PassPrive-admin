@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import ServiceSwitches from "@/components/ServiceSwitches";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,7 +32,6 @@ import {
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
-  SERVICE_LEVEL_OPTIONS,
   BOOKING_SERVICE_TYPE_OPTIONS,
   type MerchantPlan,
   type ServiceLevel,
@@ -725,22 +725,11 @@ export default function RestaurantDetailPage() {
             </p>
           </Field>
           <Field label="Services enabled">
-            <select
-              title="Services enabled"
-              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
-              disabled={!editMode}
+            <ServiceSwitches
               value={restaurant.service_level}
-              onChange={(e) =>
-                setRestaurant({ ...restaurant, service_level: e.target.value as ServiceLevel })
-              }
-            >
-              {SERVICE_LEVEL_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {SERVICE_LEVEL_OPTIONS.find((o) => o.value === restaurant.service_level)?.hint}
-            </p>
+              disabled={!editMode}
+              onChange={(next) => setRestaurant({ ...restaurant, service_level: next })}
+            />
           </Field>
           {restaurant.service_level !== "discoverable" && (
             <Field label="Booking type">

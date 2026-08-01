@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import ServiceSwitches from "@/components/ServiceSwitches";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -20,7 +21,6 @@ import {
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
-  SERVICE_LEVEL_OPTIONS,
   BOOKING_SERVICE_TYPE_OPTIONS,
   type MerchantPlan,
   type ServiceLevel,
@@ -583,23 +583,11 @@ export default function AddRestaurantPage() {
 
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Services enabled</h2>
-        <div className="space-y-2">
-          {SERVICE_LEVEL_OPTIONS.map((option) => (
-            <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
-              <input
-                type="radio"
-                name="service_level"
-                className="mt-1"
-                checked={form.service_level === option.value}
-                onChange={() => setForm((prev) => ({ ...prev, service_level: option.value }))}
-              />
-              <span>
-                <span className="block text-sm font-medium">{option.label}</span>
-                <span className="block text-xs text-muted-foreground">{option.hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
+        <ServiceSwitches
+          value={form.service_level}
+          onChange={(next) => setForm((prev) => ({ ...prev, service_level: next }))}
+        />
+
         {form.service_level !== "discoverable" && (
           <div className="space-y-2 pt-2">
             <p className="text-sm font-medium">Booking type</p>

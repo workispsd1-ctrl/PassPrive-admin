@@ -185,6 +185,30 @@ export const MERCHANT_PLAN_OPTIONS: { value: MerchantPlan; label: string; hint: 
   },
 ];
 
+/**
+ * The capability ladder is stored as one column but edited as independent
+ * switches. Pay bill implies booking; booking implies discoverable.
+ */
+export type ServiceToggles = {
+  discoverable: boolean;
+  booking: boolean;
+  payBill: boolean;
+};
+
+export function serviceLevelToToggles(level: ServiceLevel | null | undefined): ServiceToggles {
+  return {
+    discoverable: true,
+    booking: level === "booking" || level === "payments",
+    payBill: level === "payments",
+  };
+}
+
+export function togglesToServiceLevel(toggles: Partial<ServiceToggles>): ServiceLevel {
+  if (toggles.payBill) return "payments";
+  if (toggles.booking) return "booking";
+  return "discoverable";
+}
+
 export type BookingServiceType = "instant" | "request";
 
 export const BOOKING_SERVICE_TYPE_OPTIONS: { value: BookingServiceType; label: string; hint: string }[] = [
