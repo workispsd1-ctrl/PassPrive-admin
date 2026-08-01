@@ -18,6 +18,7 @@ import {
 import ServiceSwitches from "@/components/ServiceSwitches";
 import {
   MERCHANT_PLAN_OPTIONS,
+  togglesToServiceLevel,
   type MerchantPlan,
   type ServiceLevel,
 } from "@/lib/restaurantAdmin";
@@ -181,6 +182,8 @@ function AddStorePageInner() {
   // Merchant plan + cashback + repeat rewards (parity with restaurants)
   const [merchantPlan, setMerchantPlan] = useState<MerchantPlan>("free");
   const [serviceLevel, setServiceLevel] = useState<ServiceLevel>("discoverable");
+  const [bookingEnabled, setBookingEnabled] = useState(false);
+  const [payBillEnabled, setPayBillEnabled] = useState(false);
   const [onboardingCharge, setOnboardingCharge] = useState("");
   const [monthlyCharge, setMonthlyCharge] = useState("");
   const [mdrAgreedCim, setMdrAgreedCim] = useState("");
@@ -585,6 +588,8 @@ function AddStorePageInner() {
         cover_image: null,
         merchant_plan: merchantPlan,
         service_level: serviceLevel,
+        booking_enabled: bookingEnabled,
+        pay_bill_enabled: payBillEnabled,
         onboarding_charge: onboardingCharge ? Number(onboardingCharge) : null,
         monthly_charge: monthlyCharge ? Number(monthlyCharge) : null,
         mdr_agreed_cim: mdrAgreedCim ? Number(mdrAgreedCim) : null,
@@ -848,9 +853,13 @@ function AddStorePageInner() {
           <h3 className="mt-6 text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Services enabled</h3>
           <div className="mt-3">
             <ServiceSwitches
-              value={serviceLevel}
+              value={{ discoverable: true, booking: bookingEnabled, payBill: payBillEnabled }}
               disabled={loading}
-              onChange={setServiceLevel}
+              onChange={(next) => {
+                setBookingEnabled(next.booking);
+                setPayBillEnabled(next.payBill);
+                setServiceLevel(togglesToServiceLevel(next));
+              }}
             />
           </div>
 

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { MERCHANT_PLAN_OPTIONS, type ServiceLevel } from "@/lib/restaurantAdmin";
+import { MERCHANT_PLAN_OPTIONS, togglesToServiceLevel } from "@/lib/restaurantAdmin";
 import ServiceSwitches from "@/components/ServiceSwitches";
 
 const STORE_API_BASE =
@@ -652,9 +652,20 @@ export default function StoreDetailPage() {
           </Field>
           <Field label="Services enabled">
             <ServiceSwitches
-              value={(store.service_level as ServiceLevel) ?? "discoverable"}
+              value={{
+                discoverable: true,
+                booking: store.booking_enabled === true,
+                payBill: store.pay_bill_enabled === true,
+              }}
               disabled={!editMode}
-              onChange={(next) => setStore({ ...store, service_level: next })}
+              onChange={(next) =>
+                setStore({
+                  ...store,
+                  booking_enabled: next.booking,
+                  pay_bill_enabled: next.payBill,
+                  service_level: togglesToServiceLevel(next),
+                })
+              }
             />
           </Field>
           {store.merchant_plan === "paid" && (

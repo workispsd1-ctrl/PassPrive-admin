@@ -590,6 +590,7 @@ function normalizeStore({
     owner_user_id: asString(store.owner_user_id),
     merchant_plan: asString(store.merchant_plan) ?? "free",
     service_level: asString(store.service_level) ?? "discoverable",
+    pay_bill_enabled: store.pay_bill_enabled === true,
     onboarding_charge: asNumber(store.onboarding_charge),
     monthly_charge: asNumber(store.monthly_charge),
     mdr_agreed_cim: asNumber(store.mdr_agreed_cim),
@@ -731,6 +732,7 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("owner_user_id", asString(store.owner_user_id));
   assign("merchant_plan", asString(store.merchant_plan));
   assign("service_level", asString(store.service_level));
+  assign("pay_bill_enabled", typeof store.pay_bill_enabled === "boolean" ? store.pay_bill_enabled : undefined);
   assign("onboarding_charge", asNumber(store.onboarding_charge));
   assign("monthly_charge", asNumber(store.monthly_charge));
   assign("mdr_agreed_cim", asNumber(store.mdr_agreed_cim));

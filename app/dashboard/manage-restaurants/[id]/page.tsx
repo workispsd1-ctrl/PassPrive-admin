@@ -33,6 +33,7 @@ import {
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
   BOOKING_SERVICE_TYPE_OPTIONS,
+  togglesToServiceLevel,
   type MerchantPlan,
   type ServiceLevel,
   type BookingServiceType,
@@ -726,9 +727,20 @@ export default function RestaurantDetailPage() {
           </Field>
           <Field label="Services enabled">
             <ServiceSwitches
-              value={restaurant.service_level}
+              value={{
+                discoverable: true,
+                booking: restaurant.booking_enabled,
+                payBill: restaurant.pay_bill_enabled,
+              }}
               disabled={!editMode}
-              onChange={(next) => setRestaurant({ ...restaurant, service_level: next })}
+              onChange={(next) =>
+                setRestaurant({
+                  ...restaurant,
+                  booking_enabled: next.booking,
+                  pay_bill_enabled: next.payBill,
+                  service_level: togglesToServiceLevel(next),
+                })
+              }
             />
           </Field>
           {restaurant.service_level !== "discoverable" && (

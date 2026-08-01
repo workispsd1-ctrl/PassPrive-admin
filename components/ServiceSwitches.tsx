@@ -1,15 +1,11 @@
 "use client";
 
 import { Switch } from "@/components/ui/switch";
-import {
-  serviceLevelToToggles,
-  togglesToServiceLevel,
-  type ServiceLevel,
-} from "@/lib/restaurantAdmin";
+import { type ServiceToggles } from "@/lib/restaurantAdmin";
 
 type Props = {
-  value: ServiceLevel;
-  onChange: (next: ServiceLevel) => void;
+  value: ServiceToggles;
+  onChange: (next: ServiceToggles) => void;
   disabled?: boolean;
 };
 
@@ -35,16 +31,10 @@ const ROWS = [
 ];
 
 export default function ServiceSwitches({ value, onChange, disabled }: Props) {
-  const toggles = serviceLevelToToggles(value);
+  const toggles = value;
 
   const setToggle = (key: "booking" | "payBill", next: boolean) => {
-    // Pay bill implies booking; turning booking off turns pay bill off with it.
-    const updated =
-      key === "payBill"
-        ? { ...toggles, payBill: next, booking: next ? true : toggles.booking }
-        : { ...toggles, booking: next, payBill: next ? toggles.payBill : false };
-
-    onChange(togglesToServiceLevel(updated));
+    onChange({ ...toggles, [key]: next });
   };
 
   return (

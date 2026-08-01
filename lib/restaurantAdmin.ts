@@ -185,23 +185,12 @@ export const MERCHANT_PLAN_OPTIONS: { value: MerchantPlan; label: string; hint: 
   },
 ];
 
-/**
- * The capability ladder is stored as one column but edited as independent
- * switches. Pay bill implies booking; booking implies discoverable.
- */
+/** Booking and pay bill are independent capabilities; discoverable is the base. */
 export type ServiceToggles = {
   discoverable: boolean;
   booking: boolean;
   payBill: boolean;
 };
-
-export function serviceLevelToToggles(level: ServiceLevel | null | undefined): ServiceToggles {
-  return {
-    discoverable: true,
-    booking: level === "booking" || level === "payments",
-    payBill: level === "payments",
-  };
-}
 
 export function togglesToServiceLevel(toggles: Partial<ServiceToggles>): ServiceLevel {
   if (toggles.payBill) return "payments";
@@ -265,6 +254,7 @@ export type RestaurantFlatRecord = {
   merchant_type: MerchantType | null;
   merchant_plan: MerchantPlan;
   service_level: ServiceLevel;
+  pay_bill_enabled: boolean;
   booking_service_type: BookingServiceType;
   onboarding_charge: number | null;
   monthly_charge: number | null;
@@ -693,6 +683,7 @@ export function normalizeRestaurantRecord({
     merchant_type: (asString(restaurant?.merchant_type) as MerchantType | null) ?? null,
     merchant_plan: (asString(restaurant?.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(restaurant?.service_level) as ServiceLevel | null) ?? "discoverable",
+    pay_bill_enabled: restaurant?.pay_bill_enabled === true,
     booking_service_type:
       (asString(restaurant?.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(restaurant?.onboarding_charge),
@@ -822,6 +813,7 @@ export function mergeRestaurantRecords(
     merchant_reward_rate: mergeScalar(primary.merchant_reward_rate, secondary.merchant_reward_rate),
     merchant_plan: primary.merchant_plan === "paid" || secondary.merchant_plan === "paid" ? "paid" : "free",
     service_level: mergeScalar(primary.service_level, secondary.service_level) ?? "discoverable",
+    pay_bill_enabled: primary.pay_bill_enabled || secondary.pay_bill_enabled,
     booking_service_type:
       mergeScalar(primary.booking_service_type, secondary.booking_service_type) ?? "instant",
     onboarding_charge: mergeScalar(primary.onboarding_charge, secondary.onboarding_charge),
@@ -1309,6 +1301,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
+    pay_bill_enabled: input.pay_bill_enabled === true,
     booking_service_type:
       (asString(input.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(input.onboarding_charge),
@@ -1358,6 +1351,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
+    pay_bill_enabled: input.pay_bill_enabled === true,
     booking_service_type:
       (asString(input.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(input.onboarding_charge),

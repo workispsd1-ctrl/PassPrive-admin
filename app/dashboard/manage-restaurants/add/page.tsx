@@ -22,6 +22,7 @@ import {
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
   BOOKING_SERVICE_TYPE_OPTIONS,
+  togglesToServiceLevel,
   type MerchantPlan,
   type ServiceLevel,
   type BookingServiceType,
@@ -208,6 +209,7 @@ export default function AddRestaurantPage() {
     ad_ends_at: "",
     merchant_plan: "free" as MerchantPlan,
     service_level: "discoverable" as ServiceLevel,
+    pay_bill_enabled: false,
     booking_service_type: "instant" as BookingServiceType,
     onboarding_charge: "" as string,
     monthly_charge: "" as string,
@@ -403,6 +405,7 @@ export default function AddRestaurantPage() {
         ad_ends_at: form.ad_ends_at || undefined,
         merchant_plan: form.merchant_plan,
         service_level: form.service_level,
+        pay_bill_enabled: form.pay_bill_enabled,
         booking_service_type: form.booking_service_type,
         onboarding_charge: form.onboarding_charge ? Number(form.onboarding_charge) : undefined,
         monthly_charge: form.monthly_charge ? Number(form.monthly_charge) : undefined,
@@ -584,8 +587,19 @@ export default function AddRestaurantPage() {
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Services enabled</h2>
         <ServiceSwitches
-          value={form.service_level}
-          onChange={(next) => setForm((prev) => ({ ...prev, service_level: next }))}
+          value={{
+            discoverable: true,
+            booking: form.booking_enabled,
+            payBill: form.pay_bill_enabled,
+          }}
+          onChange={(next) =>
+            setForm((prev) => ({
+              ...prev,
+              booking_enabled: next.booking,
+              pay_bill_enabled: next.payBill,
+              service_level: togglesToServiceLevel(next),
+            }))
+          }
         />
 
         {form.service_level !== "discoverable" && (
