@@ -588,7 +588,11 @@ function normalizeStore({
     logo_url: logoUrl,
     cover_image: directCoverImage,
     owner_user_id: asString(store.owner_user_id),
-    merchant_type: asString(store.merchant_type),
+    merchant_plan: asString(store.merchant_plan) ?? "free",
+    service_level: asString(store.service_level) ?? "discoverable",
+    onboarding_charge: asNumber(store.onboarding_charge),
+    monthly_charge: asNumber(store.monthly_charge),
+    mdr_agreed_cim: asNumber(store.mdr_agreed_cim),
     mdr_rate: asNumber(store.mdr_rate),
     merchant_total_rate: asNumber(store.merchant_total_rate),
     merchant_reward_rate: asNumber(store.merchant_reward_rate),
@@ -725,7 +729,11 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("logo_url", asString(store.logo_url));
   assign("cover_image", asString(store.cover_image));
   assign("owner_user_id", asString(store.owner_user_id));
-  assign("merchant_type", asString(store.merchant_type));
+  assign("merchant_plan", asString(store.merchant_plan));
+  assign("service_level", asString(store.service_level));
+  assign("onboarding_charge", asNumber(store.onboarding_charge));
+  assign("monthly_charge", asNumber(store.monthly_charge));
+  assign("mdr_agreed_cim", asNumber(store.mdr_agreed_cim));
   assign("mdr_rate", asNumber(store.mdr_rate));
   assign("merchant_total_rate", asNumber(store.merchant_total_rate));
   assign("merchant_reward_rate", asNumber(store.merchant_reward_rate));

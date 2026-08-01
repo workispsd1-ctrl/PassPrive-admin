@@ -30,8 +30,10 @@ import {
   RestaurantFlatRecord,
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
-  MerchantType,
-  MERCHANT_TYPE_OPTIONS,
+  MERCHANT_PLAN_OPTIONS,
+  SERVICE_LEVEL_OPTIONS,
+  type MerchantPlan,
+  type ServiceLevel,
   buildRestaurantBasePayload,
   formatDateTimeLocal,
   deleteRestaurantImages,
@@ -702,39 +704,91 @@ export default function RestaurantDetailPage() {
               <span className="text-sm text-gray-700">Vegetarian restaurant</span>
             </div>
           </Field>
-          <Field label="Merchant Type">
+          <Field label="Merchant Plan">
             <select
-              title="Merchant Type"
+              title="Merchant Plan"
               className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
               disabled={!editMode}
-              value={restaurant.merchant_type ?? ""}
-              onChange={(e) => {
-                const val = e.target.value as MerchantType | "";
-                const option = MERCHANT_TYPE_OPTIONS.find((o) => o.value === val);
-                setRestaurant({
-                  ...restaurant,
-                  merchant_type: val || null,
-                  mdr_rate: option?.defaultMdr ?? restaurant.mdr_rate,
-                });
-              }}
+              value={restaurant.merchant_plan}
+              onChange={(e) =>
+                setRestaurant({ ...restaurant, merchant_plan: e.target.value as MerchantPlan })
+              }
             >
-              {MERCHANT_TYPE_OPTIONS.map((o) => (
+              {MERCHANT_PLAN_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {MERCHANT_PLAN_OPTIONS.find((o) => o.value === restaurant.merchant_plan)?.hint}
+            </p>
           </Field>
-          <Field label="MDR Rate (%)">
-            <Input
-              className={inputClass}
-              type="number"
-              min={0}
-              step="0.01"
+          <Field label="Services enabled">
+            <select
+              title="Services enabled"
+              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
               disabled={!editMode}
-              value={restaurant.mdr_rate ?? ""}
-              onChange={(e) => setRestaurant({ ...restaurant, mdr_rate: e.target.value ? Number(e.target.value) : null })}
-            />
+              value={restaurant.service_level}
+              onChange={(e) =>
+                setRestaurant({ ...restaurant, service_level: e.target.value as ServiceLevel })
+              }
+            >
+              {SERVICE_LEVEL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {SERVICE_LEVEL_OPTIONS.find((o) => o.value === restaurant.service_level)?.hint}
+            </p>
           </Field>
-          {restaurant.merchant_type === "Preferred" && (
+          {restaurant.merchant_plan === "paid" && (
+            <>
+              <Field label="Onboarding charge (MUR)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={restaurant.onboarding_charge ?? ""}
+                  onChange={(e) => setRestaurant({ ...restaurant, onboarding_charge: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="Monthly charge (MUR)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={restaurant.monthly_charge ?? ""}
+                  onChange={(e) => setRestaurant({ ...restaurant, monthly_charge: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="MDR (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={restaurant.mdr_rate ?? ""}
+                  onChange={(e) => setRestaurant({ ...restaurant, mdr_rate: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="MDR agreed to CIM (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={restaurant.mdr_agreed_cim ?? ""}
+                  onChange={(e) => setRestaurant({ ...restaurant, mdr_agreed_cim: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+            </>
+          )}
+          {restaurant.merchant_plan === "paid" && (
             <>
               <Field label="Total Rate charged to merchant (%)">
                 <Input
@@ -849,7 +903,7 @@ export default function RestaurantDetailPage() {
 
       <Section title="Booking & Reservation">
         <Grid>
-          <ToggleField label="Booking Enabled" checked={restaurant.booking_enabled} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, booking_enabled: value })} />
+          <ToggleField label="Booking Enabled (from Services enabled)" checked={restaurant.service_level !== "discoverable"} disabled onCheckedChange={() => {}} />
           <Field label="Avg Duration (minutes)">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.avg_duration_minutes ?? ""} onChange={(e) => setRestaurant({ ...restaurant, avg_duration_minutes: e.target.value ? Number(e.target.value) : null })} />
           </Field>

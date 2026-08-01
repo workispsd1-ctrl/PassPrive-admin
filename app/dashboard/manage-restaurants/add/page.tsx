@@ -19,7 +19,10 @@ import { showToast } from "@/hooks/useToast";
 import {
   RestaurantOfferInput,
   RestaurantSubscriptionInput,
-  MERCHANT_TYPE_OPTIONS,
+  MERCHANT_PLAN_OPTIONS,
+  SERVICE_LEVEL_OPTIONS,
+  type MerchantPlan,
+  type ServiceLevel,
   buildRestaurantInsertPayload,
   formatDateTimeLocal,
   replaceRestaurantRelations,
@@ -201,7 +204,11 @@ export default function AddRestaurantPage() {
     ad_badge_text: "",
     ad_starts_at: "",
     ad_ends_at: "",
-    merchant_type: "" as string,
+    merchant_plan: "free" as MerchantPlan,
+    service_level: "discoverable" as ServiceLevel,
+    onboarding_charge: "" as string,
+    monthly_charge: "" as string,
+    mdr_agreed_cim: "" as string,
     mdr_rate: "" as string,
     merchant_total_rate: "" as string,
     merchant_reward_rate: "" as string,
@@ -391,7 +398,11 @@ export default function AddRestaurantPage() {
         ad_badge_text: form.ad_badge_text || undefined,
         ad_starts_at: form.ad_starts_at || undefined,
         ad_ends_at: form.ad_ends_at || undefined,
-        merchant_type: (form.merchant_type || undefined) as "Verified" | "Preferred" | "Unclaimed" | undefined,
+        merchant_plan: form.merchant_plan,
+        service_level: form.service_level,
+        onboarding_charge: form.onboarding_charge ? Number(form.onboarding_charge) : undefined,
+        monthly_charge: form.monthly_charge ? Number(form.monthly_charge) : undefined,
+        mdr_agreed_cim: form.mdr_agreed_cim ? Number(form.mdr_agreed_cim) : undefined,
         mdr_rate: form.mdr_rate ? Number(form.mdr_rate) : undefined,
         merchant_total_rate: form.merchant_total_rate ? Number(form.merchant_total_rate) : undefined,
         merchant_reward_rate: form.merchant_reward_rate ? Number(form.merchant_reward_rate) : undefined,
@@ -487,80 +498,108 @@ export default function AddRestaurantPage() {
 
       
 
-      <section className="space-y-4 border-b py-8">
+      <section className="space-y-6 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Merchant Plan</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label htmlFor="merchant_type" className="text-sm font-medium">Merchant Type</label>
-            <select
-              id="merchant_type"
-              className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
-              value={form.merchant_type}
-              onChange={(e) => {
-                const selected = MERCHANT_TYPE_OPTIONS.find((o) => o.value === e.target.value);
-                setForm((prev) => ({
-                  ...prev,
-                  merchant_type: e.target.value,
-                  mdr_rate: selected?.defaultMdr != null ? String(selected.defaultMdr) : prev.mdr_rate,
-                }));
-              }}
-            >
-              {MERCHANT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium">MDR Rate (%)</label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              className={inputClass}
-              placeholder="e.g. 2.5"
-              value={form.mdr_rate}
-              onChange={(e) => setForm((prev) => ({ ...prev, mdr_rate: e.target.value }))}
-            />
-            {form.merchant_type === "Verified" && (
-              <p className="text-xs text-muted-foreground">Standard rate — default 2.5%, configurable</p>
-            )}
-            {form.merchant_type === "Preferred" && (
-              <p className="text-xs text-muted-foreground">CIM MDR on the transaction</p>
-            )}
-          </div>
+
+        <div className="space-y-2">
+          {MERCHANT_PLAN_OPTIONS.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+              <input
+                type="radio"
+                name="merchant_plan"
+                className="mt-1"
+                checked={form.merchant_plan === option.value}
+                onChange={() => setForm((prev) => ({ ...prev, merchant_plan: option.value }))}
+              />
+              <span>
+                <span className="block text-sm font-medium">{option.label}</span>
+                <span className="block text-xs text-muted-foreground">{option.hint}</span>
+              </span>
+            </label>
+          ))}
         </div>
 
-        {form.merchant_type === "Preferred" && (
+        {form.merchant_plan === "paid" && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Total Rate charged to merchant (%)</label>
+              <label className="text-sm font-medium">Onboarding charge (MUR)</label>
               <Input
                 type="number"
                 min={0}
                 step="0.01"
                 className={inputClass}
-                placeholder="e.g. 4.0"
-                value={form.merchant_total_rate}
-                onChange={(e) => setForm((prev) => ({ ...prev, merchant_total_rate: e.target.value }))}
+                placeholder="e.g. 5000"
+                value={form.onboarding_charge}
+                onChange={(e) => setForm((prev) => ({ ...prev, onboarding_charge: e.target.value }))}
               />
-              <p className="text-xs text-muted-foreground">All-inclusive preferred rate — typically 3.5%–5%</p>
+              <p className="text-xs text-muted-foreground">One-off fee charged when the merchant joins</p>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Merchant reward contribution (%)</label>
+              <label className="text-sm font-medium">Monthly charge (MUR)</label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                className={inputClass}
+                placeholder="e.g. 1500"
+                value={form.monthly_charge}
+                onChange={(e) => setForm((prev) => ({ ...prev, monthly_charge: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">Recurring subscription billed to the merchant</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">MDR (%)</label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                className={inputClass}
+                placeholder="e.g. 3.5"
+                value={form.mdr_rate}
+                onChange={(e) => setForm((prev) => ({ ...prev, mdr_rate: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">Rate charged to the merchant per transaction</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">MDR agreed to CIM (%)</label>
               <Input
                 type="number"
                 min={0}
                 step="0.01"
                 className={inputClass}
                 placeholder="e.g. 2.0"
-                value={form.merchant_reward_rate}
-                onChange={(e) => setForm((prev) => ({ ...prev, merchant_reward_rate: e.target.value }))}
+                value={form.mdr_agreed_cim}
+                onChange={(e) => setForm((prev) => ({ ...prev, mdr_agreed_cim: e.target.value }))}
               />
-              <p className="text-xs text-muted-foreground">Merchant-funded cashback credited to the customer (14-day expiry)</p>
+              <p className="text-xs text-muted-foreground">Acquirer-side rate payable to CIM</p>
             </div>
           </div>
+        )}
+      </section>
+
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">Services enabled</h2>
+        <div className="space-y-2">
+          {SERVICE_LEVEL_OPTIONS.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+              <input
+                type="radio"
+                name="service_level"
+                className="mt-1"
+                checked={form.service_level === option.value}
+                onChange={() => setForm((prev) => ({ ...prev, service_level: option.value }))}
+              />
+              <span>
+                <span className="block text-sm font-medium">{option.label}</span>
+                <span className="block text-xs text-muted-foreground">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {form.service_level === "payments" && !form.mdr_rate && (
+          <p className="text-xs text-amber-600">
+            Pay bill needs an MDR rate — set one above or the button stays hidden in the app.
+          </p>
         )}
       </section>
 

@@ -152,11 +152,48 @@ export function validateRestaurantAdvertising(input: {
 
 export type MerchantType = "Verified" | "Preferred" | "Unclaimed";
 
+/** @deprecated derived from merchant_plan by the database; kept for legacy reads. */
 export const MERCHANT_TYPE_OPTIONS: { value: MerchantType | ""; label: string; defaultMdr: number | null }[] = [
   { value: "", label: "Select merchant type", defaultMdr: null },
   { value: "Verified", label: "Verified", defaultMdr: 2.5 },
   { value: "Preferred", label: "Preferred", defaultMdr: 3.5 },
   { value: "Unclaimed", label: "Unclaimed", defaultMdr: null },
+];
+
+export type MerchantPlan = "free" | "paid";
+
+export const MERCHANT_PLAN_OPTIONS: { value: MerchantPlan; label: string; hint: string }[] = [
+  {
+    value: "free",
+    label: "Free listing",
+    hint: "Discoverable in the app. No contract, no commercial terms, customers earn no cashback here.",
+  },
+  {
+    value: "paid",
+    label: "Paid partner",
+    hint: "Contracted merchant. Commercial terms apply and customers earn tiered cashback.",
+  },
+];
+
+/** Capability ladder — each level includes the ones before it. */
+export type ServiceLevel = "discoverable" | "booking" | "payments";
+
+export const SERVICE_LEVEL_OPTIONS: { value: ServiceLevel; label: string; hint: string }[] = [
+  {
+    value: "discoverable",
+    label: "Discoverable only",
+    hint: "Listed and searchable. No booking and no pay-bill buttons.",
+  },
+  {
+    value: "booking",
+    label: "Discoverable + Booking",
+    hint: "Adds Book a table / Book a service. No pay-bill button.",
+  },
+  {
+    value: "payments",
+    label: "Discoverable + Booking + Pay bill",
+    hint: "Full access, including the pay-bill flow. Requires an MDR rate.",
+  },
 ];
 
 export type RestaurantFlatRecord = {
@@ -177,6 +214,11 @@ export type RestaurantFlatRecord = {
   is_pure_veg: boolean;
   booking_enabled: boolean;
   merchant_type: MerchantType | null;
+  merchant_plan: MerchantPlan;
+  service_level: ServiceLevel;
+  onboarding_charge: number | null;
+  monthly_charge: number | null;
+  mdr_agreed_cim: number | null;
   mdr_rate: number | null;
   merchant_total_rate: number | null;
   merchant_reward_rate: number | null;
@@ -599,6 +641,11 @@ export function normalizeRestaurantRecord({
     total_ratings: ratings.total_ratings,
     reviews: Array.isArray(reviews) ? reviews : [],
     merchant_type: (asString(restaurant?.merchant_type) as MerchantType | null) ?? null,
+    merchant_plan: (asString(restaurant?.merchant_plan) as MerchantPlan | null) ?? "free",
+    service_level: (asString(restaurant?.service_level) as ServiceLevel | null) ?? "discoverable",
+    onboarding_charge: asNumber(restaurant?.onboarding_charge),
+    monthly_charge: asNumber(restaurant?.monthly_charge),
+    mdr_agreed_cim: asNumber(restaurant?.mdr_agreed_cim),
     mdr_rate: asNumber(restaurant?.mdr_rate),
     merchant_total_rate: asNumber(restaurant?.merchant_total_rate),
     merchant_reward_rate: asNumber(restaurant?.merchant_reward_rate),
@@ -721,6 +768,11 @@ export function mergeRestaurantRecords(
     mdr_rate: mergeScalar(primary.mdr_rate, secondary.mdr_rate),
     merchant_total_rate: mergeScalar(primary.merchant_total_rate, secondary.merchant_total_rate),
     merchant_reward_rate: mergeScalar(primary.merchant_reward_rate, secondary.merchant_reward_rate),
+    merchant_plan: primary.merchant_plan === "paid" || secondary.merchant_plan === "paid" ? "paid" : "free",
+    service_level: mergeScalar(primary.service_level, secondary.service_level) ?? "discoverable",
+    onboarding_charge: mergeScalar(primary.onboarding_charge, secondary.onboarding_charge),
+    monthly_charge: mergeScalar(primary.monthly_charge, secondary.monthly_charge),
+    mdr_agreed_cim: mergeScalar(primary.mdr_agreed_cim, secondary.mdr_agreed_cim),
     booking_terms: primary.booking_terms?.length ? primary.booking_terms : secondary.booking_terms,
 
     // Boolean: primary wins (already has default false, so only override if primary is false and secondary is true)
@@ -1201,7 +1253,11 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     ad_ends_at: asString(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
-    merchant_type: asString(input.merchant_type),
+    merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
+    service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
+    onboarding_charge: asNumber(input.onboarding_charge),
+    monthly_charge: asNumber(input.monthly_charge),
+    mdr_agreed_cim: asNumber(input.mdr_agreed_cim),
     mdr_rate: asNumber(input.mdr_rate),
     merchant_total_rate: asNumber(input.merchant_total_rate),
     merchant_reward_rate: asNumber(input.merchant_reward_rate),
@@ -1244,7 +1300,11 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     ad_ends_at: asString(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
-    merchant_type: asString(input.merchant_type),
+    merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
+    service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
+    onboarding_charge: asNumber(input.onboarding_charge),
+    monthly_charge: asNumber(input.monthly_charge),
+    mdr_agreed_cim: asNumber(input.mdr_agreed_cim),
     mdr_rate: asNumber(input.mdr_rate),
     merchant_total_rate: asNumber(input.merchant_total_rate),
     merchant_reward_rate: asNumber(input.merchant_reward_rate),

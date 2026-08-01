@@ -15,7 +15,12 @@ import {
   upsertStoreMember,
   upsertStorePaymentDetails,
 } from "@/lib/storeAdmin";
-import { MERCHANT_TYPE_OPTIONS } from "@/lib/restaurantAdmin";
+import {
+  MERCHANT_PLAN_OPTIONS,
+  SERVICE_LEVEL_OPTIONS,
+  type MerchantPlan,
+  type ServiceLevel,
+} from "@/lib/restaurantAdmin";
 
 import { DAYS, PRIMARY_BTN } from "@/app/dashboard/_components/StoreComponents/constants";
 
@@ -174,10 +179,12 @@ function AddStorePageInner() {
   const [partnerPassword, setPartnerPassword] = useState("");
 
   // Merchant plan + cashback + repeat rewards (parity with restaurants)
-  const [merchantType, setMerchantType] = useState("");
+  const [merchantPlan, setMerchantPlan] = useState<MerchantPlan>("free");
+  const [serviceLevel, setServiceLevel] = useState<ServiceLevel>("discoverable");
+  const [onboardingCharge, setOnboardingCharge] = useState("");
+  const [monthlyCharge, setMonthlyCharge] = useState("");
+  const [mdrAgreedCim, setMdrAgreedCim] = useState("");
   const [mdrRate, setMdrRate] = useState("");
-  const [merchantTotalRate, setMerchantTotalRate] = useState("");
-  const [merchantRewardRate, setMerchantRewardRate] = useState("");
   const [repeatRewardsEnabled, setRepeatRewardsEnabled] = useState(false);
 
   // Onboarded = create a partner login for this store. When off, the store is
@@ -576,11 +583,13 @@ function AddStorePageInner() {
         ...baseStorePayload,
         logo_url: null,
         cover_image: null,
-        merchant_type: merchantType || null,
+        merchant_plan: merchantPlan,
+        service_level: serviceLevel,
+        onboarding_charge: onboardingCharge ? Number(onboardingCharge) : null,
+        monthly_charge: monthlyCharge ? Number(monthlyCharge) : null,
+        mdr_agreed_cim: mdrAgreedCim ? Number(mdrAgreedCim) : null,
         on_boarded: onboarded,
         mdr_rate: mdrRate ? Number(mdrRate) : null,
-        merchant_total_rate: merchantTotalRate ? Number(merchantTotalRate) : null,
-        merchant_reward_rate: merchantRewardRate ? Number(merchantRewardRate) : null,
       };
       const { error: createError } = await supabaseBrowser.from("stores").insert(storePayload);
       if (createError) throw createError;
@@ -796,76 +805,66 @@ function AddStorePageInner() {
 
         <div className="mt-6 border-t pt-4">
           <h3 className="text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Merchant Plan</h3>
-          <div className="grid grid-cols-2 gap-4 mt-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Merchant Type</label>
-              <select
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                value={merchantType}
-                onChange={(e) => {
-                  const selected = MERCHANT_TYPE_OPTIONS.find((o) => o.value === e.target.value);
-                  setMerchantType(e.target.value);
-                  if (selected?.defaultMdr != null) setMdrRate(String(selected.defaultMdr));
-                }}
-                disabled={loading}
-              >
-                {MERCHANT_TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">MDR Rate (%)</label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="e.g. 2.5"
-                value={mdrRate}
-                onChange={(e) => setMdrRate(e.target.value)}
-                disabled={loading}
-              />
-              {merchantType === "Verified" && (
-                <p className="text-xs text-muted-foreground">Standard rate — default 2.5%, configurable</p>
-              )}
-              {merchantType === "Preferred" && (
-                <p className="text-xs text-muted-foreground">CIM MDR on the transaction</p>
-              )}
-            </div>
+          <div className="mt-3 space-y-2">
+            {MERCHANT_PLAN_OPTIONS.map((option) => (
+              <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                <input
+                  type="radio"
+                  name="store_merchant_plan"
+                  className="mt-1"
+                  checked={merchantPlan === option.value}
+                  onChange={() => setMerchantPlan(option.value)}
+                  disabled={loading}
+                />
+                <span>
+                  <span className="block text-sm font-medium">{option.label}</span>
+                  <span className="block text-xs text-muted-foreground">{option.hint}</span>
+                </span>
+              </label>
+            ))}
           </div>
 
-          {merchantType === "Preferred" && (
-            <div className="grid grid-cols-2 gap-4 mt-3">
+          {merchantPlan === "paid" && (
+            <div className="mt-3 grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium">Total Rate charged to merchant (%)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="e.g. 4.0"
-                  value={merchantTotalRate}
-                  onChange={(e) => setMerchantTotalRate(e.target.value)}
-                  disabled={loading}
-                />
-                <p className="text-xs text-muted-foreground">All-inclusive preferred rate — typically 3.5%–5%</p>
+                <label className="text-sm font-medium">Onboarding charge (MUR)</label>
+                <Input type="number" min={0} step="0.01" placeholder="e.g. 5000" value={onboardingCharge} onChange={(e) => setOnboardingCharge(e.target.value)} disabled={loading} />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Merchant reward contribution (%)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="e.g. 2.0"
-                  value={merchantRewardRate}
-                  onChange={(e) => setMerchantRewardRate(e.target.value)}
-                  disabled={loading}
-                />
-                <p className="text-xs text-muted-foreground">Merchant-funded cashback credited to the customer (14-day expiry)</p>
+                <label className="text-sm font-medium">Monthly charge (MUR)</label>
+                <Input type="number" min={0} step="0.01" placeholder="e.g. 1500" value={monthlyCharge} onChange={(e) => setMonthlyCharge(e.target.value)} disabled={loading} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">MDR (%)</label>
+                <Input type="number" min={0} step="0.01" placeholder="e.g. 3.5" value={mdrRate} onChange={(e) => setMdrRate(e.target.value)} disabled={loading} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">MDR agreed to CIM (%)</label>
+                <Input type="number" min={0} step="0.01" placeholder="e.g. 2.0" value={mdrAgreedCim} onChange={(e) => setMdrAgreedCim(e.target.value)} disabled={loading} />
               </div>
             </div>
           )}
+
+          <h3 className="mt-6 text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Services enabled</h3>
+          <div className="mt-3 space-y-2">
+            {SERVICE_LEVEL_OPTIONS.map((option) => (
+              <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                <input
+                  type="radio"
+                  name="store_service_level"
+                  className="mt-1"
+                  checked={serviceLevel === option.value}
+                  onChange={() => setServiceLevel(option.value)}
+                  disabled={loading}
+                />
+                <span>
+                  <span className="block text-sm font-medium">{option.label}</span>
+                  <span className="block text-xs text-muted-foreground">{option.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+
 
           <label className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-700">
             <input

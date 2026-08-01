@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { MERCHANT_TYPE_OPTIONS } from "@/lib/restaurantAdmin";
+import { MERCHANT_PLAN_OPTIONS, SERVICE_LEVEL_OPTIONS } from "@/lib/restaurantAdmin";
 
 const STORE_API_BASE =
   (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
@@ -636,59 +636,76 @@ export default function StoreDetailPage() {
       {/* MERCHANT PLAN & REWARDS */}
       <Section title="Merchant Plan & Rewards">
         <Grid>
-          <Field label="Merchant Type">
+          <Field label="Merchant Plan">
             <select
+              title="Merchant Plan"
               className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
               disabled={!editMode}
-              value={(store.merchant_type as string) ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                const option = MERCHANT_TYPE_OPTIONS.find((o) => o.value === val);
-                setStore({
-                  ...store,
-                  merchant_type: val || null,
-                  mdr_rate: option?.defaultMdr ?? store.mdr_rate,
-                });
-              }}
+              value={(store.merchant_plan as string) ?? "free"}
+              onChange={(e) => setStore({ ...store, merchant_plan: e.target.value })}
             >
-              {MERCHANT_TYPE_OPTIONS.map((o) => (
+              {MERCHANT_PLAN_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
           </Field>
-          <Field label="MDR Rate (%)">
-            <Input
-              className={inputClass}
-              type="number"
-              min={0}
-              step="0.01"
+          <Field label="Services enabled">
+            <select
+              title="Services enabled"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100"
               disabled={!editMode}
-              value={(store.mdr_rate as number | string) ?? ""}
-              onChange={(e) => setStore({ ...store, mdr_rate: e.target.value ? Number(e.target.value) : null })}
-            />
+              value={(store.service_level as string) ?? "discoverable"}
+              onChange={(e) => setStore({ ...store, service_level: e.target.value })}
+            >
+              {SERVICE_LEVEL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </Field>
-          {store.merchant_type === "Preferred" && (
+          {store.merchant_plan === "paid" && (
             <>
-              <Field label="Total Rate charged to merchant (%)">
+              <Field label="Onboarding charge (MUR)">
                 <Input
                   className={inputClass}
                   type="number"
                   min={0}
                   step="0.01"
                   disabled={!editMode}
-                  value={(store.merchant_total_rate as number | string) ?? ""}
-                  onChange={(e) => setStore({ ...store, merchant_total_rate: e.target.value ? Number(e.target.value) : null })}
+                  value={(store.onboarding_charge as number | string) ?? ""}
+                  onChange={(e) => setStore({ ...store, onboarding_charge: e.target.value ? Number(e.target.value) : null })}
                 />
               </Field>
-              <Field label="Merchant reward contribution (%)">
+              <Field label="Monthly charge (MUR)">
                 <Input
                   className={inputClass}
                   type="number"
                   min={0}
                   step="0.01"
                   disabled={!editMode}
-                  value={(store.merchant_reward_rate as number | string) ?? ""}
-                  onChange={(e) => setStore({ ...store, merchant_reward_rate: e.target.value ? Number(e.target.value) : null })}
+                  value={(store.monthly_charge as number | string) ?? ""}
+                  onChange={(e) => setStore({ ...store, monthly_charge: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="MDR (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={(store.mdr_rate as number | string) ?? ""}
+                  onChange={(e) => setStore({ ...store, mdr_rate: e.target.value ? Number(e.target.value) : null })}
+                />
+              </Field>
+              <Field label="MDR agreed to CIM (%)">
+                <Input
+                  className={inputClass}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  disabled={!editMode}
+                  value={(store.mdr_agreed_cim as number | string) ?? ""}
+                  onChange={(e) => setStore({ ...store, mdr_agreed_cim: e.target.value ? Number(e.target.value) : null })}
                 />
               </Field>
             </>
