@@ -21,8 +21,10 @@ import {
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
   SERVICE_LEVEL_OPTIONS,
+  BOOKING_SERVICE_TYPE_OPTIONS,
   type MerchantPlan,
   type ServiceLevel,
+  type BookingServiceType,
   buildRestaurantInsertPayload,
   formatDateTimeLocal,
   replaceRestaurantRelations,
@@ -206,6 +208,7 @@ export default function AddRestaurantPage() {
     ad_ends_at: "",
     merchant_plan: "free" as MerchantPlan,
     service_level: "discoverable" as ServiceLevel,
+    booking_service_type: "instant" as BookingServiceType,
     onboarding_charge: "" as string,
     monthly_charge: "" as string,
     mdr_agreed_cim: "" as string,
@@ -400,6 +403,7 @@ export default function AddRestaurantPage() {
         ad_ends_at: form.ad_ends_at || undefined,
         merchant_plan: form.merchant_plan,
         service_level: form.service_level,
+        booking_service_type: form.booking_service_type,
         onboarding_charge: form.onboarding_charge ? Number(form.onboarding_charge) : undefined,
         monthly_charge: form.monthly_charge ? Number(form.monthly_charge) : undefined,
         mdr_agreed_cim: form.mdr_agreed_cim ? Number(form.mdr_agreed_cim) : undefined,
@@ -596,6 +600,27 @@ export default function AddRestaurantPage() {
             </label>
           ))}
         </div>
+        {form.service_level !== "discoverable" && (
+          <div className="space-y-2 pt-2">
+            <p className="text-sm font-medium">Booking type</p>
+            {BOOKING_SERVICE_TYPE_OPTIONS.map((option) => (
+              <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                <input
+                  type="radio"
+                  name="booking_service_type"
+                  className="mt-1"
+                  checked={form.booking_service_type === option.value}
+                  onChange={() => setForm((prev) => ({ ...prev, booking_service_type: option.value }))}
+                />
+                <span>
+                  <span className="block text-sm font-medium">{option.label}</span>
+                  <span className="block text-xs text-muted-foreground">{option.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+
         {form.service_level === "payments" && !form.mdr_rate && (
           <p className="text-xs text-amber-600">
             Pay bill needs an MDR rate — set one above or the button stays hidden in the app.

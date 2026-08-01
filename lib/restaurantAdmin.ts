@@ -57,8 +57,18 @@ export function getOfferDateMinimum(startAt?: string | null) {
   return startAt > now ? startAt : now;
 }
 
-export function validateRestaurantOffers(offers: RestaurantOfferInput[] | undefined) {
+/**
+ * `previousOffers` is the record as it was loaded. Dates that already existed are
+ * not re-checked against "now", so editing an unrelated field never fails on an
+ * offer that started (or ended) in the past.
+ */
+export function validateRestaurantOffers(
+  offers: RestaurantOfferInput[] | undefined,
+  previousOffers?: RestaurantOfferInput[] | null,
+) {
   const now = Date.now();
+  const unchanged = (index: number, field: "start_at" | "end_at", value: string) =>
+    asString(previousOffers?.[index]?.[field]) === value;
 
   for (const [index, offer] of (offers || []).entries()) {
     const title = asString(offer?.title);
@@ -84,7 +94,7 @@ export function validateRestaurantOffers(offers: RestaurantOfferInput[] | undefi
       if (Number.isNaN(parsedStart.getTime())) {
         return `Offer ${index + 1}: start date is invalid.`;
       }
-      if (parsedStart.getTime() < now) {
+      if (parsedStart.getTime() < now && !unchanged(index, "start_at", startAt)) {
         return `Offer ${index + 1}: start date cannot be in the past.`;
       }
     }
@@ -94,7 +104,7 @@ export function validateRestaurantOffers(offers: RestaurantOfferInput[] | undefi
       if (Number.isNaN(parsedEnd.getTime())) {
         return `Offer ${index + 1}: end date is invalid.`;
       }
-      if (parsedEnd.getTime() < now) {
+      if (parsedEnd.getTime() < now && !unchanged(index, "end_at", endAt)) {
         return `Offer ${index + 1}: end date cannot be in the past.`;
       }
     }
@@ -175,6 +185,21 @@ export const MERCHANT_PLAN_OPTIONS: { value: MerchantPlan; label: string; hint: 
   },
 ];
 
+export type BookingServiceType = "instant" | "request";
+
+export const BOOKING_SERVICE_TYPE_OPTIONS: { value: BookingServiceType; label: string; hint: string }[] = [
+  {
+    value: "instant",
+    label: "Instant booking",
+    hint: "Bookings are confirmed straight away. The app shows Confirmed.",
+  },
+  {
+    value: "request",
+    label: "Request booking",
+    hint: "Merchant accepts or declines first. The app shows Requested, then Confirmed or Rejected.",
+  },
+];
+
 /** Capability ladder — each level includes the ones before it. */
 export type ServiceLevel = "discoverable" | "booking" | "payments";
 
@@ -216,6 +241,7 @@ export type RestaurantFlatRecord = {
   merchant_type: MerchantType | null;
   merchant_plan: MerchantPlan;
   service_level: ServiceLevel;
+  booking_service_type: BookingServiceType;
   onboarding_charge: number | null;
   monthly_charge: number | null;
   mdr_agreed_cim: number | null;
@@ -643,6 +669,8 @@ export function normalizeRestaurantRecord({
     merchant_type: (asString(restaurant?.merchant_type) as MerchantType | null) ?? null,
     merchant_plan: (asString(restaurant?.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(restaurant?.service_level) as ServiceLevel | null) ?? "discoverable",
+    booking_service_type:
+      (asString(restaurant?.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(restaurant?.onboarding_charge),
     monthly_charge: asNumber(restaurant?.monthly_charge),
     mdr_agreed_cim: asNumber(restaurant?.mdr_agreed_cim),
@@ -770,6 +798,8 @@ export function mergeRestaurantRecords(
     merchant_reward_rate: mergeScalar(primary.merchant_reward_rate, secondary.merchant_reward_rate),
     merchant_plan: primary.merchant_plan === "paid" || secondary.merchant_plan === "paid" ? "paid" : "free",
     service_level: mergeScalar(primary.service_level, secondary.service_level) ?? "discoverable",
+    booking_service_type:
+      mergeScalar(primary.booking_service_type, secondary.booking_service_type) ?? "instant",
     onboarding_charge: mergeScalar(primary.onboarding_charge, secondary.onboarding_charge),
     monthly_charge: mergeScalar(primary.monthly_charge, secondary.monthly_charge),
     mdr_agreed_cim: mergeScalar(primary.mdr_agreed_cim, secondary.mdr_agreed_cim),
@@ -1255,6 +1285,8 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
+    booking_service_type:
+      (asString(input.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(input.onboarding_charge),
     monthly_charge: asNumber(input.monthly_charge),
     mdr_agreed_cim: asNumber(input.mdr_agreed_cim),
@@ -1302,6 +1334,8 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
+    booking_service_type:
+      (asString(input.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(input.onboarding_charge),
     monthly_charge: asNumber(input.monthly_charge),
     mdr_agreed_cim: asNumber(input.mdr_agreed_cim),

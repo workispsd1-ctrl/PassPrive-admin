@@ -32,8 +32,10 @@ import {
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
   SERVICE_LEVEL_OPTIONS,
+  BOOKING_SERVICE_TYPE_OPTIONS,
   type MerchantPlan,
   type ServiceLevel,
+  type BookingServiceType,
   buildRestaurantBasePayload,
   formatDateTimeLocal,
   deleteRestaurantImages,
@@ -279,7 +281,7 @@ export default function RestaurantDetailPage() {
   const handleSave = async () => {
     if (!restaurant) return;
 
-    const offerValidationError = validateRestaurantOffers(restaurant.offers);
+    const offerValidationError = validateRestaurantOffers(restaurant.offers, restaurantOriginal?.offers);
     if (offerValidationError) {
       showToast({
         type: "error",
@@ -740,6 +742,29 @@ export default function RestaurantDetailPage() {
               {SERVICE_LEVEL_OPTIONS.find((o) => o.value === restaurant.service_level)?.hint}
             </p>
           </Field>
+          {restaurant.service_level !== "discoverable" && (
+            <Field label="Booking type">
+              <select
+                title="Booking type"
+                className={`${inputClass} w-full rounded-md px-3 py-2 text-sm`}
+                disabled={!editMode}
+                value={restaurant.booking_service_type}
+                onChange={(e) =>
+                  setRestaurant({
+                    ...restaurant,
+                    booking_service_type: e.target.value as BookingServiceType,
+                  })
+                }
+              >
+                {BOOKING_SERVICE_TYPE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {BOOKING_SERVICE_TYPE_OPTIONS.find((o) => o.value === restaurant.booking_service_type)?.hint}
+              </p>
+            </Field>
+          )}
           {restaurant.merchant_plan === "paid" && (
             <>
               <Field label="Onboarding charge (MUR)">
