@@ -658,6 +658,8 @@ export default function StoreDetailPage() {
                 payBill: store.pay_bill_enabled === true,
               }}
               disabled={!editMode}
+              lockToDiscoverable={(store.store_type || "PRODUCT") !== "SERVICE"}
+              lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
               onChange={(next) =>
                 setStore({
                   ...store,
