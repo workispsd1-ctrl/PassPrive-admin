@@ -13,6 +13,7 @@ type Offer = {
   title: string | null;
   type: string;
   media_url: string;
+  thumbnail_url: string | null;
   priority: number | null;
   is_active: boolean | null;
   action: BannerAction;
@@ -44,7 +45,9 @@ export default function EditOfferPage() {
     is_active: true,
   });
   const [currentMediaUrl, setCurrentMediaUrl] = useState("");
+  const [currentThumbnailUrl, setCurrentThumbnailUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [action, setAction] = useState<BannerAction>(null);
 
   useEffect(() => {
@@ -53,7 +56,7 @@ export default function EditOfferPage() {
         setLoading(true);
         const { data, error } = await supabaseBrowser
           .from("homeherooffers")
-          .select("id,title,type,media_url,priority,is_active,action")
+          .select("id,title,type,media_url,thumbnail_url,priority,is_active,action")
           .eq("id", Number(id))
           .maybeSingle();
         if (error) throw error;
@@ -67,6 +70,7 @@ export default function EditOfferPage() {
           is_active: offer.is_active ?? true,
         });
         setCurrentMediaUrl(offer.media_url || "");
+        setCurrentThumbnailUrl(offer.thumbnail_url || "");
         setAction(offer.action ?? null);
       } catch (error) {
         alert(error instanceof Error ? error.message : "Failed to load offer");
@@ -100,12 +104,31 @@ export default function EditOfferPage() {
         }
       }
 
+      let nextThumbnailUrl = currentThumbnailUrl || null;
+      if (thumbnail) {
+        const thumbPath = buildStoragePath("thumbnail", thumbnail.name);
+        const { error: thumbError } = await supabaseBrowser.storage
+          .from("HomeHeroOffers")
+          .upload(thumbPath, thumbnail);
+        if (thumbError) throw thumbError;
+
+        nextThumbnailUrl = supabaseBrowser.storage
+          .from("HomeHeroOffers")
+          .getPublicUrl(thumbPath).data.publicUrl;
+
+        const oldThumbPath = extractStoragePath(currentThumbnailUrl);
+        if (oldThumbPath) {
+          await supabaseBrowser.storage.from("HomeHeroOffers").remove([oldThumbPath]).catch(() => undefined);
+        }
+      }
+
       const { error } = await supabaseBrowser
         .from("homeherooffers")
         .update({
           title: form.title || null,
           type: form.type,
           media_url: nextMediaUrl,
+          thumbnail_url: form.type === "video" ? nextThumbnailUrl : null,
           action: action && action.type !== "NONE" ? action : null,
           priority: form.priority,
           is_active: form.is_active,
@@ -204,6 +227,30 @@ export default function EditOfferPage() {
                 <video src={URL.createObjectURL(file)} className="w-full max-w-md rounded shadow-sm" controls />
               )}
             </div>
+          </div>
+        )}
+
+        {form.type === "video" && (
+          <div className="space-y-2 rounded border border-amber-200 bg-amber-50 p-3">
+            <label className="block text-sm font-medium text-slate-900">
+              Thumbnail image {currentThumbnailUrl ? "(replace)" : <span className="text-red-600">— missing</span>}
+            </label>
+            <p className="text-xs text-slate-600">
+              Shown in the app while the video loads. Without it the banner appears black.
+              Use a still frame from the video, same aspect ratio.
+            </p>
+            {currentThumbnailUrl && !thumbnail && (
+              <img src={currentThumbnailUrl} alt="Current thumbnail" className="w-48 rounded" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setThumbnail(e.target.files?.[0] ?? null)}
+              className="w-full rounded border border-gray-300 bg-white p-3"
+            />
+            {thumbnail && (
+              <img src={URL.createObjectURL(thumbnail)} alt="New thumbnail" className="w-48 rounded" />
+            )}
           </div>
         )}
 

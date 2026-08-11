@@ -24,28 +24,39 @@ export default function AddOfferPage() {
     is_active: true,
   });
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [action, setAction] = useState<BannerAction>(null);
+
+  const uploadToStorage = async (upload: File, kind: string) => {
+    const path = buildStoragePath(kind, upload.name);
+    const { error } = await supabaseBrowser.storage.from("HomeHeroOffers").upload(path, upload);
+    if (error) throw error;
+    return supabaseBrowser.storage.from("HomeHeroOffers").getPublicUrl(path).data.publicUrl;
+  };
 
   const onSubmit = async () => {
     if (!file) {
       alert("Please upload a file");
       return;
     }
+    if (form.type === "video" && !thumbnail) {
+      alert("Please upload a thumbnail image for the video banner");
+      return;
+    }
 
     try {
       setSaving(true);
-      const path = buildStoragePath(form.type, file.name);
-      const { error: uploadError } = await supabaseBrowser.storage
-        .from("HomeHeroOffers")
-        .upload(path, file);
-      if (uploadError) throw uploadError;
+      const mediaUrl = await uploadToStorage(file, form.type);
+      const thumbnailUrl =
+        form.type === "video" && thumbnail
+          ? await uploadToStorage(thumbnail, "thumbnail")
+          : null;
 
-      const { data } = supabaseBrowser.storage.from("HomeHeroOffers").getPublicUrl(path);
       const { error: insertError } = await supabaseBrowser.from("homeherooffers").insert({
         title: form.title || null,
         type: form.type,
-        media_url: data.publicUrl,
-        thumbnail_url: null,
+        media_url: mediaUrl,
+        thumbnail_url: thumbnailUrl,
         cta_text: null,
         cta_link: null,
         action: action && action.type !== "NONE" ? action : null,
@@ -112,6 +123,31 @@ export default function AddOfferPage() {
               <img src={URL.createObjectURL(file)} alt="Offer preview" className="w-48 rounded" />
             ) : (
               <video src={URL.createObjectURL(file)} className="w-48 rounded" controls />
+            )}
+          </div>
+        )}
+
+        {form.type === "video" && (
+          <div className="space-y-2 rounded border border-amber-200 bg-amber-50 p-3">
+            <label className="block text-sm font-medium text-slate-900">
+              Thumbnail image <span className="text-red-600">*</span>
+            </label>
+            <p className="text-xs text-slate-600">
+              Shown in the app while the video loads. Without it the banner appears black.
+              Use a still frame from the video, same aspect ratio.
+            </p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setThumbnail(e.target.files?.[0] ?? null)}
+              className="w-full rounded border border-gray-300 bg-white p-3"
+            />
+            {thumbnail && (
+              <img
+                src={URL.createObjectURL(thumbnail)}
+                alt="Thumbnail preview"
+                className="w-48 rounded"
+              />
             )}
           </div>
         )}
