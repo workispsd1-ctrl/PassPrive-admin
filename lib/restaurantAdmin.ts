@@ -1371,6 +1371,18 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
   return payload;
 }
 
+export function buildTillProviderRows(restaurantId: string, xlentEnabled: boolean) {
+  if (!xlentEnabled) return [];
+  return [
+    {
+      restaurant_id: restaurantId,
+      provider_name: "xlent",
+      external_restaurant_id: restaurantId,
+      is_enabled: true,
+    },
+  ];
+}
+
 export function buildTagRows(restaurantId: string, input: RestaurantRelationsInput) {
   const groups = [
     { type: "cuisine", values: input.cuisines || [] },

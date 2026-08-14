@@ -277,6 +277,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (relations.opening_hours) {
         tasks.push(replaceTableRows("restaurant_opening_hours", relations.opening_hours));
       }
+      if (relations.till_providers) {
+        tasks.push(replaceTableRows("restaurant_till_providers", relations.till_providers));
+      }
 
       await Promise.all(tasks);
     }
