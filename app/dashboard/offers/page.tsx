@@ -7,6 +7,14 @@ import { ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import BannerActionFields, { type BannerAction } from "../_components/BannerActionFields";
+import {
+  bannerConfigs,
+  bannerEditHref,
+  buildBannerStoragePath,
+  extractStoragePath,
+  type BannerConfig,
+  type BannerKind,
+} from "./bannerConfigs";
 
 type BannerRecord = {
   id: number;
@@ -15,20 +23,7 @@ type BannerRecord = {
   media_url: string;
   is_active: boolean;
   priority?: number;
-};
-
-type BannerKind = "homehero" | "dinein" | "store" | "wellness" | "tourist";
-
-type BannerConfig = {
-  key: BannerKind;
-  title: string;
-  description: string;
-  collectionLabel: string;
-  table: string;
-  storageBucket: string;
-  emptyLabel: string;
-  addLabel: string;
-  supportsEdit: boolean;
+  action?: BannerAction;
 };
 
 type UploadFormState = {
@@ -46,64 +41,6 @@ const initialUploadForm: UploadFormState = {
   is_active: true,
   action: null,
 };
-
-const bannerConfigs: BannerConfig[] = [
-  {
-    key: "homehero",
-    title: "Home Hero Offers",
-    description: "Top-level hero creatives shown on the main home experience.",
-    collectionLabel: "Hero offers",
-    table: "homeherooffers",
-    storageBucket: "HomeHeroOffers",
-    emptyLabel: "No home hero offers available yet.",
-    addLabel: "Add Home Hero Offer",
-    supportsEdit: true,
-  },
-  {
-    key: "dinein",
-    title: "Dine-In Home Banners",
-    description: "Promotional banners shown in the dine-in home section.",
-    collectionLabel: "Dine-in banners",
-    table: "dineinhomebanners",
-    storageBucket: "DineinHomeBanners",
-    emptyLabel: "No dine-in home banners available yet.",
-    addLabel: "Add Dine-In Banner",
-    supportsEdit: false,
-  },
-  {
-    key: "store",
-    title: "Store Home Banners",
-    description: "Promotional banners shown in the store home section.",
-    collectionLabel: "Store banners",
-    table: "storeshomebanners",
-    storageBucket: "StoresHomeBanners",
-    emptyLabel: "No store home banners available yet.",
-    addLabel: "Add Store Banner",
-    supportsEdit: false,
-  },
-  {
-    key: "wellness",
-    title: "Wellness Home Banners",
-    description: "Promotional banners shown in the wellness home section.",
-    collectionLabel: "Wellness banners",
-    table: "wellnesshomebanners",
-    storageBucket: "WellnessHomeBanners",
-    emptyLabel: "No wellness home banners available yet.",
-    addLabel: "Add Wellness Banner",
-    supportsEdit: false,
-  },
-  {
-    key: "tourist",
-    title: "Explore Home Banners",
-    description: "Promotional banners shown in the explore (tourist) home section.",
-    collectionLabel: "Explore banners",
-    table: "touristhomebanners",
-    storageBucket: "TouristHomeBanners",
-    emptyLabel: "No explore home banners available yet.",
-    addLabel: "Add Explore Banner",
-    supportsEdit: false,
-  },
-];
 
 function extractBannerList(payload: unknown): BannerRecord[] {
   if (Array.isArray(payload)) return payload;
@@ -132,18 +69,27 @@ function extractBannerList(payload: unknown): BannerRecord[] {
   return [];
 }
 
-function extractStoragePath(publicUrl: string, bucket: string): string | null {
-  if (!publicUrl) return null;
-  const objectPublicMatch = publicUrl.match(/\/object\/public\/[^/]+\/(.+)$/);
-  if (objectPublicMatch?.[1]) return objectPublicMatch[1];
-  const bucketMatch = publicUrl.match(new RegExp(`/${bucket}/(.+)$`));
-  return bucketMatch?.[1] ?? null;
-}
+const ACTION_LABELS: Record<string, string> = {
+  RESTAURANT_LIST: "Restaurant list",
+  STORE_LIST: "Store list",
+  TOURIST_PLACE_LIST: "Tourist places",
+  COLLECTION: "Collection",
+  MERCHANT: "Merchant",
+  URL: "URL",
+  PERSONALIZED: "Personalized",
+  INFORMATION: "Information sheet",
+};
 
-function buildBannerStoragePath(type: string, fileName: string) {
-  const extension = fileName.split(".").pop() || "bin";
-  const random = Math.random().toString(36).slice(2, 9);
-  return `${type}/${Date.now()}-${random}.${extension}`;
+function ActionBadge({ action }: { action?: BannerAction }) {
+  if (!action || !action.type || action.type === "NONE") {
+    return <span className="text-xs text-slate-400">No action</span>;
+  }
+
+  return (
+    <span className="inline-flex rounded-full bg-[#F2E9FB] px-3 py-1 text-xs font-medium text-[#5800AB]">
+      {ACTION_LABELS[action.type] || action.type}
+    </span>
+  );
 }
 
 function BannerPreview({ banner }: { banner: BannerRecord }) {
@@ -364,7 +310,7 @@ export default function OffersPage() {
       setLoading((current) => ({ ...current, [config.key]: true }));
       const { data, error } = await supabaseBrowser
         .from(config.table)
-        .select("id,title,type,media_url,thumbnail_url,is_active,priority,start_at,end_at,created_at,updated_at")
+        .select("id,title,type,media_url,thumbnail_url,action,is_active,priority,start_at,end_at,created_at,updated_at")
         .order("priority", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -479,8 +425,8 @@ export default function OffersPage() {
     }
   }
 
-  function handleEdit(id: number) {
-    router.push(`/dashboard/offers/${id}`);
+  function handleEdit(config: BannerConfig, id: number) {
+    router.push(bannerEditHref(config, id));
   }
 
   return (
@@ -586,7 +532,7 @@ export default function OffersPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  {config.supportsEdit ? (
+                  {config.usesDedicatedPages ? (
                     <Link
                       href="/dashboard/offers/new"
                       className="rounded-xl bg-[#5800AB] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4a0090]"
@@ -608,7 +554,7 @@ export default function OffersPage() {
                 </div>
               </div>
 
-              {formOpen && !config.supportsEdit && (
+              {formOpen && !config.usesDedicatedPages && (
                 <div className="mt-5">
                   <UploadPanel
                     config={config}
@@ -643,6 +589,7 @@ export default function OffersPage() {
                             <th className="px-4 py-3 text-left font-medium text-slate-600">Type</th>
                             <th className="px-4 py-3 text-left font-medium text-slate-600">Priority</th>
                             <th className="px-4 py-3 text-left font-medium text-slate-600">Preview</th>
+                            <th className="px-4 py-3 text-left font-medium text-slate-600">On Tap</th>
                             <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
                             <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
                           </tr>
@@ -666,6 +613,9 @@ export default function OffersPage() {
                                   <BannerPreview banner={item} />
                                 </td>
                                 <td className="px-4 py-4">
+                                  <ActionBadge action={item.action} />
+                                </td>
+                                <td className="px-4 py-4">
                                   <span
                                     className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                                       item.is_active
@@ -678,15 +628,13 @@ export default function OffersPage() {
                                 </td>
                                 <td className="px-4 py-4 text-right">
                                   <div className="flex justify-end gap-3">
-                                    {config.supportsEdit && (
-                                      <button
-                                        onClick={() => handleEdit(item.id)}
-                                        className="text-blue-600 transition hover:underline"
-                                        disabled={deleting === rowDeleteKey}
-                                      >
-                                        Edit
-                                      </button>
-                                    )}
+                                    <button
+                                      onClick={() => handleEdit(config, item.id)}
+                                      className="text-blue-600 transition hover:underline"
+                                      disabled={deleting === rowDeleteKey}
+                                    >
+                                      Edit
+                                    </button>
                                     <button
                                       onClick={() => handleDelete(config, item.id)}
                                       className="text-red-500 transition hover:underline disabled:cursor-not-allowed disabled:opacity-50"
@@ -718,12 +666,13 @@ function SkeletonTable() {
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="animate-pulse space-y-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="grid grid-cols-6 gap-4">
+          <div key={index} className="grid grid-cols-7 gap-4">
             <div className="h-4 rounded bg-slate-200" />
             <div className="h-4 rounded bg-slate-200" />
             <div className="h-4 rounded bg-slate-200" />
             <div className="h-4 rounded bg-slate-200" />
             <div className="h-16 rounded bg-slate-200" />
+            <div className="h-4 rounded bg-slate-200" />
             <div className="h-4 rounded bg-slate-200" />
           </div>
         ))}
