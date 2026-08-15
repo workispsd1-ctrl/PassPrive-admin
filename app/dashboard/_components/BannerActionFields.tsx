@@ -18,6 +18,7 @@ const ACTION_TYPES: Option[] = [
   { value: "MERCHANT", label: "Single restaurant / store" },
   { value: "URL", label: "Open a URL" },
   { value: "PERSONALIZED", label: "Personalized (ask the user's priorities)" },
+  { value: "INFORMATION", label: "Information (show a sheet, no navigation)" },
 ];
 
 const selectClass = "w-full rounded border border-gray-300 p-3 text-sm";
@@ -163,6 +164,65 @@ export default function BannerActionFields({
           </div>
         </>
       )}
+
+      {type === "INFORMATION" && (() => {
+        const points = Array.isArray(params.points) ? (params.points as unknown as string[]) : [];
+        const setPoints = (next: string[]) => onChange({ type, params: { ...params, points: next } });
+
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Heading (optional)</label>
+              <input
+                type="text"
+                placeholder="Defaults to the banner title"
+                className={inputClass}
+                value={params.title || ""}
+                onChange={e => setParam("title", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Information</label>
+              <textarea
+                rows={4}
+                placeholder="Shown as the body of the sheet when the banner is tapped."
+                className={inputClass}
+                value={params.body || ""}
+                onChange={e => setParam("body", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Bullet points (optional)</label>
+              {points.map((point, i) => (
+                <div key={i} className="mb-2 flex gap-2">
+                  <input
+                    type="text"
+                    className={inputClass}
+                    value={point}
+                    onChange={e => setPoints(points.map((v, idx) => (idx === i ? e.target.value : v)))}
+                  />
+                  <button
+                    type="button"
+                    className="rounded border border-gray-300 px-3 text-sm"
+                    onClick={() => setPoints(points.filter((_, idx) => idx !== i))}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="rounded border border-gray-300 px-3 py-2 text-sm"
+                onClick={() => setPoints([...points, ""])}
+              >
+                Add point
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {type === "URL" && (
         <div>
