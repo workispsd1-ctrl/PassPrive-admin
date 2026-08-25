@@ -32,7 +32,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${beVietnamPro.className} ${dmSans.variable} ${libreBaskerville.variable} min-h-screen bg-[#eef0fb] text-slate-900 antialiased`}>
         <Providers>{children}</Providers>
         <ToastProvider />
