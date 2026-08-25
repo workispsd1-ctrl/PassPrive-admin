@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -82,11 +82,38 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
   const navbarDescription = pathDescription[pathname] || null;
   const [seminarId, setSeminarId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const user = useSelector((s: RootState) => s.admin.user);
 
   useEffect(() => {
     const id = localStorage.getItem("seminarId");
     setSeminarId(id);
   }, []);
+
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".profile-menu-container")) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, [isProfileOpen]);
+
+  const handleLogout = async () => {
+    try {
+      await supabaseBrowser.auth.signOut();
+      window.location.href = "/sign-in";
+    } catch (error) {
+      showToast({
+        title: "Logout failed",
+        description: "Please try again.",
+        type: "error",
+      });
+    }
+  };
 
   const handleRefresh = () => {
     window.location.reload();
@@ -546,11 +573,68 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
             className="h-4 w-4 object-contain"
           />
         </button>
-        <div className="flex items-center gap-2 rounded-full border border-[#D0D5DD] bg-transparent px-2 py-[2px]">
-          <div className="h-7 w-7 rounded-full bg-[#929292]" />
-          <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
-            {roleLabel}
-          </span>
+        <div className="relative profile-menu-container flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className="flex items-center gap-2 rounded-full border border-[#D0D5DD] bg-transparent px-3 py-[4px] transition hover:bg-slate-50 cursor-pointer"
+          >
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt="Profile"
+                width={28}
+                height={28}
+                className="h-7 w-7 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="h-7 w-7 rounded-full bg-[linear-gradient(135deg,#2247FF_0%,#FF4800_100%)] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                {user?.fullName?.charAt(0)?.toUpperCase() || "A"}
+              </div>
+            )}
+            <span className="text-[14px] font-medium leading-[20px] text-[#314158]">
+              {user?.fullName || roleLabel}
+            </span>
+          </button>
+
+          {isProfileOpen && (
+            <div className="absolute right-0 top-[48px] z-50 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center gap-3">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt="Profile"
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded-full bg-[linear-gradient(135deg,#2247FF_0%,#FF4800_100%)] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                    {user?.fullName?.charAt(0)?.toUpperCase() || "A"}
+                  </div>
+                )}
+                <div className="overflow-hidden">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {user?.fullName || "Admin User"}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">
+                    {user?.email || "admin@passprive.com"}
+                  </p>
+                  <span className="inline-flex mt-1.5 items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 capitalize border border-amber-200">
+                    {user?.role || "Admin"}
+                  </span>
+                </div>
+              </div>
+              <div className="border-t my-3 border-slate-100" />
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#F85B7E] transition hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
+              >
+                <LogOut className="h-4.5 w-4.5 shrink-0" />
+                Log out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

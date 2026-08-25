@@ -500,45 +500,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </div>
         </TooltipProvider>
       </nav>
-
-      <div className="border-t border-[#FFE2D6] px-3 py-3">
-        {collapsed ? (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-full rounded-[12px] text-[#F85B7E] hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
-                onClick={handleLogout}
-              >
-                <Image
-                  src="/login.png"
-                  alt="Log out"
-                  width={18}
-                  height={18}
-                  className="h-4.5 w-4.5 object-contain brightness-0 invert-0"
-                />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Log out</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="ghost"
-            className="h-10 w-full justify-start rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] text-[#F85B7E] hover:bg-[#FFF4F7] hover:text-[#E52F5C]"
-            onClick={handleLogout}
-          >
-            <Image
-              src="/login.png"
-              alt="Log out"
-              width={18}
-              height={18}
-              className="mr-3 h-4.5 w-4.5 object-contain brightness-0"
-            />
-            <span className={sidebarLabelClass}>Log out</span>
-          </Button>
-        )}
-      </div>
     </aside>
   );
 }

@@ -290,6 +290,7 @@ export default function StoreDetailPage() {
   const [logoToDelete, setLogoToDelete] = useState(false);
   const [coverToDelete, setCoverToDelete] = useState(false);
   const [galleryToDelete, setGalleryToDelete] = useState<string[]>([]);
+  const [galleryToReplace, setGalleryToReplace] = useState<Record<string, File>>({});
 
   const headerLocation = useMemo(() => {
     if (!store) return "";
@@ -377,6 +378,7 @@ export default function StoreDetailPage() {
     setLogoToDelete(false);
     setCoverToDelete(false);
     setGalleryToDelete([]);
+    setGalleryToReplace({});
     setEditMode(false);
   };
 
@@ -398,15 +400,23 @@ export default function StoreDetailPage() {
       }
       if (galleryToDelete.length > 0) urlsToDelete.push(...galleryToDelete);
 
+      const replacementEntries = Object.entries(galleryToReplace);
+      const replacedUrls = replacementEntries.map(([url]) => url);
+      const replacementFiles = replacementEntries.map(([_, file]) => file);
+      urlsToDelete.push(...replacedUrls);
+
       if (urlsToDelete.length > 0) {
         await deleteStoreImages(urlsToDelete);
       }
 
-      const [uploadedLogoUrls, uploadedCoverUrls, uploadedGalleryUrls] = await Promise.all([
+      const [uploadedLogoUrls, uploadedCoverUrls, uploadedGalleryUrls, uploadedReplacementUrls] = await Promise.all([
         logoToAdd ? uploadStoreImages(String(id), [logoToAdd], "logo") : Promise.resolve([]),
         coverToAdd ? uploadStoreImages(String(id), [coverToAdd], "cover") : Promise.resolve([]),
         galleryToAdd.length > 0
           ? uploadStoreImages(String(id), galleryToAdd, "gallery")
+          : Promise.resolve([]),
+        replacementFiles.length > 0
+          ? uploadStoreImages(String(id), replacementFiles, "gallery")
           : Promise.resolve([]),
       ]);
 
@@ -414,10 +424,16 @@ export default function StoreDetailPage() {
       const newCoverUrl = uploadedCoverUrls[0] ?? null;
       const finalLogoUrl = logoToDelete ? newLogoUrl : newLogoUrl || store.logo_url;
       const finalCoverUrl = coverToDelete ? newCoverUrl : newCoverUrl || store.cover_image_url;
-      const finalGalleryUrls = [
-        ...(store.gallery_urls || []).filter((url: string) => !galleryToDelete.includes(url)),
-        ...uploadedGalleryUrls,
-      ];
+
+      const replacementMap: Record<string, string> = {};
+      replacedUrls.forEach((oldUrl, idx) => {
+        replacementMap[oldUrl] = uploadedReplacementUrls[idx];
+      });
+
+      const finalGalleryUrls = (store.gallery_urls || [])
+        .filter((url: string) => !galleryToDelete.includes(url))
+        .map((url: string) => replacementMap[url] || url);
+      finalGalleryUrls.push(...uploadedGalleryUrls);
 
       const tagsArray = Array.isArray(store.tags) ? store.tags : [];
       const lat = typeof store.lat === "number" && !Number.isNaN(store.lat) ? store.lat : null;
@@ -550,6 +566,7 @@ export default function StoreDetailPage() {
       setLogoToDelete(false);
       setCoverToDelete(false);
       setGalleryToDelete([]);
+      setGalleryToReplace({});
     } catch (err: unknown) {
       showToast({
         type: "error",
@@ -1377,136 +1394,64 @@ export default function StoreDetailPage() {
 
       {/* IMAGES */}
       <Section title="Images">
-        {/* Logo Image */}
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Logo Image */}
           <EditableSingleImage
             title="Logo"
-            src={logoToDelete ? null : store.logo_url}
-            onDelete={() => setLogoToDelete(true)}
+            src={logoToDelete ? null : (logoToAdd ? URL.createObjectURL(logoToAdd) : store.logo_url)}
+            onDelete={() => {
+              setLogoToDelete(true);
+              setLogoToAdd(null);
+            }}
+            onReplace={(file) => {
+              setLogoToAdd(file);
+              setLogoToDelete(false);
+            }}
             disabled={!editMode}
           />
 
-          {editMode && (
-            <div className="space-y-2">
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">{logoToDelete ? 'Replace' : 'Change'} Logo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setLogoToAdd(file);
-                      setLogoToDelete(false); // Clear delete flag when adding new
-                    }
-                    e.target.value = ""; // Reset input
-                  }}
-                  className="mt-1 block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-gray-100 file:text-gray-700
-                    hover:file:bg-gray-200
-                    cursor-pointer"
-                />
-              </label>
-
-              {logoToAdd && (
-                <SingleFilePreview
-                  file={logoToAdd}
-                  onRemove={() => setLogoToAdd(null)}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Cover Image */}
-        <div className="space-y-3 mt-6">
+          {/* Cover Image */}
           <EditableSingleImage
             title="Cover Image"
-            src={coverToDelete ? null : store.cover_image_url}
-            onDelete={() => setCoverToDelete(true)}
+            src={coverToDelete ? null : (coverToAdd ? URL.createObjectURL(coverToAdd) : store.cover_image_url)}
+            onDelete={() => {
+              setCoverToDelete(true);
+              setCoverToAdd(null);
+            }}
+            onReplace={(file) => {
+              setCoverToAdd(file);
+              setCoverToDelete(false);
+            }}
             disabled={!editMode}
           />
-
-          {editMode && (
-            <div className="space-y-2">
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">{coverToDelete ? 'Replace' : 'Change'} Cover</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setCoverToAdd(file);
-                      setCoverToDelete(false); // Clear delete flag when adding new
-                    }
-                    e.target.value = ""; // Reset input
-                  }}
-                  className="mt-1 block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-gray-100 file:text-gray-700
-                    hover:file:bg-gray-200
-                    cursor-pointer"
-                />
-              </label>
-
-              {coverToAdd && (
-                <SingleFilePreview
-                  file={coverToAdd}
-                  onRemove={() => setCoverToAdd(null)}
-                />
-              )}
-            </div>
-          )}
         </div>
 
         {/* Gallery Images */}
-        <div className="space-y-3 mt-6">
+        <div className="mt-8 border-t border-slate-100 pt-6">
           <EditableImageGrid
             title="Gallery Images"
             images={(store.gallery_urls || []).filter(
               (url: string) => !galleryToDelete.includes(url)
             )}
-            onDelete={(url) => setGalleryToDelete([...galleryToDelete, url])}
+            galleryToReplace={galleryToReplace}
+            onReplace={(url, file) =>
+              setGalleryToReplace({ ...galleryToReplace, [url]: file })
+            }
+            onDelete={(url) => {
+              setGalleryToDelete([...galleryToDelete, url]);
+              if (galleryToReplace[url]) {
+                const next = { ...galleryToReplace };
+                delete next[url];
+                setGalleryToReplace(next);
+              }
+            }}
+            galleryToAdd={galleryToAdd}
+            onAdd={(files) => setGalleryToAdd([...galleryToAdd, ...files])}
+            onRemoveAdded={(idx) =>
+              setGalleryToAdd(galleryToAdd.filter((_, i) => i !== idx))
+            }
             disabled={!editMode}
           />
-
-          {editMode && (
-            <div className="space-y-2">
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Add Gallery Images</span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    setGalleryToAdd([...galleryToAdd, ...files]);
-                    e.target.value = ""; // Reset input
-                  }}
-                  className="mt-1 block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-gray-100 file:text-gray-700
-                    hover:file:bg-gray-200
-                    cursor-pointer"
-                />
-              </label>
-
-              <FilePreviewGrid
-                files={galleryToAdd}
-                onRemove={(idx) =>
-                  setGalleryToAdd(galleryToAdd.filter((_, i) => i !== idx))
-                }
-              />
-            </div>
-          )}
         </div>
       </Section>
 
@@ -1579,106 +1524,72 @@ const ReadOnly = ({ label, value }: { label: string; value: unknown }) => (
 /* ---------------- IMAGE COMPONENTS ---------------- */
 
 /**
- * Editable Single Image - shows one image with delete button
+ * Editable Single Image - shows one image with overlay edit and delete actions
  */
 const EditableSingleImage = ({
   title,
   src,
   onDelete,
+  onReplace,
   disabled,
 }: {
   title: string;
   src: string | null;
   onDelete: () => void;
+  onReplace: (file: File) => void;
   disabled: boolean;
 }) => {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium">{title}</h3>
-      {src ? (
-        <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
-          <img src={src} className="w-full h-full object-cover" alt={title} />
-          {!disabled && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-              aria-label="Delete image"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-      ) : (
-        <p className="text-sm text-gray-400">No image</p>
-      )}
-    </div>
-  );
-};
-
-/**
- * Single File Preview - shows preview of newly selected file with remove button
- */
-const SingleFilePreview = ({
-  file,
-  onRemove,
-}: {
-  file: File;
-  onRemove: () => void;
-}) => (
-  <div className="relative w-full max-w-sm h-48 rounded-md overflow-hidden border border-gray-300">
-    <img
-      src={URL.createObjectURL(file)}
-      alt="Preview"
-      className="w-full h-full object-cover"
-    />
-    <button
-      type="button"
-      onClick={onRemove}
-      className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-      aria-label="Remove file"
-    >
-      <X size={14} />
-    </button>
-  </div>
-);
-
-/**
- * Editable Image Grid - shows existing images with delete buttons
- */
-const EditableImageGrid = ({
-  title,
-  images,
-  onDelete,
-  disabled,
-}: {
-  title: string;
-  images: string[];
-  onDelete: (url: string) => void;
-  disabled: boolean;
-}) => {
-  return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <div className="grid grid-cols-4 gap-3">
-        {images?.length ? (
-          images.map((src: string, i: number) => (
-            <div key={i} className="relative h-32 rounded-md overflow-hidden border">
-              <img src={src} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
-              {!disabled && (
+      <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+      <div className="relative w-full max-w-sm h-48 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center group shadow-sm">
+        {src ? (
+          <>
+            <img src={src} className="w-full h-full object-cover" alt={title} />
+            {!disabled && (
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-2">
+                <label className="cursor-pointer bg-white text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1 transition">
+                  Edit
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) onReplace(file);
+                      e.target.value = "";
+                    }}
+                    className="hidden"
+                  />
+                </label>
                 <button
                   type="button"
-                  onClick={() => onDelete(src)}
-                  className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-                  aria-label="Delete image"
+                  onClick={onDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition"
                 >
-                  <X size={14} />
+                  Delete
                 </button>
-              )}
-            </div>
-          ))
+              </div>
+            )}
+          </>
         ) : (
-          <p className="text-sm text-gray-400">No images</p>
+          <div className="flex flex-col items-center justify-center p-4">
+            <span className="text-sm text-gray-400">No image uploaded</span>
+            {!disabled && (
+              <label className="mt-3 cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition">
+                Upload Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onReplace(file);
+                    e.target.value = "";
+                  }}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -1686,36 +1597,112 @@ const EditableImageGrid = ({
 };
 
 /**
- * File Preview Grid - shows newly selected files with remove buttons
+ * Editable Image Grid - shows gallery images with inline edit, delete, and add card
  */
-const FilePreviewGrid = ({
-  files,
-  onRemove,
+const EditableImageGrid = ({
+  title,
+  images,
+  galleryToReplace,
+  onReplace,
+  onDelete,
+  galleryToAdd,
+  onAdd,
+  onRemoveAdded,
+  disabled,
 }: {
-  files: File[];
-  onRemove: (index: number) => void;
+  title: string;
+  images: string[];
+  galleryToReplace: Record<string, File>;
+  onReplace: (url: string, file: File) => void;
+  onDelete: (url: string) => void;
+  galleryToAdd: File[];
+  onAdd: (files: File[]) => void;
+  onRemoveAdded: (index: number) => void;
+  disabled: boolean;
 }) => {
-  if (files.length === 0) return null;
-
   return (
-    <div className="grid grid-cols-4 gap-3 mt-3">
-      {files.map((file, index) => (
-        <div key={index} className="relative h-32 rounded-md overflow-hidden border border-gray-300">
-          <img
-            src={URL.createObjectURL(file)}
-            alt={`Preview ${index + 1}`}
-            className="w-full h-full object-cover"
-          />
-          <button
-            type="button"
-            onClick={() => onRemove(index)}
-            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-            aria-label="Remove file"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ))}
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Render existing images */}
+        {images.map((src: string, i: number) => {
+          const replacementFile = galleryToReplace[src];
+          const displaySrc = replacementFile ? URL.createObjectURL(replacementFile) : src;
+
+          return (
+            <div key={src} className="relative h-32 rounded-xl overflow-hidden border border-slate-200 group bg-slate-50 shadow-sm">
+              <img src={displaySrc} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
+              {!disabled && (
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1.5">
+                  <label className="cursor-pointer bg-white text-slate-800 hover:bg-slate-100 px-2.5 py-1 rounded-lg text-[11px] font-semibold shadow-sm transition">
+                    Edit
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) onReplace(src, file);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(src)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold shadow-sm transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Render newly added images */}
+        {galleryToAdd.map((file, idx) => (
+          <div key={idx} className="relative h-32 rounded-xl overflow-hidden border border-slate-200 group bg-slate-50 shadow-sm">
+            <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt={`New upload ${idx + 1}`} />
+            {!disabled && (
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => onRemoveAdded(idx)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold shadow-sm transition"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Render Add Card beside the gallery grid */}
+        {!disabled && (
+          <label className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50/50 transition duration-150 group">
+            <svg className="w-6 h-6 text-slate-400 group-hover:text-slate-500 transition-colors duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span className="mt-1 text-xs text-slate-500 font-medium group-hover:text-slate-600 transition-colors duration-150">Add Picture</span>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length) onAdd(files);
+                e.target.value = "";
+              }}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+
+      {images.length === 0 && galleryToAdd.length === 0 && disabled && (
+        <p className="text-sm text-slate-400 italic">No gallery pictures uploaded.</p>
+      )}
     </div>
   );
 };

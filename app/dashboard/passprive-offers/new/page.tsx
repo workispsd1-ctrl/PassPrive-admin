@@ -19,10 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/hooks/useToast";
 import { getTokenClient } from "@/lib/getTokenClient";
 
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:8000";
+const backendUrl = "";
 
 const OFFER_BASE_PATH = "/api/passprive-offers";
 

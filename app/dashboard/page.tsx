@@ -337,58 +337,6 @@ export default function AdminDashboard() {
         <DashboardSkeleton />
       ) : (
         <div className="space-y-4">
-          <div className="flex h-14 items-center justify-between">
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={handleToggleSidebar}
-                aria-label="Toggle sidebar"
-                className="mr-2 rounded-md p-1 text-[#5b6473] transition hover:bg-white/70"
-              >
-                {sidebarOpen ? (
-                  <ChevronLeft className="h-5 w-5" />
-                ) : (
-                  <ChevronRight className="h-5 w-5" />
-                )}
-              </button>
-              <h1 className="text-[22px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">Dashboard - Superadmin</h1>
-            </div>
-            <div className="flex items-center gap-3 text-[#1f2a37]">
-              <button
-                type="button"
-                className="rounded-md p-1.5 transition hover:bg-white/70"
-                aria-label="Download"
-              >
-                <Image
-                  src="/download.png"
-                  alt="Download"
-                  width={16}
-                  height={16}
-                  className="h-4 w-4 object-contain"
-                />
-              </button>
-              <button
-                type="button"
-                className="rounded-md p-1.5 transition hover:bg-white/70"
-                aria-label="Refresh"
-              >
-                <Image
-                  src="/refresh.png"
-                  alt="Refresh"
-                  width={16}
-                  height={16}
-                  className="h-4 w-4 object-contain"
-                />
-              </button>
-              <div className="flex items-center gap-2 rounded-full bg-white/70 px-2 py-[2px]">
-                <div className="h-7 w-7 rounded-full bg-[#929292]" />
-                <span className="text-[14px] font-normal leading-[20px] text-[#314158]">
-                  Super Admin
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* KPIs */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KPI

@@ -25,10 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/hooks/useToast";
 import { getTokenClient } from "@/lib/getTokenClient";
 
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://localhost:8000";
+const backendUrl = "";
 
 const OFFER_BASE_PATH = "/api/passprive-offers";
 const NESTED_DETAIL_KEYS = new Set([
@@ -271,7 +268,12 @@ export default function PasspriveOffersPage() {
 
 function PasspriveOffersContent() {
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
   const [offers, setOffers] = useState<JsonRecord[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [subscriptions, setSubscriptions] = useState<JsonRecord[]>([]);
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
   const [selectedOffer, setSelectedOffer] = useState<JsonRecord | null>(null);
@@ -360,7 +362,8 @@ function PasspriveOffersContent() {
         redemptionsResponse,
       ] = await Promise.all([
         apiGet(`${backendUrl}${OFFER_BASE_PATH}/${offerId}`),
-        apiGet(`${backendUrl}${OFFER_BASE_PATH}/${offerId}/store-targets`),
+        // Commented out store-targets API fetch call
+        Promise.resolve({ data: [] }),
         apiGet(`${backendUrl}${OFFER_BASE_PATH}/${offerId}/plan-targets`),
         apiGet(`${backendUrl}${OFFER_BASE_PATH}/${offerId}/conditions`),
         apiGet(`${backendUrl}${OFFER_BASE_PATH}/${offerId}/usage-limit`),
@@ -430,6 +433,8 @@ function PasspriveOffersContent() {
   }
 
   async function loadSubscriptions() {
+    // Commented out non-existent subscriptions API fetch
+    /*
     try {
       setLoadingSubscriptions(true);
       const response = await apiGet(`${backendUrl}${OFFER_BASE_PATH}/store-subscriptions`);
@@ -444,6 +449,9 @@ function PasspriveOffersContent() {
     } finally {
       setLoadingSubscriptions(false);
     }
+    */
+    setSubscriptions([]);
+    setLoadingSubscriptions(false);
   }
 
   useEffect(() => {
@@ -454,7 +462,7 @@ function PasspriveOffersContent() {
   }, [showActiveOnly, searchParams]);
 
   useEffect(() => {
-    void loadSubscriptions();
+    // void loadSubscriptions();
   }, []);
 
   useEffect(() => {
@@ -582,6 +590,10 @@ function PasspriveOffersContent() {
 
   const selectedOfferLabel = selectedOffer ? getLabel(selectedOffer) : "Select an offer";
   const activeCount = offers.filter((offer) => inferStatus(offer).toLowerCase() === "active").length;
+
+  if (!mounted) {
+    return <PasspriveOffersFallback />;
+  }
 
   return (
     <div className="min-h-full bg-[linear-gradient(135deg,_#FFF7ED_0%,_#EFF6FF_100%)] p-6">

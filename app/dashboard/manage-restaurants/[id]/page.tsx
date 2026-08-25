@@ -190,6 +190,9 @@ export default function RestaurantDetailPage() {
   const [foodImagesToDelete, setFoodImagesToDelete] = useState<string[]>([]);
   const [ambienceImagesToDelete, setAmbienceImagesToDelete] = useState<string[]>([]);
   const [menuImagesToDelete, setMenuImagesToDelete] = useState<string[]>([]);
+  const [foodImagesToReplace, setFoodImagesToReplace] = useState<Record<string, File>>({});
+  const [ambienceImagesToReplace, setAmbienceImagesToReplace] = useState<Record<string, File>>({});
+  const [menuImagesToReplace, setMenuImagesToReplace] = useState<Record<string, File>>({});
 
   useEffect(() => {
     const loadRestaurant = async () => {
@@ -296,6 +299,9 @@ export default function RestaurantDetailPage() {
     setFoodImagesToDelete([]);
     setAmbienceImagesToDelete([]);
     setMenuImagesToDelete([]);
+    setFoodImagesToReplace({});
+    setAmbienceImagesToReplace({});
+    setMenuImagesToReplace({});
     setEditMode(false);
   };
 
@@ -339,21 +345,70 @@ export default function RestaurantDetailPage() {
     setSaving(true);
 
     try {
+      const foodReplacementEntries = Object.entries(foodImagesToReplace);
+      const foodReplacedUrls = foodReplacementEntries.map(([url]) => url);
+      const foodReplacementFiles = foodReplacementEntries.map(([_, file]) => file);
+
+      const ambienceReplacementEntries = Object.entries(ambienceImagesToReplace);
+      const ambienceReplacedUrls = ambienceReplacementEntries.map(([url]) => url);
+      const ambienceReplacementFiles = ambienceReplacementEntries.map(([_, file]) => file);
+
+      const menuReplacementEntries = Object.entries(menuImagesToReplace);
+      const menuReplacedUrls = menuReplacementEntries.map(([url]) => url);
+      const menuReplacementFiles = menuReplacementEntries.map(([_, file]) => file);
+
       await deleteRestaurantImages([
         ...foodImagesToDelete,
         ...ambienceImagesToDelete,
         ...menuImagesToDelete,
+        ...foodReplacedUrls,
+        ...ambienceReplacedUrls,
+        ...menuReplacedUrls,
       ]);
 
-      const [newFoodUrls, newAmbienceUrls, newMenuUrls] = await Promise.all([
+      const [
+        newFoodUrls,
+        newAmbienceUrls,
+        newMenuUrls,
+        replacementFoodUrls,
+        replacementAmbienceUrls,
+        replacementMenuUrls,
+      ] = await Promise.all([
         uploadRestaurantImages(restaurant.id, foodImagesToAdd, "food"),
         uploadRestaurantImages(restaurant.id, ambienceImagesToAdd, "ambience"),
         uploadRestaurantImages(restaurant.id, menuImagesToAdd, "menu"),
+        foodReplacementFiles.length > 0 ? uploadRestaurantImages(restaurant.id, foodReplacementFiles, "food") : Promise.resolve([]),
+        ambienceReplacementFiles.length > 0 ? uploadRestaurantImages(restaurant.id, ambienceReplacementFiles, "ambience") : Promise.resolve([]),
+        menuReplacementFiles.length > 0 ? uploadRestaurantImages(restaurant.id, menuReplacementFiles, "menu") : Promise.resolve([]),
       ]);
 
-      const finalFoodImages = restaurant.food_images.filter((url) => !foodImagesToDelete.includes(url)).concat(newFoodUrls);
-      const finalAmbienceImages = restaurant.ambience_images.filter((url) => !ambienceImagesToDelete.includes(url)).concat(newAmbienceUrls);
-      const finalMenuImages = restaurant.menu.filter((url) => !menuImagesToDelete.includes(url)).concat(newMenuUrls);
+      const foodReplacementMap: Record<string, string> = {};
+      foodReplacedUrls.forEach((oldUrl, idx) => {
+        foodReplacementMap[oldUrl] = replacementFoodUrls[idx];
+      });
+      const finalFoodImages = restaurant.food_images
+        .filter((url) => !foodImagesToDelete.includes(url))
+        .map((url) => foodReplacementMap[url] || url)
+        .concat(newFoodUrls);
+
+      const ambienceReplacementMap: Record<string, string> = {};
+      ambienceReplacedUrls.forEach((oldUrl, idx) => {
+        ambienceReplacementMap[oldUrl] = replacementAmbienceUrls[idx];
+      });
+      const finalAmbienceImages = restaurant.ambience_images
+        .filter((url) => !ambienceImagesToDelete.includes(url))
+        .map((url) => ambienceReplacementMap[url] || url)
+        .concat(newAmbienceUrls);
+
+      const menuReplacementMap: Record<string, string> = {};
+      menuReplacedUrls.forEach((oldUrl, idx) => {
+        menuReplacementMap[oldUrl] = replacementMenuUrls[idx];
+      });
+      const finalMenuImages = restaurant.menu
+        .filter((url) => !menuImagesToDelete.includes(url))
+        .map((url) => menuReplacementMap[url] || url)
+        .concat(newMenuUrls);
+
       const coverImage = restaurant.cover_image || finalFoodImages[0] || finalAmbienceImages[0] || finalMenuImages[0] || null;
 
       const basePayload = buildRestaurantBasePayload({
@@ -427,6 +482,9 @@ export default function RestaurantDetailPage() {
       setFoodImagesToDelete([]);
       setAmbienceImagesToDelete([]);
       setMenuImagesToDelete([]);
+      setFoodImagesToReplace({});
+      setAmbienceImagesToReplace({});
+      setMenuImagesToReplace({});
       setEditMode(false);
       showToast({ type: "success", title: "Restaurant updated" });
     } catch (error: unknown) {
@@ -973,9 +1031,68 @@ export default function RestaurantDetailPage() {
       </Section>
 
       <Section title="Media">
-        <EditableImageSection title="Food Images" images={restaurant.food_images.filter((url) => !foodImagesToDelete.includes(url))} files={foodImagesToAdd} setFiles={setFoodImagesToAdd} onDelete={(url) => setFoodImagesToDelete((previous) => [...previous, url])} disabled={!editMode} coverImage={restaurant.cover_image} onSetCover={(url) => setRestaurant({ ...restaurant, cover_image: url })} />
-        <EditableImageSection title="Ambience Images" images={restaurant.ambience_images.filter((url) => !ambienceImagesToDelete.includes(url))} files={ambienceImagesToAdd} setFiles={setAmbienceImagesToAdd} onDelete={(url) => setAmbienceImagesToDelete((previous) => [...previous, url])} disabled={!editMode} coverImage={restaurant.cover_image} onSetCover={(url) => setRestaurant({ ...restaurant, cover_image: url })} />
-        <EditableImageSection title="Menu Images" images={restaurant.menu.filter((url) => !menuImagesToDelete.includes(url))} files={menuImagesToAdd} setFiles={setMenuImagesToAdd} onDelete={(url) => setMenuImagesToDelete((previous) => [...previous, url])} disabled={!editMode} />
+        <EditableImageSection
+          title="Food Images"
+          images={restaurant.food_images.filter((url) => !foodImagesToDelete.includes(url))}
+          galleryToReplace={foodImagesToReplace}
+          onReplace={(url, file) => setFoodImagesToReplace({ ...foodImagesToReplace, [url]: file })}
+          files={foodImagesToAdd}
+          onAdd={(newFiles) => setFoodImagesToAdd([...foodImagesToAdd, ...newFiles])}
+          onRemoveAdded={(idx) => setFoodImagesToAdd(foodImagesToAdd.filter((_, i) => i !== idx))}
+          onDelete={(url) => {
+            setFoodImagesToDelete((previous) => [...previous, url]);
+            if (foodImagesToReplace[url]) {
+              const next = { ...foodImagesToReplace };
+              delete next[url];
+              setFoodImagesToReplace(next);
+            }
+          }}
+          disabled={!editMode}
+          coverImage={restaurant.cover_image}
+          onSetCover={(url) => setRestaurant({ ...restaurant, cover_image: url })}
+        />
+        <div className="mt-6 pt-6 border-t border-slate-100">
+          <EditableImageSection
+            title="Ambience Images"
+            images={restaurant.ambience_images.filter((url) => !ambienceImagesToDelete.includes(url))}
+            galleryToReplace={ambienceImagesToReplace}
+            onReplace={(url, file) => setAmbienceImagesToReplace({ ...ambienceImagesToReplace, [url]: file })}
+            files={ambienceImagesToAdd}
+            onAdd={(newFiles) => setAmbienceImagesToAdd([...ambienceImagesToAdd, ...newFiles])}
+            onRemoveAdded={(idx) => setAmbienceImagesToAdd(ambienceImagesToAdd.filter((_, i) => i !== idx))}
+            onDelete={(url) => {
+              setAmbienceImagesToDelete((previous) => [...previous, url]);
+              if (ambienceImagesToReplace[url]) {
+                const next = { ...ambienceImagesToReplace };
+                delete next[url];
+                setAmbienceImagesToReplace(next);
+              }
+            }}
+            disabled={!editMode}
+            coverImage={restaurant.cover_image}
+            onSetCover={(url) => setRestaurant({ ...restaurant, cover_image: url })}
+          />
+        </div>
+        <div className="mt-6 pt-6 border-t border-slate-100">
+          <EditableImageSection
+            title="Menu Images"
+            images={restaurant.menu.filter((url) => !menuImagesToDelete.includes(url))}
+            galleryToReplace={menuImagesToReplace}
+            onReplace={(url, file) => setMenuImagesToReplace({ ...menuImagesToReplace, [url]: file })}
+            files={menuImagesToAdd}
+            onAdd={(newFiles) => setMenuImagesToAdd([...menuImagesToAdd, ...newFiles])}
+            onRemoveAdded={(idx) => setMenuImagesToAdd(menuImagesToAdd.filter((_, i) => i !== idx))}
+            onDelete={(url) => {
+              setMenuImagesToDelete((previous) => [...previous, url]);
+              if (menuImagesToReplace[url]) {
+                const next = { ...menuImagesToReplace };
+                delete next[url];
+                setMenuImagesToReplace(next);
+              }
+            }}
+            disabled={!editMode}
+          />
+        </div>
       </Section>
 
       <Section title="Offers">
@@ -1117,66 +1234,127 @@ function ToggleField({
 function EditableImageSection({
   title,
   images,
-  files,
-  setFiles,
+  galleryToReplace,
+  onReplace,
   onDelete,
+  files,
+  onAdd,
+  onRemoveAdded,
   disabled,
   coverImage,
   onSetCover,
 }: {
   title: string;
   images: string[];
-  files: File[];
-  setFiles: Dispatch<SetStateAction<File[]>>;
+  galleryToReplace: Record<string, File>;
+  onReplace: (url: string, file: File) => void;
   onDelete: (url: string) => void;
+  files: File[];
+  onAdd: (files: File[]) => void;
+  onRemoveAdded: (index: number) => void;
   disabled: boolean;
   coverImage?: string | null;
   onSetCover?: (url: string) => void;
 }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <div className="grid grid-cols-4 gap-3">
-        {images.length ? (
-          images.map((src, index) => {
-            const isCover = !!onSetCover && src === coverImage;
-            return (
-            <div key={`${src}-${index}`} className={`relative h-32 rounded-md overflow-hidden border ${isCover ? "ring-2 ring-orange-500" : ""}`}>
-              <img src={src} className="w-full h-full object-cover" alt={`${title} ${index + 1}`} />
+      <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Render existing images */}
+        {images.map((src: string, i: number) => {
+          const replacementFile = galleryToReplace[src];
+          const displaySrc = replacementFile ? URL.createObjectURL(replacementFile) : src;
+          const isCover = !!onSetCover && src === coverImage;
+
+          return (
+            <div key={src} className={`relative h-32 rounded-xl overflow-hidden border bg-slate-50 shadow-sm group ${isCover ? "ring-2 ring-orange-500" : "border-slate-200"}`}>
+              <img src={displaySrc} className="w-full h-full object-cover" alt={`${title} ${i + 1}`} />
+              
               {isCover && (
                 <span className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-semibold rounded px-1.5 py-0.5">Cover</span>
               )}
-              {!disabled && onSetCover && !isCover && (
-                <button type="button" onClick={() => onSetCover(src)} className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] rounded px-1.5 py-0.5 hover:bg-black">
-                  Set as cover
-                </button>
-              )}
+
               {!disabled && (
-                <button type="button" onClick={() => onDelete(src)} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black">
-                  <X size={14} />
-                </button>
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex flex-col items-center justify-center gap-1.5 p-2">
+                  <div className="flex gap-1.5">
+                    <label className="cursor-pointer bg-white text-slate-800 hover:bg-slate-100 px-2 py-1 rounded-lg text-[10px] font-semibold shadow-sm transition">
+                      Edit
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) onReplace(src, file);
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(src)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg text-[10px] font-semibold shadow-sm transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  {onSetCover && !isCover && (
+                    <button
+                      type="button"
+                      onClick={() => onSetCover(src)}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded-lg text-[10px] font-semibold shadow-sm transition w-full text-center"
+                    >
+                      Set as Cover
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-            );
-          })
-        ) : (
-          <p className="text-sm text-gray-400">No images</p>
-        )}
-      </div>
-      {!disabled && (
-        <>
-          <Input type="file" multiple accept="image/*" onChange={(e) => setFiles((previous) => [...previous, ...Array.from(e.target.files || [])])} />
-          <div className="grid grid-cols-4 gap-3 mt-3">
-            {files.map((file, index) => (
-              <div key={`${file.name}-${index}`} className="relative h-32 rounded-md overflow-hidden border border-gray-300">
-                <img src={URL.createObjectURL(file)} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
-                <button type="button" onClick={() => setFiles((previous) => previous.filter((_, fileIndex) => fileIndex !== index))} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black">
-                  <X size={14} />
+          );
+        })}
+
+        {/* Render newly added images */}
+        {files.map((file, idx) => (
+          <div key={idx} className="relative h-32 rounded-xl overflow-hidden border border-slate-200 group bg-slate-50 shadow-sm">
+            <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt={`New upload ${idx + 1}`} />
+            {!disabled && (
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => onRemoveAdded(idx)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold shadow-sm transition"
+                >
+                  Remove
                 </button>
               </div>
-            ))}
+            )}
           </div>
-        </>
+        ))}
+
+        {/* Render Add Card beside the gallery grid */}
+        {!disabled && (
+          <label className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50/50 transition duration-150 group">
+            <svg className="w-6 h-6 text-slate-400 group-hover:text-slate-500 transition-colors duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span className="mt-1 text-xs text-slate-500 font-medium group-hover:text-slate-600 transition-colors duration-150">Add Picture</span>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => {
+                const filesToAdd = Array.from(e.target.files || []);
+                if (filesToAdd.length) onAdd(filesToAdd);
+                e.target.value = "";
+              }}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+
+      {images.length === 0 && files.length === 0 && disabled && (
+        <p className="text-sm text-slate-400 italic">No images uploaded.</p>
       )}
     </div>
   );
