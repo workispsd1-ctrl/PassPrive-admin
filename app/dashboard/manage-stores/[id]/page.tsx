@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, X, ChevronDown, ChevronUp } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
@@ -603,7 +603,7 @@ export default function StoreDetailPage() {
       </div>
 
       {/* SYSTEM */}
-      <Section title="System">
+      <Section title="System" defaultOpen={true}>
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-4">
             <span>Active</span>
@@ -809,7 +809,7 @@ export default function StoreDetailPage() {
       </Section>
 
       {/* BASIC INFO */}
-      <Section title="Basic Information">
+      <Section title="Basic Information" defaultOpen={true}>
         <Grid>
           <Field label="Name">
             <Input
@@ -1529,12 +1529,34 @@ export default function StoreDetailPage() {
 
 /* ---------------- HELPERS ---------------- */
 
-const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className="space-y-4">
-    <h2 className="text-lg font-semibold">{title}</h2>
-    {children}
-  </section>
-);
+const Section = ({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <section className="space-y-4 border border-gray-100 rounded-xl bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] transition-all duration-200">
+      <div
+        className="flex justify-between items-center cursor-pointer select-none group"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h2 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+          {title}
+        </h2>
+        <div className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+          {isOpen ? (
+            <ChevronUp className="h-5 w-5 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-500" />
+          )}
+        </div>
+      </div>
+      {isOpen && (
+        <div className="pt-4 border-t border-gray-100">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+};
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1">

@@ -1049,19 +1049,7 @@ async function backfillPrimaryFromMerge(
 // Fetches both DBs, merges, backfills primary if secondary had extra data.
 // ---------------------------------------------------------------------------
 export async function fetchRestaurantDetailMerged(restaurantId: string): Promise<RestaurantFlatRecord> {
-  const [primary, secondary] = await Promise.all([
-    fetchRestaurantDetail(restaurantId),
-    fetchRestaurantDetailFromSecond(restaurantId),
-  ]);
-
-  if (!secondary) return primary; // second DB unavailable or no record
-
-  const merged = mergeRestaurantRecords(primary, secondary);
-
-  // Fire-and-forget: backfill primary if secondary contributed extra data
-  void backfillPrimaryFromMerge(restaurantId, merged, primary);
-
-  return merged;
+  return fetchRestaurantDetail(restaurantId);
 }
 
 export async function fetchRestaurantsPage(params: {

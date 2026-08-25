@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useSelector } from "react-redux";
 
 import { RootState } from "@/store/store";
@@ -362,9 +362,6 @@ export default function RestaurantDetailPage() {
         booking_terms: bookingTermsToPayload(bookingTermsToTextarea(restaurant.booking_terms)),
       });
 
-      // Update both DBs: primary database via client update, and secondary database via API PATCH.
-      await updateRestaurantBothDBs(restaurant.id, basePayload);
-
       const relationsPayload = {
         cuisines: restaurant.cuisines,
         facilities: restaurant.facilities,
@@ -378,7 +375,7 @@ export default function RestaurantDetailPage() {
         subscription: restaurant.subscription,
       };
 
-      // Call API PATCH to update primary DB relation tables via service role (bypasses RLS)
+      // Call API PATCH to update primary DB in a single request (bypasses RLS via service role)
       try {
         const token = await getTokenClient();
         if (token) {
@@ -396,7 +393,7 @@ export default function RestaurantDetailPage() {
             till_providers: buildTillProviderRows(restaurant.id, xlentEnabled),
           };
 
-          // 1. Update primary database relations using the server-side API (bypasses RLS on primary)
+          // Update primary database (both base fields and relation tables) in a single request
           const primaryRes = await fetch(`/api/restaurants/${restaurant.id}`, {
             method: "PATCH",
             headers: {
@@ -404,27 +401,15 @@ export default function RestaurantDetailPage() {
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
+              basePayload,
               relations: primaryRelationsRows,
               syncPrimaryOnly: true,
             }),
           });
           if (!primaryRes.ok) {
             const errData = await primaryRes.json().catch(() => ({}));
-            throw new Error(errData.error || errData.errors?.join(" | ") || "Failed to update primary relations");
+            throw new Error(errData.error || errData.errors?.join(" | ") || "Failed to update restaurant details");
           }
-
-          // 2. Update secondary database relations & basePayload using the server-side API (bypasses RLS on secondary)
-          await fetch(`/api/restaurants/${restaurant.id}`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              basePayload,
-              relations: relationsRows,
-            }),
-          });
         }
       } catch (patchErr) {
         console.error("Failed to sync updates to databases", patchErr);
@@ -574,12 +559,9 @@ export default function RestaurantDetailPage() {
         on_boarded: true,
       };
 
-      // Update base primary DB
-      await updateRestaurantBothDBs(restaurant.id, credsPayload);
-
-      // Sync base to second DB
+      // Update primary database via API (bypasses RLS)
       try {
-        await fetch(`/api/restaurants/${restaurant.id}`, {
+        const primaryRes = await fetch(`/api/restaurants/${restaurant.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -587,10 +569,15 @@ export default function RestaurantDetailPage() {
           },
           body: JSON.stringify({
             basePayload: credsPayload,
+            syncPrimaryOnly: true,
           }),
         });
+        if (!primaryRes.ok) {
+          throw new Error("Failed to update credentials status");
+        }
       } catch (patchErr) {
-        console.error("Failed to sync credentials to second database", patchErr);
+        console.error("Failed to update credentials status on database", patchErr);
+        throw patchErr;
       }
 
 
@@ -645,7 +632,7 @@ export default function RestaurantDetailPage() {
         )}
       </div>
 
-      <Section title="System">
+      <Section title="System" defaultOpen={true}>
         <Grid>
           <ToggleField label="Active" checked={restaurant.is_active} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_active: value })} />
           <ToggleField label="Onboarded" checked={restaurant.on_boarded} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, on_boarded: value })} />
@@ -712,7 +699,7 @@ export default function RestaurantDetailPage() {
         )}
       </Section>
 
-      <Section title="Basic Information">
+      <Section title="Basic Information" defaultOpen={true}>
         <Grid>
           <Field label="Name">
             <Input className={inputClass} disabled={!editMode} value={restaurant.name} onChange={(e) => setRestaurant({ ...restaurant, name: e.target.value })} />
@@ -1056,19 +1043,39 @@ export default function RestaurantDetailPage() {
         </Grid>
       </Section>
 
-      <Section title="Reviews (Read Only)">
-        <Textarea className={inputClass} readOnly value={restaurant.reviews.length ? JSON.stringify(restaurant.reviews, null, 2) : ""} placeholder="No reviews" />
-      </Section>
+
     </div>
   );
 }
 
-const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className="space-y-4">
-    <h2 className="text-lg font-semibold">{title}</h2>
-    {children}
-  </section>
-);
+const Section = ({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <section className="space-y-4 border border-gray-100 rounded-xl bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] transition-all duration-200">
+      <div
+        className="flex justify-between items-center cursor-pointer select-none group"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h2 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+          {title}
+        </h2>
+        <div className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+          {isOpen ? (
+            <ChevronUp className="h-5 w-5 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-500" />
+          )}
+        </div>
+      </div>
+      {isOpen && (
+        <div className="pt-4 border-t border-gray-100">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+};
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1">
