@@ -97,7 +97,7 @@ export default function AdminPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const [newSem, setNewSem] = useState<User>({
-    id: crypto.randomUUID(),
+    id: "",
     email: "",
     name: "",
     provider: "",
@@ -380,7 +380,7 @@ export default function AdminPage() {
       });
 
       setNewSem({
-        id: crypto.randomUUID(),
+        id: "",
         email: "",
         name: "",
         provider: "",
