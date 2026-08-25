@@ -208,7 +208,7 @@ export default function SubscriptionPlansPage() {
             onClick={() => setActiveTab("customer")}
             className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "customer"
-                ? "border-[#5800AB] text-[#5800AB]"
+                ? "border-[#FF4800] text-[#FF4800]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -219,7 +219,7 @@ export default function SubscriptionPlansPage() {
             onClick={() => setActiveTab("partner")}
             className={`px-5 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "partner"
-                ? "border-[#5800AB] text-[#5800AB]"
+                ? "border-[#FF4800] text-[#FF4800]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -338,7 +338,7 @@ export default function SubscriptionPlansPage() {
             setPartnerDialogOpen(true);
           }
         }}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00]"
       >
         <Plus className="h-6 w-6" />
       </Button>
@@ -365,7 +365,7 @@ export default function SubscriptionPlansPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPlanDialogOpen(false)} className="bg-gray-500 hover:bg-gray-600 text-white">Cancel</Button>
-            <Button onClick={() => editingPlan && handleSavePlan(editingPlan)} className="bg-[#5800AB] hover:bg-[#4a0090] text-white">Save</Button>
+            <Button onClick={() => editingPlan && handleSavePlan(editingPlan)} className="bg-[#FF4800] hover:bg-[#D43B00] text-white">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -445,7 +445,7 @@ export default function SubscriptionPlansPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPartnerDialogOpen(false)} className="bg-gray-500 hover:bg-gray-600 text-white">Cancel</Button>
-            <Button onClick={() => editingPartner && handleSavePartner(editingPartner)} className="bg-[#5800AB] hover:bg-[#4a0090] text-white">Save</Button>
+            <Button onClick={() => editingPartner && handleSavePartner(editingPartner)} className="bg-[#FF4800] hover:bg-[#D43B00] text-white">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

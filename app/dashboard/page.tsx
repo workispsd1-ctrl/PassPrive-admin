@@ -233,15 +233,15 @@ export default function AdminDashboard() {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "rgba(88, 0, 171, 0.6)";
+            if (!chartArea) return "rgba(255, 72, 0, 0.6)";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0.05, "rgba(88, 0, 171, 0.6)");
-            gradient.addColorStop(0.95, "rgba(88, 0, 171, 0.1)");
+            gradient.addColorStop(0.05, "rgba(255, 72, 0, 0.6)");
+            gradient.addColorStop(0.95, "rgba(255, 72, 0, 0.1)");
             return gradient;
           },
         },
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
           label: "Stores",
           data: weeklyStores,
           fill: true as const,
-          borderColor: "#5800AB",
+          borderColor: "#FF4800",
           borderWidth: 2.5,
           tension: 0.5,
           pointRadius: 0,
@@ -270,15 +270,15 @@ export default function AdminDashboard() {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "rgba(88, 0, 171, 0.6)";
+            if (!chartArea) return "rgba(255, 72, 0, 0.6)";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0.05, "rgba(88, 0, 171, 0.6)");
-            gradient.addColorStop(0.95, "rgba(88, 0, 171, 0.1)");
+            gradient.addColorStop(0.05, "rgba(255, 72, 0, 0.6)");
+            gradient.addColorStop(0.95, "rgba(255, 72, 0, 0.1)");
             return gradient;
           },
         },
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
           label: "Memberships",
           data: monthlyCounts,
           fill: true as const,
-          borderColor: "#5800AB",
+          borderColor: "#FF4800",
           borderWidth: 2,
           tension: 0.35,
           pointRadius: 0,
@@ -310,15 +310,15 @@ export default function AdminDashboard() {
               ctx: CanvasRenderingContext2D;
               chartArea?: ChartArea;
             };
-            if (!chartArea) return "rgba(88, 0, 171, 0.6)";
+            if (!chartArea) return "rgba(255, 72, 0, 0.6)";
             const gradient = ctx.createLinearGradient(
               0,
               chartArea.top,
               0,
               chartArea.bottom
             );
-            gradient.addColorStop(0.05, "rgba(88, 0, 171, 0.6)");
-            gradient.addColorStop(0.95, "rgba(88, 0, 171, 0.1)");
+            gradient.addColorStop(0.05, "rgba(255, 72, 0, 0.6)");
+            gradient.addColorStop(0.95, "rgba(255, 72, 0, 0.1)");
             return gradient;
           },
         },
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                   <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">New Restaurants</h3>
                   <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Per week growth</p>
                 </div>
-                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5800AB] hover:underline">View all</button>
+                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#FF4800] hover:underline">View all</button>
               </div>
               <div className="h-[310px]">
                 <Bar
@@ -537,7 +537,7 @@ export default function AdminDashboard() {
                   <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">New Stores</h3>
                   <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Per week growth</p>
                 </div>
-                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5800AB] hover:underline">View all</button>
+                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#FF4800] hover:underline">View all</button>
               </div>
               <div className="h-[310px]">
                 <Line
@@ -661,7 +661,7 @@ function KPI({
   value: React.ReactNode;
 }) {
   return (
-    <div className="h-[90px]  rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#5800AB] bg-[#FFFFFF] px-4 py-3 shadow-sm">
+    <div className="h-[90px]  rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#FF4800] bg-[#FFFFFF] px-4 py-3 shadow-sm">
       <div className="flex h-full items-center gap-3">
         <Image
           src={iconSrc}

@@ -519,7 +519,7 @@ export default function AdminPage() {
               });
               setDialogOpen(true);
             }}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#5800AB] text-white rounded-md shadow-md hover:bg-[#4a0090] focus:ring-4 focus:ring-violet-300 transition-colors duration-200 w-full sm:w-auto cursor-pointer justify-center"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#FF4800] text-white rounded-md shadow-md hover:bg-[#D43B00] focus:ring-4 focus:ring-violet-300 transition-colors duration-200 w-full sm:w-auto cursor-pointer justify-center"
             title="Add New Admin"
           >
             <Plus className="h-5 w-5" />

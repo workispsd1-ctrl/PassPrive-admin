@@ -69,7 +69,7 @@ export default function ScreenDetailDialog({ screen, onClose, onUpdate }: Screen
         </DialogHeader>
 
         {/* Add new title form */}
-        <div className="space-y-3 border border-dashed border-[#5800AB]/30 rounded-xl p-4 bg-[#5800AB]/[0.02]">
+        <div className="space-y-3 border border-dashed border-[#FF4800]/30 rounded-xl p-4 bg-[#FF4800]/[0.02]">
           <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Add Title</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -80,7 +80,7 @@ export default function ScreenDetailDialog({ screen, onClose, onUpdate }: Screen
                 placeholder="e.g. Restaurants"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="border border-gray-200 focus:border-[#5800AB] focus:ring-0 focus-visible:ring-0 rounded-lg text-sm"
+                className="border border-gray-200 focus:border-[#FF4800] focus:ring-0 focus-visible:ring-0 rounded-lg text-sm"
               />
             </div>
             <div className="space-y-1.5">
@@ -92,14 +92,14 @@ export default function ScreenDetailDialog({ screen, onClose, onUpdate }: Screen
                 value={sortLabel}
                 onChange={(e) => setSortLabel(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                className="border border-gray-200 focus:border-[#5800AB] focus:ring-0 focus-visible:ring-0 rounded-lg text-sm"
+                className="border border-gray-200 focus:border-[#FF4800] focus:ring-0 focus-visible:ring-0 rounded-lg text-sm"
               />
             </div>
           </div>
           <Button
             onClick={handleAdd}
             disabled={!title.trim() || !sortLabel.trim()}
-            className="w-full bg-[#5800AB] hover:bg-[#450087] text-white disabled:bg-gray-300 rounded-lg flex items-center gap-2"
+            className="w-full bg-[#FF4800] hover:bg-[#450087] text-white disabled:bg-gray-300 rounded-lg flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -121,7 +121,7 @@ export default function ScreenDetailDialog({ screen, onClose, onUpdate }: Screen
                   <span className="text-xs text-gray-400 font-mono w-5">{idx + 1}.</span>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                    <p className="text-xs text-[#5800AB] font-medium">{item.sortLabel}</p>
+                    <p className="text-xs text-[#FF4800] font-medium">{item.sortLabel}</p>
                   </div>
                 </div>
                 <button
@@ -142,7 +142,7 @@ export default function ScreenDetailDialog({ screen, onClose, onUpdate }: Screen
         <div className="flex justify-end pt-2">
           <Button
             onClick={handleClose}
-            className="bg-[#5800AB] hover:bg-[#450087] text-white rounded-lg"
+            className="bg-[#FF4800] hover:bg-[#450087] text-white rounded-lg"
           >
             Done
           </Button>

@@ -609,7 +609,7 @@ export default function EditTouristPlacePage() {
   if (loading) {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#5800AB]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#FF4800]" />
       </div>
     );
   }
@@ -1197,7 +1197,7 @@ export default function EditTouristPlacePage() {
                       onClick={() => toggleTag(tag)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
                         isSelected
-                          ? "bg-[#5800AB]/10 text-[#5800AB] border-[#5800AB]"
+                          ? "bg-[#FF4800]/10 text-[#FF4800] border-[#FF4800]"
                           : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                       }`}
                     >
@@ -1374,7 +1374,7 @@ export default function EditTouristPlacePage() {
                 <div className="space-y-1 text-center">
                   <Upload className="mx-auto h-12 w-12 text-gray-400" />
                   <div className="flex text-sm text-gray-600">
-                    <label className="relative cursor-pointer rounded-md bg-white font-semibold text-[#5800AB] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#5800AB] focus-within:ring-offset-2 hover:text-[#4a0090]">
+                    <label className="relative cursor-pointer rounded-md bg-white font-semibold text-[#FF4800] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#FF4800] focus-within:ring-offset-2 hover:text-[#D43B00]">
                       <span>Upload cover image</span>
                       <input
                         type="file"
@@ -1421,7 +1421,7 @@ export default function EditTouristPlacePage() {
               <div className="space-y-1 text-center">
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
                 <div className="flex text-sm text-gray-600">
-                  <label className="relative cursor-pointer rounded-md bg-white font-semibold text-[#5800AB] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#5800AB] focus-within:ring-offset-2 hover:text-[#4a0090]">
+                  <label className="relative cursor-pointer rounded-md bg-white font-semibold text-[#FF4800] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#FF4800] focus-within:ring-offset-2 hover:text-[#D43B00]">
                     <span>Upload gallery images</span>
                     <input
                       type="file"
@@ -1465,7 +1465,7 @@ export default function EditTouristPlacePage() {
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving} className="rounded-xl cursor-pointer">
               Cancel
             </Button>
-            <Button type="submit" disabled={saving} className="bg-[#5800AB] text-white hover:bg-[#4a0090] rounded-xl cursor-pointer">
+            <Button type="submit" disabled={saving} className="bg-[#FF4800] text-white hover:bg-[#D43B00] rounded-xl cursor-pointer">
               {saving ? "Saving Changes..." : "Save Changes"}
             </Button>
           </div>

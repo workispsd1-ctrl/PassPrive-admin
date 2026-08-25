@@ -468,7 +468,7 @@ export default function PromotionalCollectionManager() {
                     Themed promo banners (e.g. &quot;For the Football Fanatics&quot;). Each shows every restaurant in the chosen category.
                   </CardDescription>
                 </div>
-                <Button className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreate}>
+                <Button className="h-10 rounded-2xl bg-[#FF4800] px-5 text-sm text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00]" onClick={openCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add promotional card
                 </Button>
@@ -486,7 +486,7 @@ export default function PromotionalCollectionManager() {
                       key={s.key}
                       type="button"
                       onClick={() => setActiveScreen(s.key)}
-                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${active ? "bg-[#5800AB] text-white shadow-[0_6px_16px_rgba(88,0,171,0.22)]" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${active ? "bg-[#FF4800] text-white shadow-[0_6px_16px_rgba(255, 72, 0,0.22)]" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                     >
                       {s.label}
                       <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>{count}</span>
@@ -617,7 +617,7 @@ export default function PromotionalCollectionManager() {
                                   : [...f.category_refs, ref],
                               }))
                             }
-                            className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                            className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#FF4800] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                           >
                             {cat.title}
                           </button>
@@ -647,7 +647,7 @@ export default function PromotionalCollectionManager() {
                                 : [...f.category_refs, ref],
                             }))
                           }
-                          className={`h-9 rounded-xl px-4 text-[13px] font-medium capitalize transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                          className={`h-9 rounded-xl px-4 text-[13px] font-medium capitalize transition ${checked ? "bg-[#FF4800] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                         >
                           {tag}
                         </button>
@@ -678,7 +678,7 @@ export default function PromotionalCollectionManager() {
                             : [...f.sort_modes, o.key],
                         }))
                       }
-                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#FF4800] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                     >
                       {checked ? `${index + 1}. ` : ""}{o.label}
                     </button>
@@ -698,7 +698,7 @@ export default function PromotionalCollectionManager() {
                       key={t.key}
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, discount_type: t.key }))}
-                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#FF4800] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                     >
                       {t.label}
                     </button>
@@ -749,7 +749,7 @@ export default function PromotionalCollectionManager() {
                           screens: checked ? f.screens.filter((k) => k !== s.key) : [...f.screens, s.key],
                         }))
                       }
-                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+                      className={`h-9 rounded-xl px-4 text-[13px] font-medium transition ${checked ? "bg-[#FF4800] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
                     >
                       {s.label}
                     </button>
@@ -793,7 +793,7 @@ export default function PromotionalCollectionManager() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={() => void save()} disabled={saving} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
+            <Button onClick={() => void save()} disabled={saving} className="bg-[#FF4800] text-white hover:bg-[#D43B00]">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editing ? "Save changes" : "Create card"}
             </Button>

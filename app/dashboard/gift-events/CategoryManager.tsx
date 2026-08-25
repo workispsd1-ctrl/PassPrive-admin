@@ -188,7 +188,7 @@ export default function CategoryManager({ onClose, onChanged }: Props) {
               <button
                 type="button"
                 onClick={() => iconRef.current?.click()}
-                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white text-slate-400 hover:border-[#5800AB] hover:text-[#5800AB]"
+                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white text-slate-400 hover:border-[#FF4800] hover:text-[#FF4800]"
                 title="Upload icon"
               >
                 {iconPreview ? (
@@ -217,7 +217,7 @@ export default function CategoryManager({ onClose, onChanged }: Props) {
               <button
                 onClick={handleAdd}
                 disabled={!name.trim() || saving}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#5800AB] px-3 text-sm font-medium text-white hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#FF4800] px-3 text-sm font-medium text-white hover:bg-[#D43B00] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

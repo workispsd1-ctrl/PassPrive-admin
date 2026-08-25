@@ -62,7 +62,7 @@ export default function CorporateForm({
   onSubmit,
   isGenerating,
 }: CorporateFormProps) {
-  const inputClass = "border border-gray-200 focus:border-[#5800AB] focus:ring-0 focus-visible:ring-0 rounded-lg text-black bg-white";
+  const inputClass = "border border-gray-200 focus:border-[#FF4800] focus:ring-0 focus-visible:ring-0 rounded-lg text-black bg-white";
 
   // Calculations for inline preview
   const basePrice = passType === "Black" ? 7000 : 4000;
@@ -248,7 +248,7 @@ export default function CorporateForm({
               <select
                 id="passType"
                 title="Select Pass Type"
-                className="w-full rounded-lg border border-gray-200 px-3 h-10 text-sm bg-white text-black focus:border-[#5800AB] focus:ring-0 focus-visible:ring-0"
+                className="w-full rounded-lg border border-gray-200 px-3 h-10 text-sm bg-white text-black focus:border-[#FF4800] focus:ring-0 focus-visible:ring-0"
                 value={passType}
                 onChange={(e) => setPassType(e.target.value as "Black" | "Premium")}
               >
@@ -297,7 +297,7 @@ export default function CorporateForm({
           </div>
 
           {/* Dynamic inline cashback and price information */}
-          <div className="p-4 rounded-xl border border-dashed border-[#5800AB]/30 bg-[#5800AB]/[0.02] space-y-3">
+          <div className="p-4 rounded-xl border border-dashed border-[#FF4800]/30 bg-[#FF4800]/[0.02] space-y-3">
             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
               <span className={`h-2.5 w-2.5 rounded-full ${passType === "Black" ? "bg-black" : "bg-purple-600"}`} />
               Live Pricing & Cashback Breakdown
@@ -314,12 +314,12 @@ export default function CorporateForm({
               </div>
               <div className="space-y-0.5">
                 <span className="text-gray-500 font-medium">Cashback Percentage</span>
-                <p className="text-sm font-bold text-[#5800AB]">{(cashbackRate * 100)}% Cashback</p>
+                <p className="text-sm font-bold text-[#FF4800]">{(cashbackRate * 100)}% Cashback</p>
               </div>
             </div>
 
             {qtyVal > 0 && (
-              <div className="border-t border-[#5800AB]/10 pt-3 grid grid-cols-2 gap-4 text-xs">
+              <div className="border-t border-[#FF4800]/10 pt-3 grid grid-cols-2 gap-4 text-xs">
                 <div className="space-y-0.5">
                   <span className="text-gray-500 font-medium">Total Before Discount ({qtyVal} passes)</span>
                   <p className="text-sm font-bold text-gray-800">{formatCurrency(basePrice * qtyVal)}</p>
@@ -337,7 +337,7 @@ export default function CorporateForm({
           <button
             type="submit"
             disabled={isGenerating || !quantity}
-            className="w-full md:w-auto px-6 py-3 bg-[#5800AB] hover:bg-[#450087] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-xl transition duration-150 shadow-sm flex items-center justify-center gap-2"
+            className="w-full md:w-auto px-6 py-3 bg-[#FF4800] hover:bg-[#450087] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-xl transition duration-150 shadow-sm flex items-center justify-center gap-2"
           >
             {isGenerating ? "Generating..." : "Proceed & Generate Promocodes"}
           </button>

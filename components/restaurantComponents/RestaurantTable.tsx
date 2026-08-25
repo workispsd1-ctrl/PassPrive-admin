@@ -141,7 +141,7 @@ export const RestaurantTable = ({
                 </td>
                 <td className="px-6 py-4 text-center">
                   {r.offer ? (
-                    <span className="bg-[#EAE3FA] text-[#5800AB] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
+                    <span className="bg-[#FFF2EC] text-[#FF4800] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
                       Offer
                     </span>
                   ) : (

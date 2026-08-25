@@ -237,7 +237,7 @@ export default function AddTitleDialog({ open, onClose, onSave, editing, screenN
                 type="button"
                 onClick={() => setType(t)}
                 className={`h-9 rounded-xl px-4 text-sm font-medium ${
-                  type === t ? "bg-[#5800AB] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  type === t ? "bg-[#FF4800] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                 }`}
               >
                 {t === "native" ? "Native section" : "Template section"}
@@ -360,7 +360,7 @@ export default function AddTitleDialog({ open, onClose, onSave, editing, screenN
             type="button"
             onClick={handleSave}
             disabled={!title.trim() || sortOrder === "" || paramsInvalid}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#5800AB] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#FF4800] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isEditing ? "Save changes" : "Save"}
           </button>

@@ -230,7 +230,7 @@ export default function SeminarPage() {
         {/* Add button */}
         <button
           onClick={() => setDialogOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00]"
           title="Add promo code"
         >
           <Plus className="h-6 w-6 mx-auto" />
@@ -483,7 +483,7 @@ export default function SeminarPage() {
               </Button>
               <Button
                 disabled={saving}
-                className="bg-[#5800AB] hover:bg-[#4a0090] text-white cursor-pointer"
+                className="bg-[#FF4800] hover:bg-[#D43B00] text-white cursor-pointer"
                 onClick={async () => {
                   setSaving(true);
 

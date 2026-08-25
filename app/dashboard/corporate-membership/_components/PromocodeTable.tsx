@@ -131,7 +131,7 @@ export default function PromocodeTable({ promocodes, companyName, onExport }: Pr
             <Input
               type="text"
               placeholder="Search by code or type..."
-              className="pl-9 pr-4 py-2 border border-gray-200 focus:border-[#5800AB] focus:ring-0 focus-visible:ring-0 rounded-lg text-sm bg-white"
+              className="pl-9 pr-4 py-2 border border-gray-200 focus:border-[#FF4800] focus:ring-0 focus-visible:ring-0 rounded-lg text-sm bg-white"
               value={searchTerm}
               onChange={handleSearchChange}
             />
@@ -139,7 +139,7 @@ export default function PromocodeTable({ promocodes, companyName, onExport }: Pr
 
           <Button
             onClick={handleExport}
-            className="bg-[#5800AB] hover:bg-[#450087] text-white flex items-center justify-center gap-2 rounded-lg py-2"
+            className="bg-[#FF4800] hover:bg-[#450087] text-white flex items-center justify-center gap-2 rounded-lg py-2"
           >
             <Download className="h-4 w-4" />
             Download Excel

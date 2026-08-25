@@ -110,8 +110,8 @@ export default function ScreenDetailPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8]">
-          <Monitor className="h-5 w-5 text-[#5800AB]" />
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFF2EC] ring-1 ring-[#FFE2D6]">
+          <Monitor className="h-5 w-5 text-[#FF4800]" />
         </div>
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
@@ -160,8 +160,8 @@ export default function ScreenDetailPage() {
                 <tr>
                   <td colSpan={6} className="px-5 py-16">
                     <div className="flex flex-col items-center text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8]">
-                        <Plus className="h-5 w-5 text-[#5800AB]" />
+                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFF2EC] ring-1 ring-[#FFE2D6]">
+                        <Plus className="h-5 w-5 text-[#FF4800]" />
                       </div>
                       <p className="text-base font-semibold text-gray-900">No titles yet</p>
                       <p className="mt-1 text-sm text-gray-500">
@@ -189,7 +189,7 @@ export default function ScreenDetailPage() {
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center rounded-full bg-[#F4EEFF] px-2.5 py-1 text-xs font-semibold text-[#5800AB] ring-1 ring-[#E7DDF8]">
+                      <span className="inline-flex items-center rounded-full bg-[#FFF2EC] px-2.5 py-1 text-xs font-semibold text-[#FF4800] ring-1 ring-[#FFE2D6]">
                         {item.sort_order}
                       </span>
                     </td>
@@ -249,7 +249,7 @@ export default function ScreenDetailPage() {
           setAddOpen(true);
         }}
         aria-label="Add title"
-        className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#5800AB] text-white shadow-[0_12px_28px_rgba(88,0,171,0.4)] transition-transform hover:scale-105 hover:bg-[#4a0090]"
+        className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#FF4800] text-white shadow-[0_12px_28px_rgba(255, 72, 0,0.4)] transition-transform hover:scale-105 hover:bg-[#D43B00]"
       >
         <Plus className="h-6 w-6" />
       </button>

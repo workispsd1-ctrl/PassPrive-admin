@@ -346,8 +346,8 @@ export default function GiftEventsPage() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8]">
-            <Gift className="h-5 w-5 text-[#5800AB]" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFF2EC] ring-1 ring-[#FFE2D6]">
+            <Gift className="h-5 w-5 text-[#FF4800]" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Gift Events</h1>
@@ -371,7 +371,7 @@ export default function GiftEventsPage() {
             onClick={() => setCatModalOpen(true)}
             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
-            <Tags className="h-4 w-4 text-[#5800AB]" />
+            <Tags className="h-4 w-4 text-[#FF4800]" />
             Categories
           </button>
         </div>
@@ -467,7 +467,7 @@ export default function GiftEventsPage() {
                               {ev.title}
                             </p>
                             {ev.gift_event_categories?.name && (
-                              <span className="inline-flex shrink-0 items-center rounded-full bg-[#F4EEFF] px-2 py-0.5 text-[11px] font-medium text-[#5800AB] ring-1 ring-[#E7DDF8]">
+                              <span className="inline-flex shrink-0 items-center rounded-full bg-[#FFF2EC] px-2 py-0.5 text-[11px] font-medium text-[#FF4800] ring-1 ring-[#FFE2D6]">
                                 {ev.gift_event_categories.name}
                               </span>
                             )}
@@ -484,7 +484,7 @@ export default function GiftEventsPage() {
                       <div className="flex items-center gap-1.5 text-xs">
                         <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                         {ev.is_always_available ? (
-                          <span className="inline-flex items-center rounded-full bg-[#F4EEFF] px-2 py-0.5 font-medium text-[#5800AB] ring-1 ring-[#E7DDF8]">
+                          <span className="inline-flex items-center rounded-full bg-[#FFF2EC] px-2 py-0.5 font-medium text-[#FF4800] ring-1 ring-[#FFE2D6]">
                             Always available
                           </span>
                         ) : (
@@ -543,7 +543,7 @@ export default function GiftEventsPage() {
       <button
         onClick={openCreate}
         aria-label="Add gift event"
-        className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#5800AB] text-white shadow-[0_12px_28px_rgba(88,0,171,0.4)] transition-transform hover:scale-105 hover:bg-[#4a0090]"
+        className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#FF4800] text-white shadow-[0_12px_28px_rgba(255, 72, 0,0.4)] transition-transform hover:scale-105 hover:bg-[#D43B00]"
       >
         <Plus className="h-6 w-6" />
       </button>
@@ -609,7 +609,7 @@ export default function GiftEventsPage() {
                     <button
                       type="button"
                       onClick={() => fileRef.current?.click()}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#5800AB] px-3 py-2 text-xs font-medium text-white hover:bg-[#4a0090]"
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#FF4800] px-3 py-2 text-xs font-medium text-white hover:bg-[#D43B00]"
                     >
                       <Upload className="h-4 w-4" />
                       {preview ? "Change" : "Upload"}
@@ -672,7 +672,7 @@ export default function GiftEventsPage() {
                   <button
                     type="button"
                     onClick={() => setCatModalOpen(true)}
-                    className="text-xs font-medium text-[#5800AB] hover:underline"
+                    className="text-xs font-medium text-[#FF4800] hover:underline"
                   >
                     Manage categories
                   </button>
@@ -713,7 +713,7 @@ export default function GiftEventsPage() {
                       end_date: e.target.checked ? "" : f.end_date,
                     }))
                   }
-                  className="h-5 w-5 accent-[#5800AB]"
+                  className="h-5 w-5 accent-[#FF4800]"
                 />
               </label>
 
@@ -767,7 +767,7 @@ export default function GiftEventsPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, is_active: e.target.checked }))
                   }
-                  className="h-5 w-5 accent-[#5800AB]"
+                  className="h-5 w-5 accent-[#FF4800]"
                 />
               </label>
             </div>
@@ -783,7 +783,7 @@ export default function GiftEventsPage() {
               <button
                 onClick={handleSubmit}
                 disabled={!canSave}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#5800AB] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#FF4800] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {saving ? "Saving…" : editing ? "Save changes" : "Create event"}

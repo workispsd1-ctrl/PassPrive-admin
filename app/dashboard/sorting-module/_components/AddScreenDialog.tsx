@@ -74,7 +74,7 @@ export default function AddScreenDialog({ open, onClose, onSave }: AddScreenDial
             type="button"
             onClick={handleSave}
             disabled={!screenName.trim()}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#5800AB] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#FF4800] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save
           </button>

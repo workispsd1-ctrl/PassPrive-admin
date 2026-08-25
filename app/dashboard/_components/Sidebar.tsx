@@ -281,30 +281,33 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[#E7DDF8] bg-white shadow-[0_10px_30px_rgba(126,41,215,0.06)] transition-[width] duration-300 ease-out",
+        "fixed inset-y-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[#FFE2D6] bg-white shadow-[0_10px_30px_rgba(255, 72, 0,0.06)] transition-[width] duration-300 ease-out",
         collapsed ? "w-[84px]" : "w-[320px]"
       )}
     >
       <div
         className={cn(
-          "border-b border-[#EFE6FA] px-4 pt-5 pb-4",
-          collapsed ? "flex items-center justify-center" : "flex flex-col items-center"
+          "px-4 pt-6 pb-6 w-full bg-white border-b border-[#FFE2D6]",
+          "flex items-center justify-center"
         )}
       >
-        <Link href="/dashboard" className="flex items-center justify-center">
-          <Image
-            src="/Final%20Logo.png"
-            alt="PassPrive"
-            width={collapsed ? 66 : 150}
-            height={collapsed ? 66 : 72}
-            priority
-            className={cn(
-              "h-auto w-auto object-contain",
-              collapsed ? "max-w-[66px]" : "max-w-[150px]"
-            )}
-          />
+        <Link href="/dashboard" className="flex flex-col items-center justify-center w-full gap-2.5">
+          <div className="h-14 w-14 overflow-hidden rounded-full bg-[linear-gradient(180deg,#2247FF_0%,#FF4800_100%)] flex items-center justify-center shadow-md">
+            <Image
+              src="/passprive-logo-white.png"
+              alt="PassPrive Logo"
+              width={36}
+              height={36}
+              priority
+              className="h-9 w-9 object-contain shrink-0"
+            />
+          </div>
+          {!collapsed && (
+            <span className="text-[21px] font-bold tracking-wide bg-[linear-gradient(90deg,#2247FF_0%,#FF4800_100%)] bg-clip-text text-transparent font-[family-name:var(--font-libre-baskerville)]">
+              Passprivé
+            </span>
+          )}
         </Link>
-
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3">
@@ -322,7 +325,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         "flex h-10 items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
-                          ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
+                          ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.18)]"
                           : "text-[#000000] hover:bg-[#F7F2FF]"
                       )}
                     >
@@ -367,7 +370,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                           "flex h-10 w-full items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                           collapsed ? "justify-center px-0" : "justify-between gap-3",
                           groupActive
-                            ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
+                            ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.18)]"
                             : "text-[#000000] hover:bg-[#F7F2FF]"
                         )}
                       >
@@ -412,7 +415,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                                 className={cn(
                                   "flex h-9 items-center rounded-[10px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                                   active
-                                    ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.16)]"
+                                    ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.16)]"
                                     : "text-[#000000] hover:bg-[#F7F2FF]"
                                 )}
                               >
@@ -471,7 +474,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         "flex h-10 items-center rounded-[12px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
-                          ? "bg-[linear-gradient(91.59deg,#5800AB_2.56%,#A866E7_97.05%)] text-white shadow-[0_10px_18px_rgba(124,45,190,0.18)]"
+                          ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.18)]"
                           : "text-[#000000] hover:bg-[#F7F2FF]"
                       )}
                     >
@@ -498,7 +501,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </TooltipProvider>
       </nav>
 
-      <div className="border-t border-[#EFE6FA] px-3 py-3">
+      <div className="border-t border-[#FFE2D6] px-3 py-3">
         {collapsed ? (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>

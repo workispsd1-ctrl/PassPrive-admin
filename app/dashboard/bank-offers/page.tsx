@@ -1137,7 +1137,7 @@ export default function BankOffersPage() {
                   <button
                     type="button"
                     onClick={() => setBins((current) => [...current, createBinDraft()])}
-                    className="h-[28px] px-[12px] rounded-[10px] bg-[#5800AB]/10 text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] tracking-[0.5px] text-[#5800AB] hover:bg-[#5800AB]/20 active:bg-[#5800AB]/30 transition-colors duration-200 flex items-center justify-center gap-1.5"
+                    className="h-[28px] px-[12px] rounded-[10px] bg-[#FF4800]/10 text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] tracking-[0.5px] text-[#FF4800] hover:bg-[#FF4800]/20 active:bg-[#FF4800]/30 transition-colors duration-200 flex items-center justify-center gap-1.5"
                   >
                     <Plus className="h-4 w-4" />
                     Add rule
@@ -1181,7 +1181,7 @@ export default function BankOffersPage() {
                   <button
                     type="button"
                     onClick={() => setTargets((current) => [...current, createTargetDraft()])}
-                    className="h-[28px] px-[12px] rounded-[10px] bg-[#5800AB]/10 text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] tracking-[0.5px] text-[#5800AB] hover:bg-[#5800AB]/20 active:bg-[#5800AB]/30 transition-colors duration-200 flex items-center justify-center gap-1.5"
+                    className="h-[28px] px-[12px] rounded-[10px] bg-[#FF4800]/10 text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] tracking-[0.5px] text-[#FF4800] hover:bg-[#FF4800]/20 active:bg-[#FF4800]/30 transition-colors duration-200 flex items-center justify-center gap-1.5"
                   >
                     <Plus className="h-4 w-4" />
                     Add rule
@@ -1231,7 +1231,7 @@ export default function BankOffersPage() {
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Search offers..."
-                  className="border-slate-200 pl-10 focus:border-[#5800AB] focus:ring-[#5800AB] transition-colors duration-200"
+                  className="border-slate-200 pl-10 focus:border-[#FF4800] focus:ring-[#FF4800] transition-colors duration-200"
                 />
                 <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               </div>
@@ -1296,7 +1296,7 @@ export default function BankOffersPage() {
         <Button
           onClick={handleSubmit}
           disabled={saving}
-          className="h-12 rounded-full bg-[#5800AB] px-6 text-white shadow-lg hover:shadow-xl hover:bg-[#4a0090] transition-all duration-300 disabled:opacity-50"
+          className="h-12 rounded-full bg-[#FF4800] px-6 text-white shadow-lg hover:shadow-xl hover:bg-[#D43B00] transition-all duration-300 disabled:opacity-50"
         >
           {saving ? (
             <>
@@ -1361,7 +1361,7 @@ function StepSection({
 }) {
   return (
     <div className="flex items-start gap-[12px] pt-4 first:pt-0">
-      <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[10px] bg-[#5800AB]/10 text-[14px] font-semibold font-['Be_Vietnam_Pro',sans-serif] text-[#5800AB]">
+      <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[10px] bg-[#FF4800]/10 text-[14px] font-semibold font-['Be_Vietnam_Pro',sans-serif] text-[#FF4800]">
         {stepNumber}
       </div>
       <div className="flex flex-col gap-[2px]">
@@ -1397,7 +1397,7 @@ function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] shadow-none"
+        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#FF4800] focus:ring-[0.5px] focus:ring-[#FF4800] shadow-none"
       />
     </div>
   );
@@ -1419,7 +1419,7 @@ function NumberField({
         type="number"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] shadow-none"
+        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#FF4800] focus:ring-[0.5px] focus:ring-[#FF4800] shadow-none"
       />
     </div>
   );
@@ -1441,7 +1441,7 @@ function DateTimeField({
         type="datetime-local"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] shadow-none"
+        className="mt-2 h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#FF4800] focus:ring-[0.5px] focus:ring-[#FF4800] shadow-none"
       />
     </div>
   );
@@ -1462,7 +1462,7 @@ function TextareaField({
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 min-h-[100px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white p-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB] resize-none shadow-none"
+        className="mt-2 min-h-[100px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white p-[12px] text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] placeholder:text-[#938F96] outline-none transition-all duration-200 focus:border-[#FF4800] focus:ring-[0.5px] focus:ring-[#FF4800] resize-none shadow-none"
       />
     </div>
   );
@@ -1485,7 +1485,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 flex h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] py-2 text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] outline-none transition-all duration-200 focus:border-[#5800AB] focus:ring-[0.5px] focus:ring-[#5800AB]"
+        className="mt-2 flex h-[44px] w-full rounded-[12px] border-[0.3px] border-[#938F96] bg-white px-[12px] py-2 text-[14px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000] outline-none transition-all duration-200 focus:border-[#FF4800] focus:ring-[0.5px] focus:ring-[#FF4800]"
       >
         {options.map((option) => {
           if (typeof option === "string") {
@@ -1521,7 +1521,7 @@ function ToggleField({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-[16px] w-[16px] shrink-0 rounded-[4px] border-[0.3px] border-[#938F96] text-[#5800AB] focus:ring-[#5800AB] cursor-pointer"
+        className="h-[16px] w-[16px] shrink-0 rounded-[4px] border-[0.3px] border-[#938F96] text-[#FF4800] focus:ring-[#FF4800] cursor-pointer"
       />
       <span className="text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#000000]">
         {label}
@@ -1569,9 +1569,9 @@ function LogoUploadSection({
           </div>
         ) : (
           <>
-            <Upload className="h-[20px] w-[20px] text-[#5800AB]" />
+            <Upload className="h-[20px] w-[20px] text-[#FF4800]" />
             <div className="flex flex-col items-center justify-center gap-[2px]">
-              <p className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#5800AB] text-center">
+              <p className="text-[14px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[20px] text-[#FF4800] text-center">
                 Upload to add branding
               </p>
               <p className="text-[12px] font-normal font-['Be_Vietnam_Pro',sans-serif] leading-[16px] text-[#AEA9B1] text-center">
@@ -1726,7 +1726,7 @@ function BinRuleCard({
     <div className="group rounded-[12px] bg-white p-[16px] transition-all duration-200">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-[8px]">
-          <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#5800AB]/[0.15] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#5800AB]">
+          <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#FF4800]/[0.15] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#FF4800]">
             {index + 1}
           </div>
           <p className="text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#000000]">Card Rule</p>
@@ -1805,7 +1805,7 @@ function TargetRuleCard({
     <div className="group rounded-[12px] bg-white p-[16px] transition-all duration-200">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-[8px]">
-          <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#5800AB]/[0.15] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#5800AB]">
+          <div className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] bg-[#FF4800]/[0.15] text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#FF4800]">
             {index + 1}
           </div>
           <p className="text-[16px] font-medium font-['Be_Vietnam_Pro',sans-serif] leading-[24px] text-[#000000]">Location Rule</p>

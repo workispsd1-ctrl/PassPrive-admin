@@ -77,8 +77,8 @@ export default function SortingModulePage() {
     <div className="relative min-h-[calc(100vh-120px)]">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8]">
-          <Monitor className="h-5 w-5 text-[#5800AB]" />
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFF2EC] ring-1 ring-[#FFE2D6]">
+          <Monitor className="h-5 w-5 text-[#FF4800]" />
         </div>
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Session Sorting</h1>
@@ -103,8 +103,8 @@ export default function SortingModulePage() {
       ) : screens.length === 0 ? (
         <div className="overflow-hidden rounded-[14px] border border-slate-200/80 bg-white shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
           <div className="flex flex-col items-center text-center py-20">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8]">
-              <Monitor className="h-5 w-5 text-[#5800AB]" />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFF2EC] ring-1 ring-[#FFE2D6]">
+              <Monitor className="h-5 w-5 text-[#FF4800]" />
             </div>
             <p className="text-base font-semibold text-gray-900">No screens yet</p>
             <p className="mt-1 text-sm text-gray-500">Tap the + button to create your first screen.</p>
@@ -118,14 +118,14 @@ export default function SortingModulePage() {
               <div
                 key={screen.id}
                 onClick={() => router.push(`/dashboard/sorting-module/${screen.id}`)}
-                className="relative bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_2px_14px_rgba(15,23,42,0.07)] hover:shadow-md hover:border-[#5800AB]/30 transition-all duration-150 group cursor-pointer"
+                className="relative bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_2px_14px_rgba(15,23,42,0.07)] hover:shadow-md hover:border-[#FF4800]/30 transition-all duration-150 group cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4EEFF] ring-1 ring-[#E7DDF8] group-hover:bg-[#EAD5FF] transition">
-                    <Monitor className="h-5 w-5 text-[#5800AB]" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF2EC] ring-1 ring-[#FFE2D6] group-hover:bg-[#FFCCA3] transition">
+                    <Monitor className="h-5 w-5 text-[#FF4800]" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-[#F4EEFF] px-2 py-0.5 text-[11px] font-medium text-[#5800AB] ring-1 ring-[#E7DDF8]">
+                    <span className="inline-flex items-center rounded-full bg-[#FFF2EC] px-2 py-0.5 text-[11px] font-medium text-[#FF4800] ring-1 ring-[#FFE2D6]">
                       {titleCount} {titleCount === 1 ? "title" : "titles"}
                     </span>
                     <button
@@ -143,7 +143,7 @@ export default function SortingModulePage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-gray-900 group-hover:text-[#5800AB] transition">
+                <p className="text-sm font-semibold text-gray-900 group-hover:text-[#FF4800] transition">
                   {screen.name}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">Click to manage titles</p>
@@ -158,7 +158,7 @@ export default function SortingModulePage() {
         type="button"
         onClick={() => setAddOpen(true)}
         aria-label="Add screen"
-        className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#5800AB] text-white shadow-[0_12px_28px_rgba(88,0,171,0.4)] transition-transform hover:scale-105 hover:bg-[#4a0090]"
+        className="fixed bottom-8 right-8 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-[#FF4800] text-white shadow-[0_12px_28px_rgba(255, 72, 0,0.4)] transition-transform hover:scale-105 hover:bg-[#D43B00]"
       >
         <Plus className="h-6 w-6" />
       </button>

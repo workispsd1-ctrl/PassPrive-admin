@@ -382,7 +382,7 @@ export default function StoreCampaignDetailPage() {
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Refresh
                   </Button>
-                  <Button onClick={openCreateDialog} className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]">
+                  <Button onClick={openCreateDialog} className="h-10 rounded-2xl bg-[#FF4800] px-5 text-sm text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00]">
                     <Plus className="mr-2 h-4 w-4" />
                     Add Store
                   </Button>

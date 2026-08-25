@@ -184,7 +184,7 @@ function RestaurantsPageContent() {
       </div>
 
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00]"
         onClick={() => router.push("/dashboard/manage-restaurants/add")}
       >
         <Plus className="h-6 w-6" />

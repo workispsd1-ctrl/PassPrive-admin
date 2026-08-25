@@ -181,7 +181,7 @@ export const StoreTable = ({
 
                 <td className="px-6 py-3">
                   {s.is_featured ? (
-                    <span className="text-xs font-semibold text-[#5800AB]">Yes</span>
+                    <span className="text-xs font-semibold text-[#FF4800]">Yes</span>
                   ) : (
                     <span className="text-xs text-[#5b6473]">No</span>
                   )}

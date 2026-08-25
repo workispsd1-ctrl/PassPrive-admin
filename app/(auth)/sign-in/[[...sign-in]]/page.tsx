@@ -193,34 +193,31 @@ const SignInPage = () => {
     <div className="min-h-screen bg-[#eef0fb] px-3 py-4 sm:px-4 sm:py-8 lg:px-8">
       {step === "signIn" ? (
         <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1120px] items-center justify-center sm:min-h-[calc(100vh-4rem)]">
-          <div className="w-full max-w-[985px] rounded-2xl shadow-[0_24px_60px_rgba(58,41,99,0.16)]">
-            <div className="relative overflow-hidden rounded-2xl lg:flex lg:h-[679px] lg:w-[985px]">
-              <div className="relative flex min-h-[240px] overflow-hidden rounded-t-2xl bg-[linear-gradient(140deg,#5800AB_0%,#8E4CCD_52%,#562981_100%)] text-white sm:min-h-[320px] lg:min-h-[510px] lg:w-[430px] lg:rounded-l-2xl lg:rounded-tr-none">
-                <div className="pointer-events-none absolute inset-0">
-                  <div className="absolute -left-16 -top-12 h-64 w-64 rounded-full bg-[#c4b4ff]/20 blur-[120px]" />
-                  <div className="absolute bottom-8 right-6 h-56 w-56 rounded-full bg-[#ad2bff]/20 blur-[100px]" />
-                  <div className="absolute left-8 top-24 h-72 w-72 rounded-full bg-[#2b7fff]/15 blur-[160px]" />
-                </div>
+            <div className="w-full max-w-[985px] rounded-2xl shadow-[0_24px_60px_rgba(255,72,0,0.16)]">
+              <div className="relative overflow-hidden rounded-2xl lg:flex lg:h-[679px] lg:w-[985px]">
+                <div className="relative flex min-h-[240px] overflow-hidden rounded-t-2xl bg-[linear-gradient(180deg,#2247FF_0%,#FF4800_45%,#FF4800_100%)] text-white sm:min-h-[320px] lg:min-h-[510px] lg:w-[430px] lg:rounded-l-2xl lg:rounded-tr-none">
+                  <div className="pointer-events-none absolute inset-0">
+                    <div className="absolute -left-16 -top-12 h-64 w-64 rounded-full bg-[#2247FF]/20 blur-[120px]" />
+                    <div className="absolute bottom-8 right-6 h-56 w-56 rounded-full bg-[#FF4800]/20 blur-[100px]" />
+                    <div className="absolute left-8 top-24 h-72 w-72 rounded-full bg-[#FF4800]/15 blur-[160px]" />
+                  </div>
 
                 <div className="relative z-10 flex h-full w-full flex-col">
                   <div className="flex flex-col items-center pt-6 sm:pt-8 lg:pt-10">
-                    <div className="flex items-center gap-3">
-                      <Image
-                        src="/passprive.jpeg"
-                        alt="Passprive Icon"
-                        width={50}
-                        height={50}
-                        className="h-auto w-[40px] sm:w-[45px] lg:w-[50px]"
-                        priority
-                      />
-                      <Image
-                        src="/Group 3.png"
-                        alt="Pass Prive"
-                        width={180}
-                        height={55}
-                        className="h-auto w-[130px] sm:w-[160px] lg:w-[180px]"
-                        priority
-                      />
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div className="h-16 w-16 overflow-hidden rounded-full bg-[linear-gradient(180deg,#2247FF_0%,#FF4800_100%)] flex items-center justify-center shadow-lg border-2 border-white/90">
+                        <Image
+                          src="/passprive-logo-white.png"
+                          alt="PassPrive Logo"
+                          width={40}
+                          height={40}
+                          priority
+                          className="h-10 w-10 object-contain shrink-0"
+                        />
+                      </div>
+                      <span className="text-3xl font-bold tracking-wide bg-[linear-gradient(90deg,#2247FF_0%,#FF4800_100%)] bg-clip-text text-transparent font-[family-name:var(--font-libre-baskerville)] drop-shadow-[0_2px_4px_rgba(255,255,255,0.4)]">
+                        Passprivé
+                      </span>
                     </div>
                     <p className="mt-2 px-3 text-center text-[11px] font-semibold leading-none text-white sm:whitespace-nowrap sm:text-xs">
                       Your Pass to the Island&apos;s Best.
@@ -264,7 +261,7 @@ const SignInPage = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="h-[49.33px] w-full rounded-[14px] border-[0.67px] border-white/30 bg-white/60 px-4 py-3 text-base text-[#0a0a0a]/50 shadow-sm outline-none transition focus:border-[#8e4ccd] focus:ring-2 focus:ring-[#8e4ccd]/25"
+                      className="h-[49.33px] w-full rounded-[14px] border-[0.67px] border-white/30 bg-white/60 px-4 py-3 text-base text-[#0a0a0a]/50 shadow-sm outline-none transition focus:border-[#FF4800] focus:ring-2 focus:ring-[#FF4800]/25"
                       placeholder="admin@passprive.com"
                       required
                     />
@@ -286,7 +283,7 @@ const SignInPage = () => {
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="h-[49.33px] w-full rounded-[14px] border-[0.67px] border-white/30 bg-white/60 px-4 py-3 pr-11 text-base text-[#0a0a0a]/50 shadow-sm outline-none transition focus:border-[#8e4ccd] focus:ring-2 focus:ring-[#8e4ccd]/25"
+                        className="h-[49.33px] w-full rounded-[14px] border-[0.67px] border-white/30 bg-white/60 px-4 py-3 pr-11 text-base text-[#0a0a0a]/50 shadow-sm outline-none transition focus:border-[#FF4800] focus:ring-2 focus:ring-[#FF4800]/25"
                         required
                       />
 
@@ -309,7 +306,7 @@ const SignInPage = () => {
                         type="checkbox"
                         checked={rememberMe}
                         onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-4 w-4 rounded-[4px] border-[0.2px] border-black bg-white text-[#701ad2] focus:ring-[#8e4ccd]"
+                        className="h-4 w-4 rounded-[4px] border-[0.2px] border-black bg-white text-[#FF4800] focus:ring-[#FF4800]"
                       />
                       Remember me
                     </label>
@@ -319,7 +316,7 @@ const SignInPage = () => {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="h-[58px] w-full rounded-[20px] bg-[linear-gradient(90deg,#5800AB_0%,#A866E7_100%)] px-6 py-[13px] text-sm font-semibold leading-[1] text-white shadow-[0_10px_24px_rgba(88,0,171,0.35)] transition hover:brightness-110 disabled:opacity-50 lg:px-[154px]"
+                      className="h-[58px] w-full rounded-[20px] bg-[linear-gradient(90deg,#FF4800_0%,#FFA680_100%)] px-6 py-[13px] text-sm font-semibold leading-[1] text-white shadow-[0_10px_24px_rgba(255, 72, 0,0.35)] transition hover:brightness-110 disabled:opacity-50 lg:px-[154px]"
                     >
                       {isLoading ? "Signing in..." : "Login"}
                     </button>

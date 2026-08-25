@@ -534,7 +534,7 @@ const PlanBadge = ({ plan }: { plan?: string }) => {
       case "enterprise":
         return {
           variant: "default" as const,
-          className: "bg-[#5E189D] hover:bg-[#4A1278]",
+          className: "bg-[#FF4800] hover:bg-[#D43B00]",
         };
       case "professional":
         return {
@@ -560,7 +560,7 @@ const StatusBadge = ({ status }: { status?: string }) => {
   let badgeClass = "px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block ";
 
   if (isPremium) {
-    badgeClass += "bg-[#EAE3FA] text-[#5800AB]";
+    badgeClass += "bg-[#FFF2EC] text-[#FF4800]";
   } else if (value === "none" || value === "free") {
     badgeClass += "bg-[#F3F4F6] text-[#6B7280]";
   } else if (value === "canceled") {
@@ -568,7 +568,7 @@ const StatusBadge = ({ status }: { status?: string }) => {
   } else if (value === "past_due" || value === "unpaid") {
     badgeClass += "bg-[#FEF3C7] text-[#D97706]";
   } else {
-    badgeClass += "bg-[#EAE3FA] text-[#5800AB]";
+    badgeClass += "bg-[#FFF2EC] text-[#FF4800]";
   }
 
   const labelMap: Record<string, string> = {

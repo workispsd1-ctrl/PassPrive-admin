@@ -171,7 +171,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
           <button
             onClick={handleSubmit}
             disabled={loading || !canSave}
-            className="h-9 rounded-xl bg-[#5800AB] px-4 text-[13px] font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-9 rounded-xl bg-[#FF4800] px-4 text-[13px] font-medium text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
               <span className="inline-flex items-center gap-2">
@@ -240,23 +240,23 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                     className={[
                       "flex items-start gap-3 rounded-2xl border p-4 text-left transition",
                       active
-                        ? "border-[#5800AB] bg-[#F4EEFF]"
+                        ? "border-[#FF4800] bg-[#FFF2EC]"
                         : "border-slate-200 bg-white hover:bg-slate-50",
                     ].join(" ")}
                   >
                     <div
                       className={[
                         "mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border",
-                        active ? "border-[#5800AB] bg-white" : "border-slate-200 bg-white",
+                        active ? "border-[#FF4800] bg-white" : "border-slate-200 bg-white",
                       ].join(" ")}
                     >
-                      <Icon className={active ? "h-4 w-4 text-[#5800AB]" : "h-4 w-4 text-gray-700"} />
+                      <Icon className={active ? "h-4 w-4 text-[#FF4800]" : "h-4 w-4 text-gray-700"} />
                     </div>
 
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-gray-900">{label}</p>
-                        <span className={active ? "h-2.5 w-2.5 rounded-full bg-[#5800AB]" : "h-2.5 w-2.5 rounded-full bg-gray-200"} />
+                        <span className={active ? "h-2.5 w-2.5 rounded-full bg-[#FF4800]" : "h-2.5 w-2.5 rounded-full bg-gray-200"} />
                       </div>
                       <p className="mt-1 text-xs text-gray-600">{desc}</p>
                     </div>
@@ -283,7 +283,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                   onClick={() => setMediaType("image")}
                   className={[
                     "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition",
-                    mediaType === "image" ? "bg-[#5800AB] text-white" : "text-gray-700 hover:bg-gray-50",
+                    mediaType === "image" ? "bg-[#FF4800] text-white" : "text-gray-700 hover:bg-gray-50",
                   ].join(" ")}
                 >
                   <ImageIcon className="h-4 w-4" />
@@ -295,7 +295,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                   onClick={() => setMediaType("video")}
                   className={[
                     "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition",
-                    mediaType === "video" ? "bg-[#5800AB] text-white" : "text-gray-700 hover:bg-gray-50",
+                    mediaType === "video" ? "bg-[#FF4800] text-white" : "text-gray-700 hover:bg-gray-50",
                   ].join(" ")}
                 >
                   <VideoIcon className="h-4 w-4" />
@@ -335,7 +335,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
                   <button
                     type="button"
                     onClick={handlePick}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#5800AB] px-3 py-2 text-xs font-medium text-white hover:bg-[#4a0090]"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#FF4800] px-3 py-2 text-xs font-medium text-white hover:bg-[#D43B00]"
                   >
                     <Upload className="h-4 w-4" />
                     Choose
@@ -414,7 +414,7 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
         <button
           onClick={handleSubmit}
           disabled={loading || !canSave}
-          className="w-1/2 rounded-xl bg-[#5800AB] px-4 py-3 text-sm font-medium text-white hover:bg-[#4a0090] disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-1/2 rounded-xl bg-[#FF4800] px-4 py-3 text-sm font-medium text-white hover:bg-[#D43B00] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Saving…" : "Save"}
         </button>

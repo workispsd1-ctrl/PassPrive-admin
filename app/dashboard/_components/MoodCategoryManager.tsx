@@ -415,7 +415,7 @@ export default function MoodCategoryManager({
           ].map((metric) => (
             <div
               key={metric.label}
-              className="flex h-[90px] w-full flex-col justify-center rounded-[16px] border border-slate-200/50 bg-white px-5 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] border-l-4 border-l-[#5800AB] border-y-0 border-r-0"
+              className="flex h-[90px] w-full flex-col justify-center rounded-[16px] border border-slate-200/50 bg-white px-5 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] border-l-4 border-l-[#FF4800] border-y-0 border-r-0"
             >
               <span className="text-[13px] font-semibold text-slate-500 font-['Be_Vietnam_Pro',sans-serif] tracking-[0px]">
                 {metric.label}
@@ -451,7 +451,7 @@ export default function MoodCategoryManager({
                   value={form.title}
                   onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                   placeholder="Weekend unwind"
-                  className="h-[44px] rounded-[12px] border border-slate-200 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#938F96] p-3 focus-visible:ring-1 focus-visible:ring-[#5800AB]"
+                  className="h-[44px] rounded-[12px] border border-slate-200 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#938F96] p-3 focus-visible:ring-1 focus-visible:ring-[#FF4800]"
                 />
               </div>
 
@@ -476,7 +476,7 @@ export default function MoodCategoryManager({
                     }));
                   }}
                   placeholder="Enter a positive number"
-                  className="h-[44px] rounded-[12px] border border-slate-200 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#938F96] p-3 focus-visible:ring-1 focus-visible:ring-[#5800AB]"
+                  className="h-[44px] rounded-[12px] border border-slate-200 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#938F96] p-3 focus-visible:ring-1 focus-visible:ring-[#FF4800]"
                 />
                 <p className="text-[12px] text-slate-500 font-['Be_Vietnam_Pro',sans-serif] leading-4">
                   Use a whole number greater than 0. Lower numbers appear first.
@@ -548,7 +548,7 @@ export default function MoodCategoryManager({
                 <Button
                   onClick={() => void saveCategory()}
                   disabled={saving}
-                  className="flex-1 h-[40px] rounded-[12px] bg-[#5800AB] text-white hover:bg-[#4a0090] font-['Be_Vietnam_Pro',sans-serif] text-[16px] font-medium tracking-[0.5px] leading-5 shadow-[0_4px_4px_rgba(0,0,0,0.25)] transition-all"
+                  className="flex-1 h-[40px] rounded-[12px] bg-[#FF4800] text-white hover:bg-[#D43B00] font-['Be_Vietnam_Pro',sans-serif] text-[16px] font-medium tracking-[0.5px] leading-5 shadow-[0_4px_4px_rgba(0,0,0,0.25)] transition-all"
                 >
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin animate-spin" /> : null}
                   {editingId ? "Save changes" : "Create category"}
@@ -581,7 +581,7 @@ export default function MoodCategoryManager({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search by title, key, or slug.."
-                  className="pl-[44px] pr-[16px] h-[40px] w-full rounded-[12px] border border-[#938F96]/40 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#AEA9B1] focus-visible:ring-1 focus-visible:ring-[#5800AB] focus-visible:border-[#5800AB] transition-colors"
+                  className="pl-[44px] pr-[16px] h-[40px] w-full rounded-[12px] border border-[#938F96]/40 bg-white font-['Be_Vietnam_Pro',sans-serif] text-[14px] text-black placeholder:text-[#AEA9B1] focus-visible:ring-1 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] transition-colors"
                 />
               </div>
             </div>
@@ -589,7 +589,7 @@ export default function MoodCategoryManager({
             <div className="space-y-[16px]">
               {loading ? (
                 <div className="flex h-48 items-center justify-center text-slate-500 font-['Be_Vietnam_Pro',sans-serif]">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#5800AB]" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#FF4800]" />
                   Loading categories...
                 </div>
               ) : filteredCategories.length === 0 ? (
@@ -622,7 +622,7 @@ export default function MoodCategoryManager({
                           <div className="flex flex-col justify-center gap-[4px] min-w-0 h-full">
                             <div className="flex items-center gap-[8px]">
                               <p className="truncate text-[18px] font-medium text-black font-['Be_Vietnam_Pro',sans-serif] leading-[28px] tracking-[0px]">{category.title}</p>
-                              <span className="rounded-full bg-[#5800AB]/15 px-[6px] py-[1px] text-[12px] font-medium text-[#5800AB] font-['Be_Vietnam_Pro',sans-serif] leading-[16px] tracking-[0px] shrink-0">
+                              <span className="rounded-full bg-[#FF4800]/15 px-[6px] py-[1px] text-[12px] font-medium text-[#FF4800] font-['Be_Vietnam_Pro',sans-serif] leading-[16px] tracking-[0px] shrink-0">
                                 Sort {category.sort_order ?? 100}
                               </span>
                             </div>

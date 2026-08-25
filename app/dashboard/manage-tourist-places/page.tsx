@@ -233,7 +233,7 @@ function TouristPlacesPageContent() {
                   You haven't added any tourist places yet. Click the button below to add your first destination.
                 </p>
                 <Button
-                  className="bg-[#5800AB] text-white hover:bg-[#4a0090] cursor-pointer rounded-xl px-6"
+                  className="bg-[#FF4800] text-white hover:bg-[#D43B00] cursor-pointer rounded-xl px-6"
                   onClick={() => router.push("/dashboard/manage-tourist-places/add")}
                 >
                   Add Tourist Place
@@ -414,7 +414,7 @@ function TouristPlacesPageContent() {
 
       {/* Floating Add Button */}
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090] cursor-pointer flex items-center justify-center"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00] cursor-pointer flex items-center justify-center"
         onClick={() => router.push("/dashboard/manage-tourist-places/add")}
       >
         <Plus className="h-6 w-6" />

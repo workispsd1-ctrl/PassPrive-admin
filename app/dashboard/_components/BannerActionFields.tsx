@@ -288,11 +288,11 @@ export default function BannerActionFields({
                   {Array.isArray(q.options) && q.options.length > 0 && (
                     <div className="mb-2 flex flex-wrap gap-2">
                       {q.options.map(opt => (
-                        <span key={opt} className="inline-flex items-center gap-1 rounded-full border border-[#5800AB] bg-[#F2E9FB] px-3 py-1 text-sm text-[#5800AB]">
+                        <span key={opt} className="inline-flex items-center gap-1 rounded-full border border-[#FF4800] bg-[#FFF2EC] px-3 py-1 text-sm text-[#FF4800]">
                           {opt}
                           <button
                             type="button"
-                            className="text-[#5800AB]/70 hover:text-[#5800AB]"
+                            className="text-[#FF4800]/70 hover:text-[#FF4800]"
                             onClick={() => setQuestions(questions.map((qq, idx) => (idx === i ? { ...qq, options: qq.options.filter(o => o !== opt) } : qq)))}
                           >
                             ×

@@ -399,7 +399,7 @@ export default function PassPriveCardManager({
                   <CardTitle className="text-[19px] leading-7 tracking-tight text-slate-900">Cards</CardTitle>
                   <CardDescription className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-500">Create cards, adjust order, and open item management for each card.</CardDescription>
                 </div>
-                <Button className="h-11 rounded-2xl bg-[#5800AB] px-6 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreateDialog}>
+                <Button className="h-11 rounded-2xl bg-[#FF4800] px-6 text-sm text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00]" onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add new card
                 </Button>
@@ -546,7 +546,7 @@ export default function PassPriveCardManager({
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={() => void saveCard()} disabled={saving} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
+            <Button onClick={() => void saveCard()} disabled={saving} className="bg-[#FF4800] text-white hover:bg-[#D43B00]">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editingCard ? "Save changes" : "Create card"}
             </Button>

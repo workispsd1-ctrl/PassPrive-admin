@@ -174,7 +174,7 @@ export default function StoresPage() {
           <button
             onClick={() => setView("stores")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              view === "stores" ? "bg-[#5800AB] text-white" : "text-gray-600 hover:text-gray-900"
+              view === "stores" ? "bg-[#FF4800] text-white" : "text-gray-600 hover:text-gray-900"
             }`}
           >
             <Store className="h-4 w-4" /> Stores
@@ -182,7 +182,7 @@ export default function StoresPage() {
           <button
             onClick={() => setView("malls")}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              view === "malls" ? "bg-[#5800AB] text-white" : "text-gray-600 hover:text-gray-900"
+              view === "malls" ? "bg-[#FF4800] text-white" : "text-gray-600 hover:text-gray-900"
             }`}
           >
             <Building2 className="h-4 w-4" /> Malls
@@ -234,7 +234,7 @@ export default function StoresPage() {
       {/* Floating Add Button — asks Store or Mall */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]">
+          <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00]">
             <Plus className="h-6 w-6" />
           </Button>
         </DropdownMenuTrigger>

@@ -86,7 +86,7 @@ function ActionBadge({ action }: { action?: BannerAction }) {
   }
 
   return (
-    <span className="inline-flex rounded-full bg-[#F2E9FB] px-3 py-1 text-xs font-medium text-[#5800AB]">
+    <span className="inline-flex rounded-full bg-[#FFF2EC] px-3 py-1 text-xs font-medium text-[#FF4800]">
       {ACTION_LABELS[action.type] || action.type}
     </span>
   );
@@ -450,7 +450,7 @@ export default function OffersPage() {
               </Link>
               <Link
                 href="/dashboard/passprive-offers"
-                className="inline-flex h-10 items-center rounded-2xl bg-[#5800AB] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] transition hover:bg-[#4a0090]"
+                className="inline-flex h-10 items-center rounded-2xl bg-[#FF4800] px-5 text-sm font-medium text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] transition hover:bg-[#D43B00]"
               >
                 PassPrive Offers
                 <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -535,7 +535,7 @@ export default function OffersPage() {
                   {config.usesDedicatedPages ? (
                     <Link
                       href="/dashboard/offers/new"
-                      className="rounded-xl bg-[#5800AB] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4a0090]"
+                      className="rounded-xl bg-[#FF4800] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#D43B00]"
                     >
                       {config.addLabel}
                     </Link>
@@ -546,7 +546,7 @@ export default function OffersPage() {
                           current === config.key ? null : config.key
                         )
                       }
-                      className="rounded-xl bg-[#5800AB] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4a0090]"
+                      className="rounded-xl bg-[#FF4800] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#D43B00]"
                     >
                       {formOpen ? "Close Form" : config.addLabel}
                     </button>

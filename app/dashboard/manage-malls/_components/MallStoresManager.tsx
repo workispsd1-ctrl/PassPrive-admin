@@ -118,7 +118,7 @@ export default function MallStoresManager({ mallId }: { mallId: string }) {
           </Button>
           <Button
             size="sm"
-            className="gap-1.5 bg-[#5800AB] hover:bg-[#4a0090]"
+            className="gap-1.5 bg-[#FF4800] hover:bg-[#D43B00]"
             onClick={() => router.push(`/dashboard/manage-stores/add?mallId=${mallId}`)}
           >
             <PackagePlus className="h-3.5 w-3.5" /> Create new store

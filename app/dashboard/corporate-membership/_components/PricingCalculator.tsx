@@ -95,7 +95,7 @@ export default function PricingCalculator({
 
             <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
               <span className="font-bold text-gray-900 text-base">Net Amount to Pay:</span>
-              <span className="font-extrabold text-[#5800AB] text-lg">{formatCurrency(totalDiscounted)}</span>
+              <span className="font-extrabold text-[#FF4800] text-lg">{formatCurrency(totalDiscounted)}</span>
             </div>
           </div>
         </div>

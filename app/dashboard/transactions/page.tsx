@@ -407,7 +407,7 @@ export default function TransactionsPage() {
                 />
 
                 <Button
-                  className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]"
+                  className="h-10 rounded-2xl bg-[#FF4800] px-5 text-sm text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00]"
                   onClick={() => setRefreshToken((value) => value + 1)}
                 >
                   <RefreshCcw className="mr-2 h-4 w-4" />

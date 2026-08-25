@@ -384,7 +384,7 @@ export default function CorporatePage() {
       </div>
 
       <Button
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#5800AB] text-white shadow-lg hover:bg-[#4a0090]"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00]"
         onClick={() => setOpenCreate(true)}
       >
         <Plus className="h-6 w-6" />
@@ -605,7 +605,7 @@ function CorporateTable({
                       Disabled
                     </span>
                   ) : (
-                    <span className="bg-[#EAE3FA] text-[#5800AB] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
+                    <span className="bg-[#FFF2EC] text-[#FF4800] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
                       Active
                     </span>
                   )}

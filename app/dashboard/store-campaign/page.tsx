@@ -276,7 +276,7 @@ export default function StoreCampaignPage() {
                     Create and manage store home campaigns and the stores attached to each section.
                   </CardDescription>
                 </div>
-                <Button className="h-10 rounded-2xl bg-[#5800AB] px-5 text-sm text-white shadow-[0_10px_20px_rgba(88,0,171,0.25)] hover:bg-[#4a0090]" onClick={openCreateDialog}>
+                <Button className="h-10 rounded-2xl bg-[#FF4800] px-5 text-sm text-white shadow-[0_10px_20px_rgba(255, 72, 0,0.25)] hover:bg-[#D43B00]" onClick={openCreateDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add new card
                 </Button>
@@ -359,7 +359,7 @@ export default function StoreCampaignPage() {
                         className={`h-9 rounded-xl px-3 text-[13px] font-medium ${
                           campaign.is_active
                             ? "bg-red-600 text-white hover:bg-red-700"
-                            : "bg-[#5800AB] text-white hover:bg-[#4a0090]"
+                            : "bg-[#FF4800] text-white hover:bg-[#D43B00]"
                         }`}
                       >
                         {campaign.is_active ? "Deactivate" : "Activate"}
@@ -478,7 +478,7 @@ export default function StoreCampaignPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={() => void saveCampaign()} disabled={saving} className="bg-[#5800AB] text-white hover:bg-[#4a0090]">
+            <Button onClick={() => void saveCampaign()} disabled={saving} className="bg-[#FF4800] text-white hover:bg-[#D43B00]">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editingCampaign ? "Save changes" : "Create campaign"}
             </Button>
