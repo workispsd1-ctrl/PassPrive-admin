@@ -4,8 +4,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 // GET handler
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path?: string[] } }
+  context: { params: Promise<{ path?: string[] }> }
 ) {
+  const params = await context.params;
   const path = params.path || [];
 
   try {
@@ -110,8 +111,9 @@ export async function GET(
 // POST handler
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path?: string[] } }
+  context: { params: Promise<{ path?: string[] }> }
 ) {
+  const params = await context.params;
   const path = params.path || [];
 
   try {
@@ -177,8 +179,9 @@ export async function POST(
 // PUT handler
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path?: string[] } }
+  context: { params: Promise<{ path?: string[] }> }
 ) {
+  const params = await context.params;
   const path = params.path || [];
 
   try {
@@ -236,8 +239,9 @@ export async function PUT(
 // DELETE handler
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path?: string[] } }
+  context: { params: Promise<{ path?: string[] }> }
 ) {
+  const params = await context.params;
   const path = params.path || [];
 
   try {
