@@ -2,6 +2,7 @@
 
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/app/dashboard/_components/Modal";
@@ -107,145 +108,196 @@ export const RestaurantTable = ({
 
   return (
     <>
-      <table className="min-w-full border-collapse bg-white">
-        <thead className="bg-white">
-          <tr className="border-b border-gray-200 h-[36px]">
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">NAME</th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">LOCATION</th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">RATING</th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">COST FOR TWO</th>
-            <th className="px-4 py-1.5 text-center text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">OFFER</th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
-          </tr>
-        </thead>
+      <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3]">
+        <table className="w-full min-w-[900px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[26%]" />
+            <col className="w-[23%]" />
+            <col className="w-[11%]" />
+            <col className="w-[15%]" />
+            <col className="w-[12%]" />
+            <col className="w-[13%]" />
+          </colgroup>
 
-        <tbody className="bg-[#FFFFFF]">
-          {restaurants.map((r, idx) => {
-            if (!r.id) return null;
+          <thead>
+            <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Name</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Location</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Rating</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Cost for two</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-center">Offer</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-right">Actions</th>
+            </tr>
+          </thead>
 
-            return (
-              <tr
-                key={r.id}
-                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-xs ${
-                  idx !== restaurants.length - 1 ? "border-b" : ""
-                }`}
-                onClick={() => onRowClick?.(r.id)}
-              >
-                <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{r.name}</td>
-                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                  {r.area}, {r.city}
-                </td>
-                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">{r.rating ?? "-"}</td>
-                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                  {r.cost_for_two ? `Rs ${r.cost_for_two}` : "-"}
-                </td>
-                <td className="px-4 py-1.5 text-center">
-                  {r.offer ? (
-                    <span className="bg-[#FFF2EC] text-[#FF4800] px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
-                      Offer
+          <tbody>
+            {restaurants.map((r) => {
+              if (!r.id) return null;
+
+              return (
+                <tr
+                  key={r.id}
+                  className="group h-[56px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
+                  onClick={() => onRowClick?.(r.id)}
+                >
+                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                    <span className="block truncate" title={r.name ?? undefined}>
+                      {r.name || "—"}
                     </span>
-                  ) : (
-                    <span className="text-[#8A92A6]">—</span>
-                  )}
-                </td>
+                  </td>
 
-                <td className="px-4 py-1.5">
-                  <div className="flex items-center gap-3">
-                    {/* VIEW */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelected(r);
-                      }}
-                       className="cursor-pointer p-0 h-auto"
-                    >
-                      <Image
-                        src="/view.png"
-                        alt="View"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                      />
-                    </Button>
+                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                    <span className="block truncate" title={[r.area, r.city].filter(Boolean).join(", ")}>
+                      {[r.area, r.city].filter(Boolean).join(", ") || "—"}
+                    </span>
+                  </td>
 
-                    {/* EDIT -> go to /dashboard/manage-restaurants/[id] */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/dashboard/manage-restaurants/${r.id}`);
-                      }}
-                      className="cursor-pointer p-0 h-auto"
-                    >
-                      <Image
-                        src="/edit.png"
-                        alt="Edit"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                      />
-                    </Button>
+                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                    {r.rating ? (
+                      <span className="inline-flex items-center gap-1 font-medium text-[#111827]">
+                        <Star className="h-[13px] w-[13px] shrink-0 fill-[#F5A623] text-[#F5A623]" />
+                        {Number(r.rating).toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-[#C3C8D4]">—</span>
+                    )}
+                  </td>
 
-                    {/* DELETE */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmDelete(r);
-                      }}
-                       className="cursor-pointer p-0 h-auto"
-                    >
-                      <Image
-                        src="/delete.png"
-                        alt="Delete"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                      />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] whitespace-nowrap font-normal text-[#8A92A6]">
+                    {r.cost_for_two ? (
+                      <>
+                        <span className="text-[#111827]">
+                          ₹{Number(r.cost_for_two).toLocaleString("en-IN")}
+                        </span>
+                        <span className="ml-1 text-[11px] text-[#A8AEBD]">for 2</span>
+                      </>
+                    ) : (
+                      <span className="text-[#C3C8D4]">—</span>
+                    )}
+                  </td>
 
-      <PaginationBar
-        page={page}
-        setPage={setPage}
-        totalPage={totalPages}
-        totalRecord={totalRecord}
-        limit={limit}
-        setLimit={setLimit}
-      />
+                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] text-center">
+                    {r.offer ? (
+                      <span className="inline-flex h-[24px] items-center whitespace-nowrap rounded-full bg-[#FFF2EC] px-3 text-[11px] font-semibold tracking-[0.5px] text-[#FF4800]">
+                        Offer
+                      </span>
+                    ) : (
+                      <span className="text-[#C3C8D4]">—</span>
+                    )}
+                  </td>
+
+                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* VIEW */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="View details"
+                        aria-label={`View ${r.name ?? "restaurant"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(r);
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                      >
+                        <Image src="/view.png" alt="" width={16} height={16} className="h-4 w-4" />
+                      </Button>
+
+                      {/* EDIT -> go to /dashboard/manage-restaurants/[id] */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Edit restaurant"
+                        aria-label={`Edit ${r.name ?? "restaurant"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/manage-restaurants/${r.id}`);
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                      >
+                        <Image src="/edit.png" alt="" width={16} height={16} className="h-4 w-4" />
+                      </Button>
+
+                      {/* DELETE */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Delete restaurant"
+                        aria-label={`Delete ${r.name ?? "restaurant"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDelete(r);
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE4E4] hover:opacity-100 group-hover:opacity-100"
+                      >
+                        <Image src="/delete.png" alt="" width={16} height={16} className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-3">
+        <PaginationBar
+          page={page}
+          setPage={setPage}
+          totalPage={totalPages}
+          totalRecord={totalRecord}
+          limit={limit}
+          setLimit={setLimit}
+        />
+      </div>
 
       {/* DETAILS MODAL */}
       <Modal isOpen={!!selected} onClose={() => setSelected(null)}>
-        <div className="p-6 space-y-2">
-          <h2 className="text-xl font-semibold">{selected?.name}</h2>
-          <p>
-            <b>Location:</b> {selected?.area}, {selected?.city}
-          </p>
-          <p>
-            <b>Cost for two:</b>{" "}
-            {selected?.cost_for_two ? `₹${selected.cost_for_two}` : "-"}
-          </p>
-          <p>
-            <b>Rating:</b> {selected?.rating ?? "-"}
-          </p>
+        <div className="space-y-4 p-6">
+          <div className="space-y-1">
+            <h2 className="text-[18px] font-semibold leading-[24px] text-[#111827]">
+              {selected?.name}
+            </h2>
+            <p className="text-[13px] leading-[18px] text-[#8A92A6]">
+              {[selected?.area, selected?.city].filter(Boolean).join(", ") || "—"}
+            </p>
+          </div>
+
+          <dl className="divide-y divide-[#F1F2F5] border-y border-[#F1F2F5]">
+            {[
+              {
+                label: "Rating",
+                value: selected?.rating ? Number(selected.rating).toFixed(1) : "—",
+              },
+              {
+                label: "Cost for two",
+                value: selected?.cost_for_two
+                  ? `₹${Number(selected.cost_for_two).toLocaleString("en-IN")}`
+                  : "—",
+              },
+              { label: "Offer", value: selected?.offer ? "Available" : "—" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between py-3">
+                <dt className="text-[13px] text-[#8A92A6]">{row.label}</dt>
+                <dd className="text-[13px] font-medium text-[#111827]">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </Modal>
 
       {/* DELETE CONFIRM */}
       <Modal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)}>
-        <h2 className="text-lg font-semibold mb-4">Delete restaurant?</h2>
+        <h2 className="mb-2 text-[18px] font-semibold leading-[24px] text-[#111827]">
+          Delete restaurant?
+        </h2>
+        <p className="mb-5 text-[13px] leading-[18px] text-[#8A92A6]">
+          <span className="font-medium text-[#111827]">{confirmDelete?.name}</span> and its images
+          will be permanently removed. This can&apos;t be undone.
+        </p>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setConfirmDelete(null)} className="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer">
+          <Button variant="secondary" onClick={() => setConfirmDelete(null)} className="cursor-pointer border border-[#E5E7EB] bg-white text-[#111827] hover:bg-[#F9FAFB]">
             Cancel
           </Button>
           <Button

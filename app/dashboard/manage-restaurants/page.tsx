@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
 import ComingSoon from "@/components/ui/coming-soon";
 import { showToast } from "@/hooks/useToast";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { RestaurantTable } from "@/components/restaurantComponents/RestaurantTable";
 import { fetchRestaurantsPage, type RestaurantFlatRecord } from "@/lib/restaurantAdmin";
 
@@ -30,53 +29,48 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function RestaurantsTableSkeleton() {
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <Skeleton className="h-5 w-44" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-28 rounded-xl" />
-          <Skeleton className="h-9 w-24 rounded-xl" />
-        </div>
+    <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3]">
+      <div className="flex h-[44px] items-center gap-4 border-b border-[#EDEFF3] bg-[#FAFAFB] px-4">
+        <Skeleton className="h-3 w-[22%]" />
+        <Skeleton className="h-3 w-[20%]" />
+        <Skeleton className="h-3 w-[8%]" />
+        <Skeleton className="h-3 w-[12%]" />
+        <Skeleton className="h-3 w-[8%]" />
       </div>
 
-      <div className="grid grid-cols-12 gap-3 border-b border-gray-100 pb-3">
-        <Skeleton className="col-span-3 h-4 w-24" />
-        <Skeleton className="col-span-2 h-4 w-20" />
-        <Skeleton className="col-span-2 h-4 w-20" />
-        <Skeleton className="col-span-2 h-4 w-16" />
-        <Skeleton className="col-span-3 h-4 w-24" />
-      </div>
-
-      <div className="mt-3 space-y-3">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-12 items-center gap-3 rounded-xl border border-gray-100 bg-white p-3"
-          >
-            <div className="col-span-3 space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-3 w-28" />
-            </div>
-            <div className="col-span-2">
-              <Skeleton className="h-4 w-24" />
-            </div>
-            <div className="col-span-2">
-              <Skeleton className="h-4 w-24" />
-            </div>
-            <div className="col-span-2">
-              <Skeleton className="h-4 w-16" />
-            </div>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex h-[56px] items-center gap-4 border-b border-[#F1F2F5] px-4 last:border-b-0"
+        >
+          <Skeleton className="h-3.5 w-[24%]" />
+          <Skeleton className="h-3.5 w-[20%]" />
+          <Skeleton className="h-3.5 w-[6%]" />
+          <Skeleton className="h-3.5 w-[10%]" />
+          <Skeleton className="h-6 w-[9%] rounded-full" />
+          <div className="ml-auto flex gap-1">
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton className="h-8 w-8 rounded-md" />
           </div>
-        ))}
-      </div>
-
-      <div className="mt-5 flex items-center justify-between">
-        <Skeleton className="h-4 w-40" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-24 rounded-xl" />
-          <Skeleton className="h-9 w-24 rounded-xl" />
         </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ searchTerm }: { searchTerm: string }) {
+  if (!searchTerm) return <ComingSoon />;
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FFF2EC]">
+        <Search className="h-5 w-5 text-[#FF4800]" />
       </div>
+      <p className="text-[15px] font-semibold text-[#111827]">No restaurants found</p>
+      <p className="max-w-[320px] text-[13px] leading-[18px] text-[#8A92A6]">
+        Nothing matched &ldquo;{searchTerm}&rdquo;. Try a different name, city, or area.
+      </p>
     </div>
   );
 }
@@ -157,28 +151,37 @@ function RestaurantsPageContent() {
             variant="search-only"
             placeholder="Search restaurants by name, city, or area..."
           />
-          <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
-            {loading ? (
-              <div className="p-6">
+          <div className="w-full rounded-[16px] bg-[#FFFFFF] p-5 shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className="text-[16px] font-semibold leading-[22px] text-[#111827]">
+                Restaurants
+              </h2>
+              {!loading && total > 0 && (
+                <span className="whitespace-nowrap rounded-full bg-[#F4F5F7] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
+                  {total} total
+                </span>
+              )}
+            </div>
+
+            <div className="w-full overflow-x-auto">
+              {loading ? (
                 <RestaurantsTableSkeleton />
-              </div>
-            ) : restaurants.length === 0 ? (
-              <div className="p-6">
-                <ComingSoon />
-              </div>
-            ) : (
-              <RestaurantTable
-                restaurants={restaurants}
-                page={page}
-                setPage={setPage}
-                totalPages={totalPages}
-                totalRecord={total}
-                limit={limit}
-                setLimit={setLimit}
-                setRefresh={setRefresh}
-                onRowClick={(id: string) => router.push(`/dashboard/manage-restaurants/${id}`)}
-              />
-            )}
+              ) : restaurants.length === 0 ? (
+                <EmptyState searchTerm={debouncedSearch} />
+              ) : (
+                <RestaurantTable
+                  restaurants={restaurants}
+                  page={page}
+                  setPage={setPage}
+                  totalPages={totalPages}
+                  totalRecord={total}
+                  limit={limit}
+                  setLimit={setLimit}
+                  setRefresh={setRefresh}
+                  onRowClick={(id: string) => router.push(`/dashboard/manage-restaurants/${id}`)}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -195,7 +198,15 @@ function RestaurantsPageContent() {
 
 export default function RestaurantsPage() {
   return (
-    <Suspense fallback={<div className="p-6"><RestaurantsTableSkeleton /></div>}>
+    <Suspense
+      fallback={
+        <div className="p-6">
+          <div className="w-full rounded-[16px] bg-[#FFFFFF] p-5 shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+            <RestaurantsTableSkeleton />
+          </div>
+        </div>
+      }
+    >
       <RestaurantsPageContent />
     </Suspense>
   );
