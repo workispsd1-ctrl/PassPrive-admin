@@ -168,66 +168,75 @@ export default function StoresPage() {
   return (
     <>
       <div className="min-h-full w-full space-y-4">
-      <div className="min-h-full space-y-6 p-6">
-        {/* Stores / Malls toggle */}
-        <div className="inline-flex rounded-full border border-gray-200 bg-white p-1">
-          <button
-            onClick={() => setView("stores")}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              view === "stores" ? "bg-[#FF4800] text-white" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Store className="h-4 w-4" /> Stores
-          </button>
-          <button
-            onClick={() => setView("malls")}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              view === "malls" ? "bg-[#FF4800] text-white" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Building2 className="h-4 w-4" /> Malls
-          </button>
+        <div className="min-h-full space-y-4 pb-6 pt-2">
+          {/* Stores / Malls toggle */}
+          <div className="inline-flex rounded-full border border-gray-200 bg-white p-1">
+            <button
+              onClick={() => setView("stores")}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                view === "stores" ? "bg-[#FF4800] text-white" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Store className="h-4 w-4" /> Stores
+            </button>
+            <button
+              onClick={() => setView("malls")}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                view === "malls" ? "bg-[#FF4800] text-white" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              <Building2 className="h-4 w-4" /> Malls
+            </button>
+          </div>
+
+          {view === "malls" ? (
+            <MallList />
+          ) : (
+            <>
+              <SearchAndFilter
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                variant="search-only"
+                placeholder="Search stores by name, category, city, or location..."
+              />
+
+              <div className="w-full rounded-[16px] bg-[#FFFFFF] px-[10px] py-[18px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h2 className="text-[16px] font-semibold leading-[22px] text-[#111827]">
+                    Stores
+                  </h2>
+                  {!loading && total > 0 && (
+                    <span className="whitespace-nowrap rounded-full bg-[#F4F5F7] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
+                      {total} total
+                    </span>
+                  )}
+                </div>
+
+                <div className="w-full overflow-x-auto">
+                  {loading ? (
+                    <StoresTableSkeleton />
+                  ) : stores.length === 0 ? (
+                    <ComingSoon />
+                  ) : (
+                    <StoreTable
+                      stores={stores}
+                      page={page}
+                      setPage={setPage}
+                      totalPages={totalPages}
+                      totalRecord={total}
+                      limit={limit}
+                      setLimit={setLimit}
+                      setRefresh={setRefresh}
+                      onRowClick={(id: string) =>
+                        router.push(`/dashboard/manage-stores/${id}`)
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
-
-        {view === "malls" ? (
-          <MallList />
-        ) : (
-          <>
-            <SearchAndFilter
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              variant="search-only"
-              placeholder="Search stores by name, category, city, or location..."
-            />
-
-            <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
-              {loading ? (
-                <div className="p-6">
-                  <StoresTableSkeleton />
-                </div>
-              ) : stores.length === 0 ? (
-                <div className="p-6">
-                  <ComingSoon />
-                </div>
-              ) : (
-                <StoreTable
-                  stores={stores}
-                  page={page}
-                  setPage={setPage}
-                  totalPages={totalPages}
-                  totalRecord={total}
-                  limit={limit}
-                  setLimit={setLimit}
-                  setRefresh={setRefresh}
-                  onRowClick={(id: string) =>
-                    router.push(`/dashboard/manage-stores/${id}`)
-                  }
-                />
-              )}
-            </div>
-          </>
-        )}
-      </div>
       </div>
 
 

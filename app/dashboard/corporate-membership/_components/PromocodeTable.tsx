@@ -103,11 +103,9 @@ export default function PromocodeTable({ promocodes, companyName, onExport }: Pr
   };
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "MUR",
+    return `MUR ${Number(val).toLocaleString("en-US", {
       maximumFractionDigits: 0,
-    }).format(val);
+    })}`;
   };
 
   if (promocodes.length === 0) return null;

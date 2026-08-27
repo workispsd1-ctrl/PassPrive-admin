@@ -292,9 +292,17 @@ function getBankLogoStoragePath(url: string | null | undefined) {
 
 function formatCurrency(value: number | null, currencyCode: string) {
   if (value == null) return "—";
+  const code = (currencyCode || "MUR").toUpperCase();
+  if (code === "MUR" || code === "INR") {
+    const displayCode = code === "INR" ? "MUR" : code;
+    return `${displayCode} ${Number(value).toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+  }
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: currencyCode || "INR",
+    currency: code,
     maximumFractionDigits: 2,
   }).format(value);
 }

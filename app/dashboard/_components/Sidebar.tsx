@@ -45,18 +45,19 @@ type MenuItem = {
 type MenuGroup = {
   key: string;
   title: string;
-  iconSrc: string;
+  iconSrc?: string;
+  icon?: MenuIcon;
   items: MenuItem[];
 };
 
 const sidebarLabelClass =
-  "text-[18px] leading-[28px] font-normal tracking-[0px] whitespace-nowrap";
+  "text-[16px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
 
 const sidebarSmallLabelClass =
-  "text-[15px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
+  "text-[13px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap";
 
 const sidebarMutedLabelClass =
-  "text-[15px] leading-[24px] font-normal tracking-[0px] whitespace-nowrap";
+  "text-[13px] leading-[20px] font-normal tracking-[0px] whitespace-nowrap";
 
 const topLevelItems: MenuItem[] = [
   { title: "Dashboard", href: "/dashboard", iconSrc: "/Dashboard.png", exact: true },
@@ -75,10 +76,6 @@ const topLevelItems: MenuItem[] = [
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
   { title: "Corporate Membership", href: "/dashboard/corporate-membership", icon: Users },
   { title: "Session Sorting", href: "/dashboard/sorting-module", iconSrc: "/menu.png" },
-  { title: "Support Inbox", href: "/dashboard/support-inbox", icon: Inbox },
-  { title: "FAQ", href: "/dashboard/faq", icon: HelpCircle },
-  { title: "Help Topics", href: "/dashboard/help-center", icon: BookOpen },
-  { title: "About", href: "/dashboard/about", icon: Info },
 ];
 
 const groups: MenuGroup[] = [
@@ -114,6 +111,17 @@ const groups: MenuGroup[] = [
       { title: "Service Categories", href: "/dashboard/service-categories", iconSrc: "/menu.png" },
     ],
   },
+  {
+    key: "support",
+    title: "Support & Help",
+    icon: HelpCircle,
+    items: [
+      { title: "Support Inbox", href: "/dashboard/support-inbox", icon: Inbox },
+      { title: "FAQ", href: "/dashboard/faq", icon: HelpCircle },
+      { title: "Help Topics", href: "/dashboard/help-center", icon: BookOpen },
+      { title: "About", href: "/dashboard/about", icon: Info },
+    ],
+  },
 ];
 
 function isActivePath(pathname: string, href: string, exact = false) {
@@ -142,6 +150,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     management: true,
     "in-passprive": true,
     mood: true,
+    support: true,
   });
 
   const activeGroupKeys = useMemo(
@@ -282,28 +291,28 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[#FFE2D6] bg-white shadow-[0_10px_30px_rgba(255, 72, 0,0.06)] transition-[width] duration-300 ease-out",
-        collapsed ? "w-[84px]" : "w-[320px]"
+        collapsed ? "w-[70px]" : "w-[260px]"
       )}
     >
       <div
         className={cn(
           "px-4 pt-6 pb-6 w-full bg-white border-b border-[#FFE2D6]",
-          "flex items-center justify-center"
+          collapsed ? "flex items-center justify-center" : "flex items-center justify-start pl-5"
         )}
       >
-        <Link href="/dashboard" className="flex flex-col items-center justify-center w-full gap-2.5">
-          <div className="h-14 w-14 overflow-hidden rounded-full bg-[linear-gradient(180deg,#2247FF_0%,#FF4800_100%)] flex items-center justify-center shadow-md">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="h-11 w-11 overflow-hidden rounded-[12px] bg-[#FF4800] flex items-center justify-center shadow-sm shrink-0">
             <Image
               src="/passprive-logo-white.png"
               alt="PassPrive Logo"
-              width={36}
-              height={36}
+              width={26}
+              height={26}
               priority
-              className="h-9 w-9 object-contain shrink-0"
+              className="h-6 w-6 object-contain shrink-0"
             />
           </div>
           {!collapsed && (
-            <span className="text-[21px] font-bold tracking-wide bg-[linear-gradient(90deg,#2247FF_0%,#FF4800_100%)] bg-clip-text text-transparent font-[family-name:var(--font-libre-baskerville)]">
+            <span className="text-[20px] font-bold tracking-wide text-[#FF4800] font-[family-name:var(--font-libre-baskerville)]">
               Passprivé
             </span>
           )}
@@ -375,13 +384,17 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         )}
                       >
                         <span className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")}> 
-                          <Image
-                            src={group.iconSrc}
-                            alt={group.title}
-                            width={18}
-                            height={18}
-                            className={iconClassName(groupActive, collapsed)}
-                          />
+                          {group.iconSrc ? (
+                            <Image
+                              src={group.iconSrc}
+                              alt={group.title}
+                              width={18}
+                              height={18}
+                              className={iconClassName(groupActive, collapsed)}
+                            />
+                          ) : group.icon ? (
+                            <group.icon className={iconClassName(groupActive, collapsed)} />
+                          ) : null}
                           {!collapsed && <span className={cn(sidebarLabelClass, groupActive && "text-white")}>{group.title}</span>}
                         </span>
 
@@ -393,7 +406,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             height={16}
                             className={cn(
                               "h-4 w-4 shrink-0 transition-transform duration-200",
-                              isOpen ? "rotate-0" : "rotate-180"
+                              isOpen ? "rotate-180" : "rotate-0"
                             )}
                           />
                         )}

@@ -430,15 +430,9 @@ export default function OffersPage() {
   }
 
   return (
-    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)] p-6">
+    <div className="min-h-full bg-white p-6">
       <div className="mx-auto max-w-7xl space-y-8">
-        <Card
-          className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
-          style={{
-            background:
-              "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
-          }}
-        >
+        <Card className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] bg-white">
           <CardContent className="space-y-4 px-4 py-4 sm:px-5">
             <div className="flex flex-wrap justify-end gap-3">
               <Link
@@ -594,7 +588,7 @@ export default function OffersPage() {
                             <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+                        <tbody className="bg-white">
                           {items.map((item) => {
                             const rowDeleteKey = `${config.key}-${item.id}`;
                             return (

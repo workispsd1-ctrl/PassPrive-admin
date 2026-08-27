@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Utensils, Store, DollarSign, Download, ShoppingBag, Sparkles } from "lucide-react";
+import { exportToExcel } from "@/lib/exportToExcel";
 
 import {
   Chart as ChartJS,
@@ -58,7 +58,8 @@ type Stats = {
   totalUsers: number;
   activeSubscribers: number;
   totalRestaurants: number;
-  totalStores: number;
+  totalShopping: number;
+  totalWellness: number;
   totalRevenue: number;
 };
 
@@ -70,11 +71,12 @@ export default function AdminDashboard() {
     totalUsers: 0,
     activeSubscribers: 0,
     totalRestaurants: 0,
-    totalStores: 0,
+    totalShopping: 0,
+    totalWellness: 0,
     totalRevenue: 0,
   });
 
-  const [revenueINR, setRevenueINR] = useState<number>(0);
+  const [revenueMUR, setRevenueMUR] = useState<number>(0);
   const [weeklyRestaurants, setWeeklyRestaurants] = useState<number[]>([]);
   const [weeklyStores, setWeeklyStores] = useState<number[]>([]);
   const [monthlyLabels, setMonthlyLabels] = useState<string[]>([]);
@@ -141,7 +143,7 @@ export default function AdminDashboard() {
 
         const { data: sdata } = await supabaseBrowser
           .from("stores")
-          .select("created_at");
+          .select("created_at, store_type");
 
         setWeeklyRestaurants(computeWeeklyCounts((rdata as any[]) || [], 4));
         setWeeklyStores(computeWeeklyCounts((sdata as any[]) || [], 4));
@@ -150,9 +152,12 @@ export default function AdminDashboard() {
           .from("restaurants")
           .select("id", { count: "exact", head: true });
 
-        const { count: storesCount } = await supabaseBrowser
-          .from("stores")
-          .select("id", { count: "exact", head: true });
+        const shoppingCount = ((sdata || []) as any[]).filter(
+          (s) => s.store_type?.toUpperCase() === "PRODUCT"
+        ).length;
+        const wellnessCount = ((sdata || []) as any[]).filter(
+          (s) => s.store_type?.toUpperCase() !== "PRODUCT"
+        ).length;
 
         /* REVENUE */
         let totalRevenue = 0;
@@ -165,7 +170,7 @@ export default function AdminDashboard() {
           totalRevenue += parseAmount(transaction.amount_major);
         });
 
-        setRevenueINR(totalRevenue);
+        setRevenueMUR(totalRevenue);
 
         /* MONTHLY MEMBERSHIPS */
         const { data: monthlyData } = await supabaseBrowser
@@ -199,7 +204,8 @@ export default function AdminDashboard() {
           totalUsers: usersCount || 0,
           activeSubscribers: activeCount || 0,
           totalRestaurants: restaurantsCount || 0,
-          totalStores: storesCount || 0,
+          totalShopping: shoppingCount,
+          totalWellness: wellnessCount,
           totalRevenue,
         };
 
@@ -331,6 +337,30 @@ export default function AdminDashboard() {
     setSidebarOpen((prev) => !prev);
   };
 
+  const handleExportSubscriptions = () => {
+    const data = monthlyLabels.map((month, idx) => ({
+      Month: month,
+      "New Memberships": monthlyCounts[idx] || 0,
+    }));
+    exportToExcel(data, "monthly_subscriptions");
+  };
+
+  const handleExportRestaurants = () => {
+    const data = WEEKLY_LABELS.map((week, idx) => ({
+      Week: week,
+      "New Restaurants": weeklyRestaurants[idx] || 0,
+    }));
+    exportToExcel(data, "weekly_restaurants_growth");
+  };
+
+  const handleExportStores = () => {
+    const data = WEEKLY_LABELS.map((week, idx) => ({
+      Week: week,
+      "New Stores": weeklyStores[idx] || 0,
+    }));
+    exportToExcel(data, "weekly_stores_growth");
+  };
+
   return (
     <div className="min-h-full w-full space-y-4">
       {loading ? (
@@ -338,35 +368,39 @@ export default function AdminDashboard() {
       ) : (
         <div className="space-y-4">
           {/* KPIs */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <KPI
-              iconSrc="/dashboardusers.png"
+              icon={Users}
               label="Total Users"
               value={stats.totalUsers}
             />
             <KPI
-              iconSrc="/dashboardrestaurents.png"
+              icon={Utensils}
               label="Restaurants"
               value={stats.totalRestaurants}
             />
             <KPI
-              iconSrc="/dashboardstore.png"
-              label="Stores"
-              value={stats.totalStores}
+              icon={ShoppingBag}
+              label="Shopping"
+              value={stats.totalShopping}
+            />
+            <KPI
+              icon={Sparkles}
+              label="Wellness"
+              value={stats.totalWellness}
             />
             {/* <KPI
-              iconSrc="/qr_code_scanner.png"
+              icon={Users}
               label="Active Subs"
               value={stats.activeSubscribers}
             /> */}
             <KPI
-              iconSrc="/attach_money.png"
+              icon={DollarSign}
               label="Revenue (MUR)"
-              value={new Intl.NumberFormat("en-MU", {
-                style: "currency",
-                currency: "MUR",
+              value={`MUR ${Number(revenueMUR).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
-              }).format(revenueINR)}
+              })}`}
             />
           </div>
 
@@ -374,34 +408,45 @@ export default function AdminDashboard() {
           <div className="flex flex-col gap-4">
             <div className="flex min-h-[116px] flex-col rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] px-4 py-3 shadow-sm">
               <div className="mb-1 flex items-center justify-between">
-                <h3 className="text-[18px] font-medium leading-[28px] tracking-[0px] text-[#000000]">Overview</h3>
+                <h3 className="text-[16px] font-medium leading-[26px] tracking-[0px] text-[#000000]">Overview</h3>
                 <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#000000] hover:underline">View all</button>
               </div>
               <div className="mt-1.5 grid flex-1 grid-cols-[1fr_auto] content-start gap-x-4 gap-y-2 overflow-hidden">
-                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Conversion Rate</span>
-                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{conversionRate}</span>
-                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Total Revenue</span>
-                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">
-                  {new Intl.NumberFormat("en-MU", {
-                    style: "currency",
-                    currency: "MUR",
+                <span className="text-[14px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Conversion Rate</span>
+                <span className="text-right text-[14px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{conversionRate}</span>
+                <span className="text-[14px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Total Revenue</span>
+                <span className="text-right text-[14px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">
+                  {`MUR ${Number(stats.totalRevenue).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
-                  }).format(stats.totalRevenue)}
+                  })}`}
                 </span>
-                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Restaurants</span>
-                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalRestaurants}</span>
-                <span className="text-[16px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Stores</span>
-                <span className="text-right text-[16px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalStores}</span>
+                <span className="text-[14px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Restaurants</span>
+                <span className="text-right text-[14px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalRestaurants}</span>
+                <span className="text-[14px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Shopping Stores</span>
+                <span className="text-right text-[14px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalShopping}</span>
+                <span className="text-[14px] font-normal leading-5 tracking-[0.5px] text-[#AEA9B1]">Wellness Stores</span>
+                <span className="text-right text-[14px] font-normal leading-5 tracking-[0.5px] text-[#000000]/60">{stats.totalWellness}</span>
               </div>
             </div>
 
             <div className="flex h-[460px] flex-col rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] p-4 shadow-sm">
               <div className="flex items-start justify-between pb-0">
                 <div>
-                  <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">Subscriptions</h3>
+                  <h3 className="text-[16px] font-semibold leading-[26px] tracking-[0px] text-[#000000]">Subscriptions</h3>
                   <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Last 12 months</p>
                 </div>
-                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#000000] hover:underline">View all statistic</button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleExportSubscriptions}
+                    className="inline-flex items-center gap-1 text-[12px] font-medium text-[#FF4800] hover:text-[#D43B00] transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export
+                  </button>
+                  <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#000000] hover:underline">View all statistic</button>
+                </div>
               </div>
 
               <div className="min-h-0 flex-1 pt-2">
@@ -442,10 +487,20 @@ export default function AdminDashboard() {
             <div className="h-[400px] rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] p-4 shadow-sm">
               <div className="mb-2 flex items-start justify-between">
                 <div>
-                  <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">New Restaurants</h3>
+                  <h3 className="text-[16px] font-semibold leading-[26px] tracking-[0px] text-[#000000]">New Restaurants</h3>
                   <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Per week growth</p>
                 </div>
-                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#FF4800] hover:underline">View all</button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleExportRestaurants}
+                    className="inline-flex items-center gap-1 text-[12px] font-medium text-[#FF4800] hover:text-[#D43B00] transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export
+                  </button>
+                  <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#FF4800] hover:underline">View all</button>
+                </div>
               </div>
               <div className="h-[310px]">
                 <Bar
@@ -482,10 +537,20 @@ export default function AdminDashboard() {
             <div className="h-[400px] rounded-2xl border border-[#E0E7FF] bg-[#FFFFFF] p-4 shadow-sm">
               <div className="mb-2 flex items-start justify-between">
                 <div>
-                  <h3 className="text-[18px] font-semibold leading-[28px] tracking-[0px] text-[#000000]">New Stores</h3>
+                  <h3 className="text-[16px] font-semibold leading-[26px] tracking-[0px] text-[#000000]">New Stores</h3>
                   <p className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#5E5E5E]">Per week growth</p>
                 </div>
-                <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#FF4800] hover:underline">View all</button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleExportStores}
+                    className="inline-flex items-center gap-1 text-[12px] font-medium text-[#FF4800] hover:text-[#D43B00] transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export
+                  </button>
+                  <button className="text-[12px] font-normal leading-[18px] tracking-[0px] text-[#FF4800] hover:underline">View all</button>
+                </div>
               </div>
               <div className="h-[310px]">
                 <Line
@@ -600,27 +665,23 @@ function DashboardSkeleton() {
 /* -------------------------- UI COMPONENTS -------------------------- */
 
 function KPI({
-  iconSrc,
+  icon: Icon,
   label,
   value,
 }: {
-  iconSrc: string;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: React.ReactNode;
 }) {
   return (
-    <div className="h-[90px]  rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#FF4800] bg-[#FFFFFF] px-4 py-3 shadow-sm">
+    <div className="h-[90px] rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#FF4800] bg-[#FFFFFF] px-4 py-3 shadow-sm">
       <div className="flex h-full items-center gap-3">
-        <Image
-          src={iconSrc}
-          alt={label}
-          width={38}
-          height={38}
-          className="h-[38px] w-[38px] shrink-0 object-contain"
-        />
+        <div className="h-10 w-10 rounded-xl bg-[#FFF7F4] flex items-center justify-center shrink-0">
+          <Icon className="h-5 w-5 text-[#FF4800]" />
+        </div>
         <div>
           <div className="text-[12px] font-normal leading-4 tracking-[0px] text-[#5E5E5E]">{label}</div>
-          <div className="text-[24px] font-semibold leading-8 tracking-[0px] text-[#000000]">{value}</div>
+          <div className="text-[20px] font-semibold leading-8 tracking-[0px] text-[#000000]">{value}</div>
         </div>
       </div>
     </div>

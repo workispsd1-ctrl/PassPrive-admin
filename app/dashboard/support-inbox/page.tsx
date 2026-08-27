@@ -279,7 +279,7 @@ export default function SupportInboxPage() {
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-4">
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-[linear-gradient(135deg,#FF4800_0%,#FFA680_100%)] flex items-center justify-center">
             <Inbox className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -347,7 +347,7 @@ export default function SupportInboxPage() {
                     className={cn(
                       "w-full text-left p-3 rounded-xl border transition-all shadow-sm",
                       selectedId === ticket.ticket_id
-                        ? "border-cyan-300 bg-cyan-50/70 ring-1 ring-cyan-100"
+                        ? "border-[#FFA680] bg-[#FFF7F4]/70 ring-1 ring-[#FFE2D6]"
                         : "border-slate-200 hover:bg-slate-50"
                     )}
                     onClick={() => void handleOpenTicket(ticket.ticket_id)}
@@ -360,7 +360,7 @@ export default function SupportInboxPage() {
                     <div className="flex items-center gap-2 mt-2">
                       <span className={cn("text-[10px] rounded-full border px-2 py-0.5 font-medium", STATUS_CHIP_CLASS[ticket.status])}>{STATUS_LABEL[ticket.status]}</span>
                       <span className={cn("text-[10px] rounded-full border px-2 py-0.5 font-medium", PRIORITY_CHIP_CLASS[ticket.priority])}>{PRIORITY_LABEL[ticket.priority]}</span>
-                      {ticket.unread_count > 0 && <span className="ml-auto text-[10px] bg-cyan-600 text-white rounded-full px-1.5 py-0.5">{ticket.unread_count}</span>}
+                      {ticket.unread_count > 0 && <span className="ml-auto text-[10px] bg-[#FF4800] text-white rounded-full px-1.5 py-0.5">{ticket.unread_count}</span>}
                     </div>
                   </button>
                 ))}
@@ -409,9 +409,9 @@ export default function SupportInboxPage() {
                     const isUser = msg.role === "user";
                     return (
                       <div key={msg.id} className={cn("mb-3 flex", isUser ? "justify-start" : "justify-end")}>
-                        <div className={cn("max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap shadow-sm", isUser ? "bg-white border border-slate-200 text-slate-900 rounded-tl-sm" : "bg-cyan-600 text-white rounded-tr-sm")}>
+                        <div className={cn("max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap shadow-sm", isUser ? "bg-white border border-slate-200 text-slate-900 rounded-tl-sm" : "bg-[#FF4800] text-white rounded-tr-sm")}>
                           <p>{msg.message}</p>
-                          <p className={cn("text-[10px] mt-1", isUser ? "text-slate-400" : "text-cyan-100")}>{formatLocal(msg.created_at)}</p>
+                          <p className={cn("text-[10px] mt-1", isUser ? "text-slate-400" : "text-[#FFE9E0]")}>{formatLocal(msg.created_at)}</p>
                         </div>
                       </div>
                     );
@@ -422,7 +422,7 @@ export default function SupportInboxPage() {
 
               {!scrollPinned && (
                 <div className="px-4 py-1 text-center border-t border-slate-100">
-                  <button className="text-xs text-cyan-700 hover:underline" onClick={() => { setScrollPinned(true); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>
+                  <button className="text-xs text-[#FF4800] hover:underline" onClick={() => { setScrollPinned(true); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }}>
                     Jump to latest
                   </button>
                 </div>
@@ -434,7 +434,7 @@ export default function SupportInboxPage() {
                     rows={3}
                     value={replyText}
                     placeholder="Type your reply (Enter to send, Shift+Enter newline)"
-                    className="border-slate-200 bg-slate-50 focus-visible:ring-cyan-500"
+                    className="border-slate-200 bg-slate-50 focus-visible:ring-[#FF4800]"
                     onChange={(e) => setReplyText(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
@@ -443,7 +443,7 @@ export default function SupportInboxPage() {
                       }
                     }}
                   />
-                  <Button className="h-[76px] bg-cyan-600 hover:bg-cyan-700 text-white" disabled={sending || !replyText.trim()} onClick={() => void sendReply()}>
+                  <Button className="h-[76px] bg-[#FF4800] hover:bg-[#D43B00] text-white" disabled={sending || !replyText.trim()} onClick={() => void sendReply()}>
                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>

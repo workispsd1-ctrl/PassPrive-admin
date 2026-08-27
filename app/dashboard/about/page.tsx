@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, FileText, Save } from "lucide-react";
+import { Eye, EyeOff, FileText, Save } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type AboutContentRow = {
   id: string;
@@ -140,42 +141,42 @@ export default function AboutPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-cyan-50 via-white to-teal-50">
-        <CardContent className="pt-6 pb-5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-600 to-teal-600 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">About Content</h1>
-              <p className="text-sm text-gray-500 mt-0.5">{lastUpdatedLabel}</p>
-            </div>
+      <div className="flex flex-col gap-1.5 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[#FFF7F4] flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 text-[#FF4800]" />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">About Content</h1>
+            <p className="text-xs text-slate-400 mt-0.5">{lastUpdatedLabel}</p>
+          </div>
+        </div>
+      </div>
 
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Edit About PassPrive</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Title</label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="About PassPrive" />
+      <Card className="border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <CardContent className="p-6">
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Title</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="About PassPrive"
+                className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
+              />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Content</label>
-              <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
-                <div className="flex flex-wrap gap-2 border-b border-gray-200 p-2">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Content</label>
+              <div className="rounded-xl border border-slate-200 overflow-hidden bg-white hover:border-slate-300 transition-all focus-within:border-[#FF4800] focus-within:ring-1 focus-within:ring-[#FF4800]/20">
+                <div className="flex flex-wrap gap-2 border-b border-slate-100 p-2 bg-slate-50/50">
                   {TOOLBAR_ACTIONS.map((action) => (
                     <Button
                       key={`${action.command}-${action.label}`}
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8"
+                      className="h-8 rounded-lg border-slate-200 hover:bg-white text-slate-700 font-medium hover:border-slate-300 hover:text-slate-900"
                       onClick={() => runEditorCommand(action.command, action.value)}
                     >
                       {action.label}
@@ -187,42 +188,55 @@ export default function AboutPage() {
                   contentEditable
                   suppressContentEditableWarning
                   onInput={(e) => syncEditorHtml((e.currentTarget as HTMLDivElement).innerHTML)}
-                  className="min-h-[260px] p-4 outline-none prose prose-sm max-w-none"
+                  className="min-h-[260px] p-4 outline-none prose prose-sm max-w-none focus:ring-0"
                 />
               </div>
             </div>
 
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input
-                type="checkbox"
-                checked={isPublished}
-                onChange={(e) => setIsPublished(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              Published
-            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Status</label>
+                <button
+                  type="button"
+                  onClick={() => setIsPublished(!isPublished)}
+                  className={cn(
+                    "w-full h-11 rounded-xl border px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors",
+                    isPublished
+                      ? "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-50"
+                      : "border-gray-200 bg-gray-50/50 text-gray-500 hover:bg-gray-50"
+                  )}
+                >
+                  {isPublished ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  {isPublished ? "Published" : "Draft"}
+                </button>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={saving || loading}>
-                <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving..." : "Save About"}
-              </Button>
+              <div className="space-y-1.5 flex flex-col justify-end">
+                <Button
+                  disabled={saving || loading}
+                  type="submit"
+                  className="h-11 rounded-xl bg-[#FF4800] hover:bg-[#D43B00] text-white border-0 transition-colors shadow-sm px-6 font-semibold"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save About"}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Eye className="h-4 w-4" />
+      <Card className="border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 border-b border-slate-100 p-6">
+          <CardTitle className="text-[16px] font-semibold flex items-center gap-2 text-slate-900">
+            <Eye className="h-4 w-4 text-[#FF4800]" />
             Preview
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <article className="prose prose-sm max-w-none rounded-xl border border-gray-200 bg-gray-50 p-4">
-            <h1>{title || "About PassPrive"}</h1>
-            <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
+        <CardContent className="p-6">
+          <article className="prose prose-sm max-w-none rounded-xl border border-slate-100 bg-slate-50/30 p-5">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">{title || "About PassPrive"}</h2>
+            <div dangerouslySetInnerHTML={{ __html: contentHtml }} className="text-slate-600 leading-relaxed" />
           </article>
         </CardContent>
       </Card>

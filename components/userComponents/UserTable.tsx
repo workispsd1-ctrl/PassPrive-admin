@@ -197,130 +197,157 @@ export const UserTable = ({
             Export
           </button>
         </div> */}
-        <table className="min-w-full border-collapse">
-          <thead className="bg-white">
-            <tr className="border-b border-gray-200 h-[36px]">
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                NAME
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                PHONE
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                EMAIL
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                PLAN
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                SUBSCRIPTION DATE
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                JOIN DATE
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                LAST OPENED
-              </th>
-              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                ACTIONS
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-[#FFFFFF]">
-            {users.length > 0 ? (
-              users.map((user, idx) => (
-                <tr
-                  key={user.id}
-                  className={`border-b border-gray-200 hover:bg-white/20 transition-colors text-xs ${idx !== users.length - 1 ? "border-b" : ""
-                    }`}
-                >
-                  <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{user.full_name || user.display_name || "-"}</td>
-                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                    {user.phone ?? "-"}
-                  </td>
-                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">{user.email}</td>
-                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                    <StatusBadge status={user.membership_tier || user.membership || "none"} />
-                  </td>
-                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                    {(user.user_subscription?.length ?? 0) > 0
-                      ? formatStartDateIST(
-                        user.user_subscription?.[0]?.start_date ??
-                        user.user_subscription?.[0]?.created_at
-                      )
-                      : formatStartDateIST(user.membership_started)}
-                  </td>
-                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                    {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
-                    {displayValidTill(user.created_at || "", user.created_at || "")}
-                  </td>
-                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                    {formatToIndia(user.last_opened)}
-                  </td>
-                  <td className="px-4 py-1.5">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => {
-                          handleUserDetails(user);
-                        }}
-                        className="cursor-pointer p-0"
-                        title="View"
-                      >
-                        <Image
-                          src="/view.png"
-                          alt="View"
-                          width={16}
-                          height={16}
-                          className="w-4 h-4"
-                        />
-                      </button>
-
-                      <Link href={`/dashboard/users/${user.id}/edit`}>
-                        <button className="cursor-pointer p-0" title="Edit">
+        <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
+          <table className="w-full min-w-[1200px] table-fixed border-collapse bg-white">
+            <colgroup>
+              <col className="w-[15%]" />
+              <col className="w-[10%]" />
+              <col className="w-[18%]" />
+              <col className="w-[8%]" />
+              <col className="w-[13%]" />
+              <col className="w-[11%]" />
+              <col className="w-[13%]" />
+              <col className="w-[12%]" />
+            </colgroup>
+            <thead>
+              <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  NAME
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  PHONE
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  EMAIL
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  PLAN
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  SUBSCRIPTION DATE
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  JOIN DATE
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                  LAST OPENED
+                </th>
+                <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-right">
+                  ACTIONS
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-[#FFFFFF]">
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
+                  >
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                      <span className="line-clamp-4 break-words" title={user.full_name || user.display_name || undefined}>
+                        {user.full_name || user.display_name || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                      <span className="line-clamp-4 break-words" title={user.phone || undefined}>
+                        {user.phone || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6] wrap-break-word">
+                      <span className="line-clamp-4 break-words" title={user.email}>
+                        {user.email}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                      <StatusBadge status={user.membership_tier || user.membership || "none"} />
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                      {(user.user_subscription?.length ?? 0) > 0
+                        ? formatStartDateIST(
+                          user.user_subscription?.[0]?.start_date ??
+                          user.user_subscription?.[0]?.created_at
+                        )
+                        : formatStartDateIST(user.membership_started)}
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                      {displayValidTill(user.created_at || "", user.created_at || "")}
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                      {formatToIndia(user.last_opened)}
+                    </td>
+                    <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            handleUserDetails(user);
+                          }}
+                          className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                          title="View"
+                        >
                           <Image
-                            src="/edit.png"
-                            alt="Edit"
+                            src="/view.png"
+                            alt="View"
                             width={16}
                             height={16}
                             className="w-4 h-4"
                           />
-                        </button>
-                      </Link>
+                        </Button>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer p-0 h-auto hover:bg-transparent"
-                        onClick={() => {
-                          setIsConfirmOpen(true);
-                          setRowData(user);
-                        }}
-                        title="Delete"
-                      >
-                        <Image
-                          src="/delete.png"
-                          alt="Delete"
-                          width={16}
-                          height={16}
-                          className="w-4 h-4"
-                        />
-                      </Button>
+                        <Link href={`/dashboard/users/${user.id}/edit`}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                            title="Edit"
+                          >
+                            <Image
+                              src="/edit.png"
+                              alt="Edit"
+                              width={16}
+                              height={16}
+                              className="w-4 h-4"
+                            />
+                          </Button>
+                        </Link>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                          onClick={() => {
+                            setIsConfirmOpen(true);
+                            setRowData(user);
+                          }}
+                          title="Delete"
+                        >
+                          <Image
+                            src="/delete.png"
+                            alt="Delete"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4"
+                          />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="h-[20vh]">
+                    <div className="flex flex-col justify-center items-center h-full text-gray-900">
+                      <FileText className="w-16 h-16 text-gray-400 mb-4" />
+                      <h2 className="text-2xl font-semibold mb-2">No Data Found</h2>
                     </div>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="h-[20vh]">
-                  <div className="flex flex-col justify-center items-center h-full text-gray-900">
-                    <FileText className="w-16 h-16 text-gray-400 mb-4" />
-                    <h2 className="text-2xl font-semibold mb-2">No Data Found</h2>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
         <div className="mt-auto">
           <PaginationBar
             page={page}

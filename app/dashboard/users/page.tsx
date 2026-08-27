@@ -138,7 +138,7 @@ function UsersPage() {
 
   return (
     <>
-      <div className="min-h-full space-y-6 p-6">
+      <div className="min-h-full space-y-4 pb-6 pt-2">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -147,28 +147,37 @@ function UsersPage() {
           placeholder="Search by name, email, or phone no..."
         />
 
-        <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
-          {loading ? (
-            <div className="p-6">
+        <div className="w-full rounded-[16px] bg-[#FFFFFF] px-[10px] py-[18px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="text-[16px] font-semibold leading-[22px] text-[#111827]">
+              Users
+            </h2>
+            {!loading && total > 0 && (
+              <span className="whitespace-nowrap rounded-full bg-[#F4F5F7] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
+                {total} total
+              </span>
+            )}
+          </div>
+
+          <div className="w-full overflow-x-auto">
+            {loading ? (
               <LoadingSkeleton />
-            </div>
-          ) : error ? (
-            <div className="p-6">
+            ) : error ? (
               <ComingSoon />
-            </div>
-          ) : (
-            <UserTable
-              users={users || []}
-              handleExportFile={handleExportFile}
-              setPage={setPage}
-              page={page}
-              totalPages={totalPages}
-              limit={limit}
-              totalRecord={total}
-              setLimit={setLimit}
-              setDeleteRefresh={setDeleteRefresh}
-            />
-          )}
+            ) : (
+              <UserTable
+                users={users || []}
+                handleExportFile={handleExportFile}
+                setPage={setPage}
+                page={page}
+                totalPages={totalPages}
+                limit={limit}
+                totalRecord={total}
+                setLimit={setLimit}
+                setDeleteRefresh={setDeleteRefresh}
+              />
+            )}
+          </div>
         </div>
       </div>
 

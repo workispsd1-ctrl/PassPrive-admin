@@ -477,8 +477,8 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="min-h-full space-y-6 p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+      <div className="min-h-full space-y-4 pb-6 pt-2">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
           {/* Search Input */}
           <form
             onSubmit={(e) => e.preventDefault()}
@@ -540,111 +540,131 @@ export default function AdminPage() {
             </p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
-            <table className="min-w-full divide-y divide-gray-200 border-collapse">
-              <thead className="bg-white">
-                <tr className="border-b border-gray-200 h-[36px]">
-                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                    Email
-                  </th>
-                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                    Name
-                  </th>
-                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                    Role
-                  </th>
-                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                    Phone
-                  </th>
-                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
+          <div className="w-full rounded-[16px] bg-[#FFFFFF] px-[10px] py-[18px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className="text-[16px] font-semibold leading-[22px] text-[#111827]">
+                Admins
+              </h2>
+              {!loading && total > 0 && (
+                <span className="whitespace-nowrap rounded-full bg-[#F4F5F7] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
+                  {total} total
+                </span>
+              )}
+            </div>
 
-              <tbody className="bg-[#FFFFFF] divide-y divide-gray-200">
-                {admins.map((admmin, idx) => (
-                  <tr key={admmin.id} className={`border-b border-gray-200 hover:bg-white/20 transition ${idx !== admins.length - 1 ? "border-b" : ""}`}>
-                    <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000] wrap-break-word">
-                      {admmin?.email}
-                    </td>
-                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                      <span className="flex items-center">
-                        {admmin?.full_name || admmin?.name}
-                      </span>
-                    </td>
-                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                      <span className="flex items-center">
-                        {formatRole(admmin?.role)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                      {admmin?.phone}
-                    </td>
-                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                      <div className="flex items-center gap-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`p-0 h-auto hover:bg-transparent ${!canDeleteAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                          disabled={!canDeleteAdmin}
-                          title={!canDeleteAdmin ? "Only superadmins can delete admins" : "Delete admin"}
-                          onClick={() => {
-                            if (canDeleteAdmin) {
-                              setIsConfirmOpen(true);
-                              setRowData(admmin);
-                            }
-                          }}
-                        >
-                          <Image
-                            src="/delete.png"
-                            alt="Delete"
-                            width={16}
-                            height={16}
-                            className="w-4 h-4"
-                          />
-                        </Button>
+            <div className="w-full overflow-x-auto">
+              <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
+                <table className="w-full min-w-[960px] table-fixed border-collapse">
+                  <colgroup>
+                    <col className="w-[30%]" />
+                    <col className="w-[25%]" />
+                    <col className="w-[17%]" />
+                    <col className="w-[15%]" />
+                    <col className="w-[13%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                        Email
+                      </th>
+                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                        Role
+                      </th>
+                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                        Phone
+                      </th>
+                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-right">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
 
-                        <button
-                          disabled={loading}
-                          onClick={() => {
-                            handleEditForm(admmin);
-                          }}
-                          className="cursor-pointer p-0"
-                        >
-                          <Image
-                            src="/edit.png"
-                            alt="Edit"
-                            width={16}
-                            height={16}
-                            className="w-4 h-4"
-                          />
-                        </button>
+                  <tbody className="bg-[#FFFFFF]">
+                    {admins.map((admmin) => (
+                      <tr
+                        key={admmin.id}
+                        className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
+                      >
+                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827] wrap-break-word">
+                          <span className="line-clamp-4 break-words" title={admmin?.email}>
+                            {admmin?.email}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                          <span className="line-clamp-4 break-words" title={admmin?.full_name || admmin?.name || ""}>
+                            {admmin?.full_name || admmin?.name || "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                          <span className="line-clamp-4 break-words" title={formatRole(admmin?.role)}>
+                            {formatRole(admmin?.role) || "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                          <span className="line-clamp-4 break-words" title={admmin?.phone || ""}>
+                            {admmin?.phone || "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* VIEW DETAILS */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                              onClick={() => {
+                                setSelectedData(admmin);
+                                setIsOpen(true);
+                              }}
+                            >
+                              <Image src="/view.png" alt="View" width={16} height={16} className="w-4 h-4" />
+                            </Button>
 
-                        <button
-                          disabled={loading}
-                          onClick={() => {
-                            setSelectedData(admmin);
-                            setIsOpen(true);
-                          }}
-                          className="cursor-pointer p-0"
-                        >
-                          <Image
-                            src="/view.png"
-                            alt="View"
-                            width={16}
-                            height={16}
-                            className="w-4 h-4"
-                          />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            {/* EDIT */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                              onClick={() => {
+                                handleEditForm(admmin);
+                              }}
+                            >
+                              <Image src="/edit.png" alt="Edit" width={16} height={16} className="w-4 h-4" />
+                            </Button>
 
-            <div className="mt-auto">
+                            {/* DELETE */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-8 w-8 rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100 ${!canDeleteAdmin ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                              disabled={!canDeleteAdmin}
+                              title={!canDeleteAdmin ? "Only superadmins can delete admins" : "Delete admin"}
+                              onClick={() => {
+                                if (canDeleteAdmin) {
+                                  setIsConfirmOpen(true);
+                                  setRowData(admmin);
+                                }
+                              }}
+                            >
+                              <Image
+                                src="/delete.png"
+                                alt="Delete"
+                                width={16}
+                                height={16}
+                                className="w-4 h-4"
+                              />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
               <PaginationBar
                 page={page}
                 setPage={setPage}

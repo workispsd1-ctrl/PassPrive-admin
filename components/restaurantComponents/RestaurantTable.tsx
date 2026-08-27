@@ -170,7 +170,7 @@ export const RestaurantTable = ({
                     {r.cost_for_two ? (
                       <>
                         <span className="text-[#111827]">
-                          ₹{Number(r.cost_for_two).toLocaleString("en-IN")}
+                          MUR {Number(r.cost_for_two).toLocaleString("en-IN")}
                         </span>
                         <span className="ml-1 text-[11px] text-[#A8AEBD]">for 2</span>
                       </>
@@ -276,7 +276,7 @@ export const RestaurantTable = ({
               {
                 label: "Cost for two",
                 value: selected?.cost_for_two
-                  ? `₹${Number(selected.cost_for_two).toLocaleString("en-IN")}`
+                  ? `MUR ${Number(selected.cost_for_two).toLocaleString("en-IN")}`
                   : "—",
               },
               { label: "Offer", value: selected?.offer ? "Available" : "—" },

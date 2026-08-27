@@ -70,9 +70,17 @@ function formatDateTime(value: string | null) {
 }
 
 function formatAmount(value: number, currencyCode: string) {
+  const code = (currencyCode || "MUR").toUpperCase();
+  if (code === "MUR" || code === "INR") {
+    const displayCode = code === "INR" ? "MUR" : code;
+    return `${displayCode} ${Number(value).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: currencyCode || "MUR",
+    currency: code,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
@@ -107,7 +115,7 @@ function getSourcePath(row: PaymentSessionRow) {
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <Card className="border-white/70 bg-white/80 shadow-sm backdrop-blur">
+    <Card className="border-slate-200 bg-white shadow-sm">
       <CardContent className="p-4">
         <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{label}</div>
         <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
@@ -119,7 +127,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
 
 function TransactionsSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-slate-200/80 bg-white/75 shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
+    <div className="overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
       <div className="h-12 animate-pulse border-b border-slate-100 bg-slate-50/80" />
       {Array.from({ length: 8 }).map((_, index) => (
         <div key={index} className="h-20 animate-pulse border-b border-slate-100 bg-white" />
@@ -353,15 +361,9 @@ export default function TransactionsPage() {
   }, [filteredRows]);
 
   return (
-    <div className="min-h-full bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+    <div className="min-h-full bg-white">
       <div className="mx-auto flex min-h-full w-full max-w-[1360px] flex-col px-4 py-4 sm:px-5 lg:px-6">
-        <Card
-          className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm"
-          style={{
-            background:
-              "linear-gradient(310.35deg, rgba(255, 255, 255, 0.42) 4.07%, rgba(255, 255, 255, 0.32) 48.73%, rgba(255, 255, 255, 0.22) 100%)",
-          }}
-        >
+        <Card className="overflow-hidden rounded-[18px] border border-slate-200/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] bg-white">
           <CardContent className="space-y-4 px-4 py-4 sm:px-5">
             <div className="grid gap-4 md:grid-cols-4">
               <StatCard label="Total transactions" value={String(filteredRows.length)} hint="Filtered by selected date" />
@@ -424,7 +426,7 @@ export default function TransactionsPage() {
                 <p className="mt-2 text-sm text-slate-500">Try changing the search or switching source tabs.</p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-[16px] border border-slate-200/80 bg-white/75 shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
+              <div className="overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_2px_14px_rgba(15,23,42,0.07)]">
                 <div className="overflow-x-auto">
                   <Table className="min-w-[1500px] table-fixed">
                     <TableHeader>

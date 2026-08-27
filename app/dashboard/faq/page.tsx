@@ -56,7 +56,6 @@ export default function FaqPage() {
   const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
   const [form, setForm] = useState(emptyForm);
 
   const parseTags = (value: string): string[] =>
@@ -183,95 +182,100 @@ export default function FaqPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-violet-50 via-white to-cyan-50">
-        <CardContent className="pt-6 pb-5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <HelpCircle className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">FAQ Manager</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {faqs.length} {faqs.length === 1 ? "entry" : "entries"} &middot; Create, edit and manage frequently asked questions
-              </p>
-            </div>
+      <div className="flex flex-col gap-1.5 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[#FFF7F4] flex items-center justify-center shrink-0">
+            <HelpCircle className="h-5 w-5 text-[#FF4800]" />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">FAQ Manager</h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {faqs.length} {faqs.length === 1 ? "entry" : "entries"} &middot; Create, edit and manage frequently asked questions
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Form Panel */}
         <div className="lg:col-span-2">
-          <Card className={cn("sticky top-4 border", editingId ? "border-violet-300 shadow-md shadow-violet-100" : "border-gray-200")}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  {editingId ? "Edit FAQ" : "Add New FAQ"}
-                </CardTitle>
-                {editingId && (
-                  <Button variant="ghost" size="icon" onClick={resetForm} className="h-7 w-7 text-gray-400 hover:text-gray-600">
-                    <X className="h-4 w-4" />
-                  </Button>
+          <Card className={cn("sticky top-4 border border-slate-200 rounded-2xl shadow-sm bg-white overflow-hidden", editingId && "border-[#FFA680] shadow-[#FFA680]/10 shadow-md")}>
+            <CardContent className="p-6 space-y-5">
+              <div className="border-b border-slate-100 pb-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {editingId ? "Edit FAQ" : "Add New FAQ"}
+                  </h3>
+                  {editingId && (
+                    <Button variant="ghost" size="icon" onClick={resetForm} className="h-7 w-7 text-gray-400 hover:text-gray-600 rounded-lg">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {editingId ? (
+                  <p className="text-xs text-[#FF4800] font-medium mt-1">Editing existing entry</p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">Create a new question and answer pair</p>
                 )}
               </div>
-              {editingId && (
-                <p className="text-xs text-violet-600 font-medium">Editing existing entry</p>
-              )}
-            </CardHeader>
-            <CardContent>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Question *</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Question *</label>
                   <Input
                     value={form.question}
                     onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))}
                     placeholder="e.g. How do I reset my password?"
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Answer *</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Answer *</label>
                   <Textarea
                     value={form.answer}
                     onChange={(e) => setForm((f) => ({ ...f, answer: e.target.value }))}
                     placeholder="Write a clear, concise answer..."
                     rows={6}
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl p-4 min-h-[140px]"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Tags</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Tags</label>
                   <Input
                     value={form.tags}
                     onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
                     placeholder="password, login, account (comma-separated)"
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Order</label>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Order</label>
                     <Input
                       type="number"
                       value={form.display_order}
                       onChange={(e) => setForm((f) => ({ ...f, display_order: Number(e.target.value) }))}
                       placeholder="0"
                       min={0}
+                      className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Status</label>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Status</label>
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, is_published: !f.is_published }))}
                       className={cn(
-                        "w-full h-9 rounded-md border px-3 text-sm font-medium flex items-center gap-2 transition-colors",
+                        "w-full h-11 rounded-xl border px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors",
                         form.is_published
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                          : "border-gray-300 bg-gray-50 text-gray-500"
+                          ? "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-50"
+                          : "border-gray-200 bg-gray-50/50 text-gray-500 hover:bg-gray-50"
                       )}
                     >
-                      {form.is_published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      {form.is_published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       {form.is_published ? "Published" : "Draft"}
                     </button>
                   </div>
@@ -279,17 +283,17 @@ export default function FaqPage() {
 
                 <div className="flex gap-2 pt-1">
                   {editingId && (
-                    <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
+                    <Button type="button" variant="outline" onClick={resetForm} className="flex-1 h-11 rounded-xl border-slate-200 hover:bg-slate-50">
                       Cancel
                     </Button>
                   )}
                   <Button
                     disabled={saving}
                     type="submit"
-                    className={cn("flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white")}
+                    className={cn("flex-1 h-11 rounded-xl bg-[#FF4800] hover:bg-[#D43B00] text-white border-0 transition-colors shadow-sm")}
                   >
                     {saving ? "Saving..." : editingId ? "Update FAQ" : (
-                      <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Add FAQ</span>
+                      <span className="flex items-center justify-center gap-2"><Plus className="h-4 w-4" /> Add FAQ</span>
                     )}
                   </Button>
                 </div>
@@ -300,11 +304,11 @@ export default function FaqPage() {
 
         {/* List Panel */}
         <div className="lg:col-span-3">
-          <Card className="border border-gray-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">All FAQs</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="border border-slate-200 rounded-2xl shadow-sm bg-white overflow-hidden">
+            <CardContent className="p-6 space-y-5">
+              <div className="border-b border-slate-100 pb-4">
+                <h3 className="text-base font-semibold text-slate-950">All FAQs</h3>
+              </div>
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
@@ -324,7 +328,7 @@ export default function FaqPage() {
                       className={cn(
                         "rounded-xl border transition-all",
                         editingId === faq.id
-                          ? "border-violet-300 bg-violet-50/50"
+                          ? "border-[#FFA680] bg-[#FFF7F4]/50"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       )}
                     >
@@ -371,7 +375,7 @@ export default function FaqPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-violet-600"
+                            className="h-8 w-8 text-gray-400 hover:text-[#FF4800]"
                             onClick={() => startEdit(faq)}
                           >
                             <Pencil className="h-4 w-4" />

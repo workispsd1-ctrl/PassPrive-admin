@@ -66,7 +66,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Billing & Subscription": "bg-amber-100 text-amber-700 border-amber-200",
   "Offers & Promotions": "bg-pink-100 text-pink-700 border-pink-200",
   "Troubleshooting": "bg-orange-100 text-orange-700 border-orange-200",
-  "Security & Privacy": "bg-violet-100 text-violet-700 border-violet-200",
+  "Security & Privacy": "bg-[#FFF7F4] text-[#FF4800] border-[#FFE2D6]",
   "Contact & Escalation": "bg-cyan-100 text-cyan-700 border-cyan-200",
 };
 
@@ -301,10 +301,10 @@ export default function HelpCenterPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="border-0 shadow-sm bg-gradient-to-r from-teal-50 via-white to-cyan-50">
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-[#FFF7F4] via-white to-[#FFF7F4]">
         <CardContent className="pt-6 pb-5">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-[linear-gradient(135deg,#FF4800_0%,#FFA680_100%)] flex items-center justify-center">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -318,9 +318,9 @@ export default function HelpCenterPage() {
       </Card>
 
       {/* Industry Templates */}
-      <Card className="border border-teal-100 bg-teal-50/40">
+      <Card className="border border-[#FFE2D6] bg-[#FFF7F4]/40">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-teal-800">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-[#FF4800]">
             <ShieldCheck className="h-4 w-4" />
             Industry-Standard Starter Templates
           </CardTitle>
@@ -349,40 +349,45 @@ export default function HelpCenterPage() {
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Form Panel */}
         <div className="lg:col-span-2">
-          <Card className={cn("sticky top-4 border", editingId ? "border-teal-300 shadow-md shadow-teal-100" : "border-gray-200")}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  {editingId ? "Edit Topic" : "Add Help Topic"}
-                </CardTitle>
-                {editingId && (
-                  <Button variant="ghost" size="icon" onClick={resetForm} className="h-7 w-7 text-gray-400 hover:text-gray-600">
-                    <X className="h-4 w-4" />
-                  </Button>
+          <Card className={cn("sticky top-4 border border-slate-200 rounded-2xl shadow-sm bg-white overflow-hidden", editingId && "border-[#FFA680] shadow-[#FFA680]/10 shadow-md")}>
+            <CardContent className="p-6 space-y-5">
+              <div className="border-b border-slate-100 pb-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {editingId ? "Edit Topic" : "Add Help Topic"}
+                  </h3>
+                  {editingId && (
+                    <Button variant="ghost" size="icon" onClick={resetForm} className="h-7 w-7 text-gray-400 hover:text-gray-600 rounded-lg">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {editingId ? (
+                  <p className="text-xs text-[#FF4800] font-medium mt-1">Editing existing topic</p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">Create a new help center knowledge article</p>
                 )}
               </div>
-              {editingId && (
-                <p className="text-xs text-teal-600 font-medium">Editing existing topic</p>
-              )}
-            </CardHeader>
-            <CardContent>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Title *</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Title *</label>
                   <Input
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                     placeholder="e.g. How to Reset Your Password"
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Category *</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Category *</label>
                   <Input
                     value={form.category}
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                     list="help-categories"
                     placeholder="Select or type a category"
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                   />
                   <datalist id="help-categories">
                     {CATEGORIES.map((cat) => (
@@ -392,49 +397,52 @@ export default function HelpCenterPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Content *</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Content *</label>
                   <Textarea
                     value={form.content}
                     onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                     placeholder="Write step-by-step instructions, Q&A, or policy content..."
                     rows={8}
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl p-4 min-h-[160px]"
                   />
                   <p className="text-[11px] text-gray-400">Supports plain text and markdown-style formatting.</p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Tags</label>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Tags</label>
                   <Input
                     value={form.tags}
                     onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
                     placeholder="billing, refund, policy (comma-separated)"
+                    className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Order</label>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Order</label>
                     <Input
                       type="number"
                       value={form.display_order}
                       onChange={(e) => setForm((f) => ({ ...f, display_order: Number(e.target.value) }))}
                       placeholder="0"
                       min={0}
+                      className="border-slate-200 focus-visible:ring-[#FF4800] focus-visible:border-[#FF4800] bg-slate-50/50 hover:bg-slate-50/80 hover:border-slate-300 transition-all rounded-xl h-11 px-4"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Status</label>
+                    <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Status</label>
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, is_published: !f.is_published }))}
                       className={cn(
-                        "w-full h-9 rounded-md border px-3 text-sm font-medium flex items-center gap-2 transition-colors",
+                        "w-full h-11 rounded-xl border px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors",
                         form.is_published
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                          : "border-gray-300 bg-gray-50 text-gray-500"
+                          ? "border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-50"
+                          : "border-gray-200 bg-gray-50/50 text-gray-500 hover:bg-gray-50"
                       )}
                     >
-                      {form.is_published ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                      {form.is_published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       {form.is_published ? "Published" : "Draft"}
                     </button>
                   </div>
@@ -442,17 +450,17 @@ export default function HelpCenterPage() {
 
                 <div className="flex gap-2 pt-1">
                   {editingId && (
-                    <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
+                    <Button type="button" variant="outline" onClick={resetForm} className="flex-1 h-11 rounded-xl border-slate-200 hover:bg-slate-50">
                       Cancel
                     </Button>
                   )}
                   <Button
                     disabled={saving}
                     type="submit"
-                    className={cn("flex-1 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white")}
+                    className={cn("flex-1 h-11 rounded-xl bg-[#FF4800] hover:bg-[#D43B00] text-white border-0 transition-colors shadow-sm")}
                   >
                     {saving ? "Saving..." : editingId ? "Update Topic" : (
-                      <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Add Topic</span>
+                      <span className="flex items-center justify-center gap-2"><Plus className="h-4 w-4" /> Add Topic</span>
                     )}
                   </Button>
                 </div>
@@ -522,7 +530,7 @@ export default function HelpCenterPage() {
                       className={cn(
                         "rounded-xl border transition-all",
                         editingId === topic.id
-                          ? "border-teal-300 bg-teal-50/50"
+                          ? "border-[#FFA680] bg-[#FFF7F4]/50"
                           : "border-gray-200 bg-white hover:border-gray-300"
                       )}
                     >
@@ -573,7 +581,7 @@ export default function HelpCenterPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-teal-600"
+                            className="h-8 w-8 text-gray-400 hover:text-[#FF4800]"
                             onClick={() => startEdit(topic)}
                           >
                             <Pencil className="h-4 w-4" />

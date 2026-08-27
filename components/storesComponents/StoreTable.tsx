@@ -126,132 +126,147 @@ export const StoreTable = ({
 
   return (
     <>
-      <table className="min-w-full border-collapse bg-white">
-        <thead className="bg-white">
-          <tr className="border-b border-gray-200 h-[36px]">
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-              NAME
-            </th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-              LOCATION
-            </th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-              CATEGORY
-            </th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-              STATUS
-            </th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-              FEATURED
-            </th>
-            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
-              ACTIONS
-            </th>
-          </tr>
-        </thead>
+      <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3]">
+        <table className="w-full min-w-[960px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[27%]" />
+            <col className="w-[22%]" />
+            <col className="w-[18%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+            <col className="w-[13%]" />
+          </colgroup>
 
-        <tbody className="bg-[#FFFFFF]">
-          {stores.map((s, idx) => {
-            if (!s.id) return null;
+          <thead>
+            <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Name</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Location</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Category</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Status</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Featured</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-right">Actions</th>
+            </tr>
+          </thead>
 
-            return (
-              <tr
-                key={s.id}
-                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-xs ${
-                  idx !== stores.length - 1 ? "border-b" : ""
-                }`}
-                onClick={() => onRowClick?.(s.id)}
-              >
-                <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{s.name}</td>
-                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#AEA9B1]">{formatLocation(s)}</td>
-                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#AEA9B1]">
-                  {s.category || "-"}
-                  {s.subcategory ? (
-                    <span className="text-[12px] text-[#AEA9B1]"> • {s.subcategory}</span>
-                  ) : null}
-                </td>
+          <tbody className="bg-[#FFFFFF]">
+            {stores.map((s) => {
+              if (!s.id) return null;
 
-                <td className="px-4 py-1.5">
-                  {s.is_active === false ? (
-                    <span className="text-xs font-semibold text-red-600">Disabled</span>
-                  ) : (
-                    <span className="text-xs font-semibold text-green-700">Active</span>
-                  )}
-                </td>
+              return (
+                <tr
+                  key={s.id}
+                  className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
+                  onClick={() => onRowClick?.(s.id)}
+                >
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                    <span className="line-clamp-4 break-words" title={s.name ?? undefined}>
+                      {s.name || "—"}
+                    </span>
+                  </td>
 
-                <td className="px-4 py-1.5">
-                  {s.is_featured ? (
-                    <span className="text-xs font-semibold text-[#FF4800]">Yes</span>
-                  ) : (
-                    <span className="text-xs text-[#5b6473]">No</span>
-                  )}
-                </td>
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                    <span className="line-clamp-4 break-words" title={formatLocation(s)}>
+                      {formatLocation(s)}
+                    </span>
+                  </td>
 
-                <td className="px-4 py-1.5">
-                  <div className="flex items-center gap-3">
-                    {/* VIEW */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelected(s);
-                      }}
-                      className="cursor-pointer p-0 h-auto"
-                    >
-                      <Image
-                        src="/view.png"
-                        alt="View"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                      />
-                    </Button>
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                    <span className="line-clamp-4 break-words" title={s.category || ""}>
+                      {s.category || "—"}
+                      {s.subcategory ? (
+                        <span className="text-[11px] text-[#A8AEBD]"> • {s.subcategory}</span>
+                      ) : null}
+                    </span>
+                  </td>
 
-                    {/* EDIT -> go to /dashboard/manage-stores/[id] */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/dashboard/manage-stores/${s.id}`);
-                      }}
-                      className="cursor-pointer p-0 h-auto"
-                    >
-                      <Image
-                        src="/edit.png"
-                        alt="Edit"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                      />
-                    </Button>
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                    {s.is_active === false ? (
+                      <span className="inline-flex h-[24px] items-center whitespace-nowrap rounded-full bg-red-50 px-3 text-[11px] font-semibold tracking-[0.5px] text-red-600">
+                        Disabled
+                      </span>
+                    ) : (
+                      <span className="inline-flex h-[24px] items-center whitespace-nowrap rounded-full bg-green-50 px-3 text-[11px] font-semibold tracking-[0.5px] text-green-700">
+                        Active
+                      </span>
+                    )}
+                  </td>
 
-                    {/* DELETE */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmDelete(s);
-                      }}
-                      className="cursor-pointer p-0 h-auto"
-                    >
-                      <Image
-                        src="/delete.png"
-                        alt="Delete"
-                        width={16}
-                        height={16}
-                        className="w-4 h-4"
-                      />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                    {s.is_featured ? (
+                      <span className="inline-flex h-[24px] items-center whitespace-nowrap rounded-full bg-[#FFF2EC] px-3 text-[11px] font-semibold tracking-[0.5px] text-[#FF4800]">
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-[#C3C8D4]">—</span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* VIEW */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(s);
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                      >
+                        <Image
+                          src="/view.png"
+                          alt="View"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
+                      </Button>
+
+                      {/* EDIT -> go to /dashboard/manage-stores/[id] */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/manage-stores/${s.id}`);
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                      >
+                        <Image
+                          src="/edit.png"
+                          alt="Edit"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
+                      </Button>
+
+                      {/* DELETE */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDelete(s);
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                      >
+                        <Image
+                          src="/delete.png"
+                          alt="Delete"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4"
+                        />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <PaginationBar
         page={page}

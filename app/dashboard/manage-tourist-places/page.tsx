@@ -211,7 +211,7 @@ function TouristPlacesPageContent() {
   return (
     <>
       <div className="min-h-full w-full space-y-4">
-        <div className="min-h-full space-y-6 p-6">
+        <div className="min-h-full space-y-4 pb-6 pt-2">
           <SearchAndFilter
             searchTerm={searchTerm}
             onSearchChange={(val) => {
@@ -222,181 +222,204 @@ function TouristPlacesPageContent() {
             placeholder="Search tourist places by name, city, area, or location..."
           />
 
-          <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
-            {loading ? (
-              <TableSkeleton />
-            ) : places.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="text-4xl mb-4">📍</div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">No Tourist Places Found</h3>
-                <p className="text-sm text-gray-500 mb-6 max-w-sm">
-                  You haven't added any tourist places yet. Click the button below to add your first destination.
-                </p>
-                <Button
-                  className="bg-[#FF4800] text-white hover:bg-[#D43B00] cursor-pointer rounded-xl px-6"
-                  onClick={() => router.push("/dashboard/manage-tourist-places/add")}
-                >
-                  Add Tourist Place
-                </Button>
-              </div>
-            ) : (
-              <>
-                <table className="min-w-full border-collapse bg-white">
-                  <thead>
-                    <tr className="border-b border-gray-200 h-[36px]">
-                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">PLACE</th>
-                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">LOCATION</th>
-                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">PAYMENT</th>
-                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">PRICE</th>
-                      <th className="px-4 py-1.5 text-center text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">STATUS</th>
-                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-[#FFFFFF]">
-                    {places.map((place, idx) => {
-                      const imgUrl = getPublicImageUrl(place.picture_id);
+          <div className="w-full rounded-[16px] bg-[#FFFFFF] px-[10px] py-[18px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className="text-[16px] font-semibold leading-[22px] text-[#111827]">
+                Tourist Places
+              </h2>
+              {!loading && total > 0 && (
+                <span className="whitespace-nowrap rounded-full bg-[#F4F5F7] px-3 py-1 text-[12px] font-medium text-[#6B7280]">
+                  {total} total
+                </span>
+              )}
+            </div>
 
-                      return (
-                        <tr
-                          key={place.id}
-                          className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-xs ${
-                            idx !== places.length - 1 ? "border-b" : ""
-                          }`}
-                          onClick={() => router.push(`/dashboard/manage-tourist-places/${place.id}`)}
-                        >
-                          <td className="px-4 py-1.5">
-                            <div className="flex items-center gap-3">
-                              {imgUrl ? (
-                                <Image
-                                  src={imgUrl}
-                                  alt={place.place_name}
-                                  width={40}
-                                  height={40}
-                                  className="h-10 w-10 rounded-lg object-cover"
-                                />
-                              ) : (
-                                <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-[#8A92A6]">
-                                  📍
-                                </div>
-                              )}
-                              <div>
-                                <div className="text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{place.place_name}</div>
-                                <div className="text-[12px] text-[#8A92A6]">Rating: {Number(place.rating || 5.0).toFixed(1)} ★ ({place.reviews_count || 0})</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                            {place.city ? `${place.area ? `${place.area}, ` : ""}${place.city}` : place.location_name || "—"}
-                          </td>
-                          <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                            <div className="flex flex-wrap gap-1">
-                              {(() => {
-                                const opts = Array.isArray(place.payment_option)
-                                  ? place.payment_option
-                                  : typeof place.payment_option === "string"
-                                  ? [place.payment_option]
-                                  : [];
-
-                                if (opts.length === 0) return <span className="text-gray-400">—</span>;
-
-                                return opts.map((opt) => {
-                                  let bgClass = "bg-gray-100 text-gray-700";
-                                  let label = opt.replace(/_/g, " ");
-
-                                  if (opt === "free") {
-                                    bgClass = "bg-green-100 text-green-700";
-                                    label = "Free Entry";
-                                  } else if (opt === "ips") {
-                                    bgClass = "bg-purple-100 text-purple-700";
-                                    label = "IPS";
-                                  } else if (opt === "card") {
-                                    bgClass = "bg-blue-100 text-blue-700";
-                                    label = "Card";
-                                  } else if (opt === "mopay") {
-                                    bgClass = "bg-amber-100 text-amber-700";
-                                    label = "Mopay";
-                                  } else if (opt === "mopay_place") {
-                                    bgClass = "bg-teal-100 text-teal-700";
-                                    label = "Mopay Place";
-                                  }
-
-                                  return (
-                                    <span
-                                      key={opt}
-                                      className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap capitalize ${bgClass}`}
-                                    >
-                                      {label}
-                                    </span>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          </td>
-                          <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
-                            {Number(place.price) > 0 ? `$${Number(place.price).toFixed(2)}` : "Free"}
-                          </td>
-                          <td className="px-4 py-1.5 text-center">
-                            <button
-                              onClick={(e) => handleToggleActive(place, e)}
-                              className={`px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.5px] ${
-                                place.is_active
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-gray-100 text-gray-700"
-                              }`}
-                            >
-                              {place.is_active ? "Active" : "Inactive"}
-                            </button>
-                          </td>
-                          <td className="px-4 py-1.5">
-                            <div className="flex items-center gap-3">
-                              {/* VIEW DETAILS */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="cursor-pointer p-0 h-auto"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedPlace(place);
-                                }}
-                              >
-                                <Image src="/view.png" alt="View" width={16} height={16} className="w-4 h-4" />
-                              </Button>
-
-                              {/* EDIT */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="cursor-pointer p-0 h-auto"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  router.push(`/dashboard/manage-tourist-places/${place.id}`);
-                                }}
-                              >
-                                <Image src="/edit.png" alt="Edit" width={16} height={16} className="w-4 h-4" />
-                              </Button>
-
-                              {/* DELETE */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="cursor-pointer p-0 h-auto"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConfirmDelete(place);
-                                }}
-                              >
-                                <Image src="/delete.png" alt="Delete" width={16} height={16} className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
+            <div className="w-full overflow-x-auto">
+              {loading ? (
+                <TableSkeleton />
+              ) : places.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center">
+                  <div className="text-4xl mb-4">📍</div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">No Tourist Places Found</h3>
+                  <p className="text-sm text-gray-500 mb-6 max-w-sm">
+                    You haven't added any tourist places yet. Click the button below to add your first destination.
+                  </p>
+                  <Button
+                    className="bg-[#FF4800] text-white hover:bg-[#D43B00] cursor-pointer rounded-xl px-6"
+                    onClick={() => router.push("/dashboard/manage-tourist-places/add")}
+                  >
+                    Add Tourist Place
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
+                    <table className="w-full min-w-[960px] table-fixed border-collapse">
+                      <colgroup>
+                        <col className="w-[27%]" />
+                        <col className="w-[22%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[13%]" />
+                      </colgroup>
+                      <thead>
+                        <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">PLACE</th>
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">LOCATION</th>
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">PAYMENT</th>
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">PRICE</th>
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-center">STATUS</th>
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-right">ACTIONS</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody className="bg-[#FFFFFF]">
+                        {places.map((place) => {
+                          const imgUrl = getPublicImageUrl(place.picture_id);
 
-                {/* Pagination */}
-                <div className="mt-4 flex items-center justify-between">
+                          return (
+                            <tr
+                              key={place.id}
+                              className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
+                              onClick={() => router.push(`/dashboard/manage-tourist-places/${place.id}`)}
+                            >
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                                <div className="flex items-center gap-3">
+                                  {imgUrl ? (
+                                    <Image
+                                      src={imgUrl}
+                                      alt={place.place_name}
+                                      width={40}
+                                      height={40}
+                                      className="h-10 w-10 rounded-lg object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-[#8A92A6]">
+                                      📍
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <div className="line-clamp-2 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#111827]" title={place.place_name}>
+                                      {place.place_name}
+                                    </div>
+                                    <div className="text-[11px] text-[#8A92A6]">Rating: {Number(place.rating || 5.0).toFixed(1)} ★ ({place.reviews_count || 0})</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                                <span className="line-clamp-4 break-words" title={place.city ? `${place.area ? `${place.area}, ` : ""}${place.city}` : place.location_name || ""}>
+                                  {place.city ? `${place.area ? `${place.area}, ` : ""}${place.city}` : place.location_name || "—"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                                <div className="flex flex-wrap gap-1">
+                                  {(() => {
+                                    const opts = Array.isArray(place.payment_option)
+                                      ? place.payment_option
+                                      : typeof place.payment_option === "string"
+                                      ? [place.payment_option]
+                                      : [];
+
+                                    if (opts.length === 0) return <span className="text-gray-400">—</span>;
+
+                                    return opts.map((opt) => {
+                                      let bgClass = "bg-gray-100 text-gray-700";
+                                      let label = opt.replace(/_/g, " ");
+
+                                      if (opt === "free") {
+                                        bgClass = "bg-green-100 text-green-700";
+                                        label = "Free Entry";
+                                      } else if (opt === "ips") {
+                                        bgClass = "bg-purple-100 text-purple-700";
+                                        label = "IPS";
+                                      } else if (opt === "card") {
+                                        bgClass = "bg-blue-100 text-blue-700";
+                                        label = "Card";
+                                      } else if (opt === "mopay") {
+                                        bgClass = "bg-amber-100 text-amber-700";
+                                        label = "Mopay";
+                                      } else if (opt === "mopay_place") {
+                                        bgClass = "bg-teal-100 text-teal-700";
+                                        label = "Mopay Place";
+                                      }
+
+                                      return (
+                                        <span
+                                          key={opt}
+                                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap capitalize ${bgClass}`}
+                                        >
+                                          {label}
+                                        </span>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                                {Number(place.price) > 0 ? `$${Number(place.price).toFixed(2)}` : "Free"}
+                              </td>
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] text-center">
+                                <button
+                                  onClick={(e) => handleToggleActive(place, e)}
+                                  className={`inline-flex h-[24px] items-center whitespace-nowrap rounded-full px-3 text-[11px] font-semibold tracking-[0.5px] ${
+                                    place.is_active
+                                      ? "bg-purple-100 text-purple-700"
+                                      : "bg-gray-100 text-gray-700"
+                                  }`}
+                                >
+                                  {place.is_active ? "Active" : "Inactive"}
+                                </button>
+                              </td>
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                                <div className="flex items-center justify-end gap-1">
+                                  {/* VIEW DETAILS */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedPlace(place);
+                                    }}
+                                  >
+                                    <Image src="/view.png" alt="View" width={16} height={16} className="w-4 h-4" />
+                                  </Button>
+
+                                  {/* EDIT */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/dashboard/manage-tourist-places/${place.id}`);
+                                    }}
+                                  >
+                                    <Image src="/edit.png" alt="Edit" width={16} height={16} className="w-4 h-4" />
+                                  </Button>
+
+                                  {/* DELETE */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 cursor-pointer rounded-md p-0 opacity-70 transition hover:bg-[#FFE9E0] hover:opacity-100 group-hover:opacity-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConfirmDelete(place);
+                                    }}
+                                  >
+                                    <Image src="/delete.png" alt="Delete" width={16} height={16} className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
                   <PaginationBar
                     totalRecord={total}
                     totalPage={totalPages}
@@ -405,9 +428,9 @@ function TouristPlacesPageContent() {
                     setLimit={setLimit}
                     setPage={setPage}
                   />
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

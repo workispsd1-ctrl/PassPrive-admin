@@ -14,8 +14,8 @@ const DashboardLayout = ({ children }) => {
   const [isLargeScreen, setIsLargeScreen] = useState(false);
   const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const isDashboardHome = pathname === "/dashboard";
-  const sidebarExpandedWidth = 320;
-  const sidebarCollapsedWidth = 84;
+  const sidebarExpandedWidth = 260;
+  const sidebarCollapsedWidth = 70;
   const dashboardGradientClass = "bg-[#FFFFFF]";
   // Track screen width
   useEffect(() => {

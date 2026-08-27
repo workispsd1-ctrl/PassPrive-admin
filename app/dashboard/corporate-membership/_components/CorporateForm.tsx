@@ -76,11 +76,9 @@ export default function CorporateForm({
   const totalCashback = cashbackPerPass * qtyVal;
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "MUR",
+    return `MUR ${Number(val).toLocaleString("en-US", {
       maximumFractionDigits: 0,
-    }).format(val);
+    })}`;
   };
 
   return (

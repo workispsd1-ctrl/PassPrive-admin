@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, LogOut, Download, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -517,7 +517,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
               }
 
               if (pathname === "/dashboard") {
-                return `${title} - Super Admin`;
+                return title;
               }
               // Handle Store Details page
               if (
@@ -547,37 +547,25 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-md p-1.5 transition hover:bg-slate-200/40"
+            className="rounded-md p-1.5 transition text-[#FF4800] hover:bg-[#FFF7F4] hover:text-[#D43B00]"
             aria-label="Export"
           >
-            <Image
-              src="/download.png"
-              alt="Download"
-              width={16}
-              height={16}
-              className="h-4 w-4 object-contain"
-            />
+            <Download className="h-4.5 w-4.5" />
           </button>
         )}
         <button
           type="button"
           onClick={handleRefresh}
-          className="rounded-md p-1.5 transition hover:bg-slate-200/40"
+          className="rounded-md p-1.5 transition text-[#FF4800] hover:bg-[#FFF7F4] hover:text-[#D43B00]"
           aria-label="Refresh"
         >
-          <Image
-            src="/refresh.png"
-            alt="Refresh"
-            width={16}
-            height={16}
-            className="h-4 w-4 object-contain"
-          />
+          <RefreshCw className="h-4.5 w-4.5" />
         </button>
         <div className="relative profile-menu-container flex items-center gap-2">
           <button
             type="button"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-2 rounded-full border border-[#D0D5DD] bg-transparent px-3 py-[4px] transition hover:bg-slate-50 cursor-pointer"
+            className="flex items-center gap-2.5 rounded-xl border border-[#E2E8F0] bg-transparent pl-2 pr-3 py-1 transition hover:bg-slate-50 cursor-pointer"
           >
             {user?.avatar ? (
               <img
@@ -588,13 +576,19 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
                 className="h-7 w-7 rounded-full object-cover shrink-0"
               />
             ) : (
-              <div className="h-7 w-7 rounded-full bg-[linear-gradient(135deg,#2247FF_0%,#FF4800_100%)] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+              <div className="h-7 w-7 rounded-full bg-[linear-gradient(135deg,#FF4800_0%,#FFA680_100%)] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
                 {user?.fullName?.charAt(0)?.toUpperCase() || "A"}
               </div>
             )}
-            <span className="text-[14px] font-medium leading-[20px] text-[#314158]">
-              {user?.fullName || roleLabel}
-            </span>
+            <div className="flex flex-col items-start text-left">
+              <span className="text-[13px] font-semibold leading-[18px] text-[#314158] truncate max-w-[120px]">
+                {user?.fullName || "Admin User"}
+              </span>
+              <span className="text-[10px] font-medium leading-[14px] text-[#EAB308]">
+                {user?.role || "Super Admin"}
+              </span>
+            </div>
+            <ChevronDown className="h-4 w-4 text-[#314158]/70 shrink-0 ml-0.5" />
           </button>
 
           {isProfileOpen && (
@@ -609,7 +603,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
                     className="h-12 w-12 rounded-full object-cover shrink-0"
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded-full bg-[linear-gradient(135deg,#2247FF_0%,#FF4800_100%)] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                  <div className="h-12 w-12 rounded-full bg-[linear-gradient(135deg,#FF4800_0%,#FFA680_100%)] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
                     {user?.fullName?.charAt(0)?.toUpperCase() || "A"}
                   </div>
                 )}

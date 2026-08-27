@@ -199,8 +199,8 @@ export default function SubscriptionPlansPage() {
   const loading = activeTab === "customer" ? loadingPlans : loadingPartner;
 
   return (
-    <main className="min-h-full">
-      <div className="min-h-full space-y-6 p-6 bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+    <main className="min-h-full bg-white">
+      <div className="min-h-full space-y-6 p-6 bg-white">
 
         <div className="flex gap-2 border-b border-gray-200">
           <button
@@ -240,7 +240,7 @@ export default function SubscriptionPlansPage() {
               <thead className="bg-white">
                 <tr className="border-b border-gray-200">
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Plan Name</th>
-                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Amount (₹)</th>
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Amount (MUR)</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Duration</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Product ID</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Price ID</th>
@@ -248,11 +248,11 @@ export default function SubscriptionPlansPage() {
                   <th className="px-6 py-3 text-right text-[12px] font-semibold text-[#1D293D]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+              <tbody className="bg-white">
                 {plans.map((plan, idx) => (
                   <tr key={plan.id} className={`border-b border-gray-200 hover:bg-white/20 transition text-sm ${idx !== plans.length - 1 ? "border-b" : ""}`}>
                     <td className="px-6 py-3 font-medium text-[#1D293D]">{plan.plan_name}</td>
-                    <td className="px-6 py-3 text-[#5b6473]">₹{plan.amount || "0"}</td>
+                    <td className="px-6 py-3 text-[#5b6473]">MUR {plan.amount || "0"}</td>
                     <td className="px-6 py-3 text-[#5b6473]">{TYPE_LABELS[plan.type] ?? plan.type}</td>
                     <td className="px-6 py-3 text-[#5b6473]">{plan.product_id}</td>
                     <td className="px-6 py-3 text-[#5b6473]">{plan.price_id}</td>
@@ -291,7 +291,7 @@ export default function SubscriptionPlansPage() {
                   <th className="px-6 py-3 text-right text-[12px] font-semibold text-[#1D293D]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-[linear-gradient(135deg,_#ECFEFF_0%,_#F3E8FF_100%)]">
+              <tbody className="bg-white">
                 {partnerPlans.map((plan, idx) => (
                   <tr key={plan.id} className={`border-b border-gray-200 hover:bg-white/20 transition text-sm ${idx !== partnerPlans.length - 1 ? "border-b" : ""}`}>
                     <td className="px-6 py-3 font-medium text-[#1D293D]">{plan.plan_name}</td>

@@ -1268,7 +1268,7 @@ export default function CorporateDetailPage() {
                   <option value="">Select plan</option>
                   {plans.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.plan_name} • {p.type} • ₹{p.amount}
+                      {p.plan_name} • {p.type} • MUR {p.amount}
                     </option>
                   ))}
                 </select>
@@ -1492,7 +1492,7 @@ export default function CorporateDetailPage() {
                   <option value="">Select plan</option>
                   {plans.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.plan_name} • {p.type} • ₹{p.amount}
+                      {p.plan_name} • {p.type} • MUR {p.amount}
                     </option>
                   ))}
                 </select>
