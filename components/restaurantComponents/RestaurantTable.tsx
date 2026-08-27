@@ -137,7 +137,7 @@ export const RestaurantTable = ({
               return (
                 <tr
                   key={r.id}
-                  className="group h-[56px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
+                  className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
                   onClick={() => onRowClick?.(r.id)}
                 >
                   <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">

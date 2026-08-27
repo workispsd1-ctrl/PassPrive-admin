@@ -41,7 +41,7 @@ function RestaurantsTableSkeleton() {
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="flex h-[56px] items-center gap-4 border-b border-[#F1F2F5] px-4 last:border-b-0"
+          className="flex h-[104px] items-center gap-4 border-b border-[#F1F2F5] px-4 last:border-b-0"
         >
           <Skeleton className="h-3.5 w-[24%]" />
           <Skeleton className="h-3.5 w-[20%]" />
