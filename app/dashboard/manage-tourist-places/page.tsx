@@ -253,7 +253,7 @@ function TouristPlacesPageContent() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
+                  <div className="overflow-x-auto overflow-y-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
                     <table className="w-full min-w-[960px] table-fixed border-collapse">
                       <colgroup>
                         <col className="w-[27%]" />
@@ -265,7 +265,7 @@ function TouristPlacesPageContent() {
                       </colgroup>
                       <thead>
                         <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
-                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">PLACE</th>
+                          <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left sticky left-0 bg-[#FAFAFB] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">PLACE</th>
                           <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">LOCATION</th>
                           <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">PAYMENT</th>
                           <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">PRICE</th>
@@ -283,7 +283,7 @@ function TouristPlacesPageContent() {
                               className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
                               onClick={() => router.push(`/dashboard/manage-tourist-places/${place.id}`)}
                             >
-                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                              <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827] sticky left-0 bg-white group-hover:bg-[#FFF7F4] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                 <div className="flex items-center gap-3">
                                   {imgUrl ? (
                                     <Image

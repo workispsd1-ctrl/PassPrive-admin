@@ -5,6 +5,7 @@ import Sidebar from "./_components/Sidebar";
 import Navbar from "./_components/Navbar";
 import { useAuth } from "@/store/hooks/useAuth";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { ChevronRight } from "lucide-react";
 
 
 
@@ -12,6 +13,7 @@ const DashboardLayout = ({ children }) => {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const isDashboardHome = pathname === "/dashboard";
   const sidebarExpandedWidth = 260;
@@ -33,6 +35,7 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     if (!isLargeScreen) {
       setSidebarCollapsed(true);
+      setMobileSidebarOpen(false);
     } else {
       setSidebarCollapsed(false);
     }
@@ -87,23 +90,39 @@ const DashboardLayout = ({ children }) => {
     <div className={`min-h-screen flex ${dashboardGradientClass}`}>
       <Sidebar
         collapsed={sidebarCollapsed}
+        isLargeScreen={isLargeScreen}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
         onToggle={() => {
           if (isLargeScreen) {
             setSidebarCollapsed(!sidebarCollapsed);
           }
         }}
       />
+      
+      {!isLargeScreen && !mobileSidebarOpen && (
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-40 bg-[#FFF7F4] text-[#FF4800] p-2 rounded-r-xl shadow-md border border-[#FFE2D6] hover:bg-white transition-colors flex items-center justify-center cursor-pointer h-10 w-9"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+
       <div
         className="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          marginLeft: sidebarCollapsed
-            ? `${sidebarCollapsedWidth}px`
-            : `${sidebarExpandedWidth}px`,
+          marginLeft: !isLargeScreen
+            ? "0px"
+            : sidebarCollapsed
+              ? `${sidebarCollapsedWidth}px`
+              : `${sidebarExpandedWidth}px`,
         }}
       >
         <Navbar
           collapsed={sidebarCollapsed}
           setCollapsed={setSidebarCollapsed}
+          isLargeScreen={isLargeScreen}
         />
         <main
           className={`flex-1 overflow-y-auto ${dashboardGradientClass}`}

@@ -16,6 +16,7 @@ interface NavbarProps {
   setSidebarOpen?: (open: boolean) => void;
   collapsed?: boolean;
   setCollapsed?: (collapsed: boolean) => void;
+  isLargeScreen?: boolean;
 }
 
 const pathName: Record<string, string> = {
@@ -75,7 +76,7 @@ const pathDescription: Record<string, string> = {
   "/dashboard/corporate-membership": "Configure corporate accounts, simulate pass pricing & cashbacks, and generate promo codes.",
 };
 
-const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
+const Navbar = ({ setCollapsed, collapsed, isLargeScreen = true }: NavbarProps) => {
   const dispatch = useDispatch();
   const pathname = usePathname();
   const isBankOffersPage = pathname === "/dashboard/bank-offers";
@@ -462,18 +463,20 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
         }`}
     >
       <div className="flex items-center gap-[10px]">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed?.(!collapsed)}
-          className="rounded-md p-1 text-[#5b6473] transition hover:bg-slate-200/40"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <ChevronLeft className="h-5 w-5" />
-          )}
-        </Button>
+        {isLargeScreen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed?.(!collapsed)}
+            className="rounded-md p-1 text-[#5b6473] transition hover:bg-slate-200/40"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-5 w-5" />
+            ) : (
+              <ChevronLeft className="h-5 w-5" />
+            )}
+          </Button>
+        )}
         <div>
           <span className="text-[22px] font-semibold leading-[28px] text-[#000000]">
             {(() => {

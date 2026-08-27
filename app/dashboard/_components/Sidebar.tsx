@@ -15,6 +15,8 @@ import {
   LayoutGrid,
   MapPin,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,9 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   collapsed: boolean;
   onToggle?: () => void;
+  isLargeScreen?: boolean;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 type MenuIcon = ComponentType<{ className?: string }>;
@@ -143,7 +148,14 @@ function iconClassName(active: boolean, collapsed: boolean) {
   );
 }
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({
+  collapsed: rawCollapsed,
+  onToggle,
+  isLargeScreen = true,
+  mobileOpen = false,
+  onMobileClose,
+}: SidebarProps) {
+  const collapsed = isLargeScreen ? rawCollapsed : false;
   const pathname = usePathname() || "";
   const router = useRouter();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
@@ -287,17 +299,21 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     //{ title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
   ];
 
+  const asideWidth = isLargeScreen 
+    ? (collapsed ? "w-[70px] translate-x-0" : "w-[260px] translate-x-0")
+    : (mobileOpen ? "w-[260px] translate-x-0 shadow-2xl" : "w-[260px] -translate-x-full");
+
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col overflow-hidden border-r border-[#FFE2D6] bg-white shadow-[0_10px_30px_rgba(255, 72, 0,0.06)] transition-[width] duration-300 ease-out",
-        collapsed ? "w-[70px]" : "w-[260px]"
+        "fixed inset-y-0 left-0 z-55 flex flex-col overflow-hidden border-r border-[#FFE2D6] bg-white shadow-[0_10px_30px_rgba(255, 72, 0,0.06)] transition-all duration-300 ease-out",
+        asideWidth
       )}
     >
       <div
         className={cn(
-          "px-4 pt-6 pb-6 w-full bg-white border-b border-[#FFE2D6]",
-          collapsed ? "flex items-center justify-center" : "flex items-center justify-start pl-5"
+          "px-4 pt-6 pb-6 w-full bg-white border-b border-[#FFE2D6] relative flex items-center justify-between",
+          collapsed ? "justify-center px-0" : "pl-5"
         )}
       >
         <Link href="/dashboard" className="flex items-center gap-3">
@@ -311,12 +327,22 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className="h-6 w-6 object-contain shrink-0"
             />
           </div>
-          {!collapsed && (
+          {(!collapsed || !isLargeScreen) && (
             <span className="text-[20px] font-bold tracking-wide text-[#FF4800] font-[family-name:var(--font-libre-baskerville)]">
               Passprivé
             </span>
           )}
         </Link>
+
+        {!isLargeScreen && mobileOpen && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="p-1.5 rounded-lg text-[#FF4800] bg-[#FFF7F4] hover:bg-white border border-[#FFE2D6] transition-colors cursor-pointer flex items-center justify-center"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3">

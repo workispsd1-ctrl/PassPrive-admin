@@ -564,7 +564,7 @@ export default function AdminPage() {
                   </colgroup>
                   <thead>
                     <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
-                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
+                      <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left sticky left-0 bg-[#FAFAFB] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         Email
                       </th>
                       <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">
@@ -588,7 +588,7 @@ export default function AdminPage() {
                         key={admmin.id}
                         className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
                       >
-                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827] wrap-break-word">
+                        <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827] wrap-break-word sticky left-0 bg-white group-hover:bg-[#FFF7F4] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                           <span className="line-clamp-4 break-words" title={admmin?.email}>
                             {admmin?.email}
                           </span>

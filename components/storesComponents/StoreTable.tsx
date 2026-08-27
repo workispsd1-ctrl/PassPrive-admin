@@ -126,7 +126,7 @@ export const StoreTable = ({
 
   return (
     <>
-      <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3]">
+      <div className="overflow-x-auto overflow-y-hidden rounded-[12px] border border-[#EDEFF3]">
         <table className="w-full min-w-[960px] table-fixed border-collapse">
           <colgroup>
             <col className="w-[27%]" />
@@ -139,7 +139,7 @@ export const StoreTable = ({
 
           <thead>
             <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
-              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Name</th>
+              <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left sticky left-0 bg-[#FAFAFB] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Name</th>
               <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Location</th>
               <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Category</th>
               <th className="px-4 py-3 text-[12px] font-semibold uppercase leading-[16px] tracking-[0.6px] text-[#6B7280] text-left">Status</th>
@@ -158,7 +158,7 @@ export const StoreTable = ({
                   className="group h-[104px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
                   onClick={() => onRowClick?.(s.id)}
                 >
-                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827] sticky left-0 bg-white group-hover:bg-[#FFF7F4] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     <span className="line-clamp-4 break-words" title={s.name ?? undefined}>
                       {s.name || "—"}
                     </span>
