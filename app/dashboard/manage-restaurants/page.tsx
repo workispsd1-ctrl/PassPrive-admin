@@ -141,7 +141,7 @@ function RestaurantsPageContent() {
   return (
     <>
       <div className="min-h-full w-full space-y-4">
-        <div className="min-h-full space-y-6 p-6">
+        <div className="min-h-full space-y-4 pb-6 pt-2">
           <SearchAndFilter
             searchTerm={searchTerm}
             onSearchChange={(val) => {
@@ -151,7 +151,7 @@ function RestaurantsPageContent() {
             variant="search-only"
             placeholder="Search restaurants by name, city, or area..."
           />
-          <div className="w-full rounded-[16px] bg-[#FFFFFF] p-5 shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+          <div className="w-full rounded-[16px] bg-[#FFFFFF] px-[10px] py-[18px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
             <div className="mb-4 flex items-center justify-between gap-4">
               <h2 className="text-[16px] font-semibold leading-[22px] text-[#111827]">
                 Restaurants
@@ -200,8 +200,8 @@ export default function RestaurantsPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-6">
-          <div className="w-full rounded-[16px] bg-[#FFFFFF] p-5 shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
+        <div className="pb-6 pt-2">
+          <div className="w-full rounded-[16px] bg-[#FFFFFF] px-[10px] py-[18px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
             <RestaurantsTableSkeleton />
           </div>
         </div>

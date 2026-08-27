@@ -109,14 +109,14 @@ export const RestaurantTable = ({
   return (
     <>
       <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3]">
-        <table className="w-full min-w-[900px] table-fixed border-collapse">
+        <table className="w-full min-w-[960px] table-fixed border-collapse">
           <colgroup>
-            <col className="w-[26%]" />
-            <col className="w-[23%]" />
-            <col className="w-[11%]" />
-            <col className="w-[15%]" />
-            <col className="w-[12%]" />
+            <col className="w-[27%]" />
+            <col className="w-[22%]" />
+            <col className="w-[9%]" />
+            <col className="w-[14%]" />
             <col className="w-[13%]" />
+            <col className="w-[15%]" />
           </colgroup>
 
           <thead>
@@ -140,19 +140,22 @@ export const RestaurantTable = ({
                   className="group h-[56px] cursor-pointer border-b border-[#F1F2F5] transition-colors last:border-b-0 hover:bg-[#FFF7F4]"
                   onClick={() => onRowClick?.(r.id)}
                 >
-                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
-                    <span className="block truncate" title={r.name ?? undefined}>
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-medium text-[#111827]">
+                    <span className="line-clamp-4 break-words" title={r.name ?? undefined}>
                       {r.name || "—"}
                     </span>
                   </td>
 
-                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
-                    <span className="block truncate" title={[r.area, r.city].filter(Boolean).join(", ")}>
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] font-normal text-[#8A92A6]">
+                    <span
+                      className="line-clamp-4 break-words"
+                      title={[r.area, r.city].filter(Boolean).join(", ")}
+                    >
                       {[r.area, r.city].filter(Boolean).join(", ") || "—"}
                     </span>
                   </td>
 
-                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
                     {r.rating ? (
                       <span className="inline-flex items-center gap-1 font-medium text-[#111827]">
                         <Star className="h-[13px] w-[13px] shrink-0 fill-[#F5A623] text-[#F5A623]" />
@@ -163,7 +166,7 @@ export const RestaurantTable = ({
                     )}
                   </td>
 
-                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] whitespace-nowrap font-normal text-[#8A92A6]">
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] whitespace-nowrap font-normal text-[#8A92A6]">
                     {r.cost_for_two ? (
                       <>
                         <span className="text-[#111827]">
@@ -176,7 +179,7 @@ export const RestaurantTable = ({
                     )}
                   </td>
 
-                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] text-center">
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px] text-center">
                     {r.offer ? (
                       <span className="inline-flex h-[24px] items-center whitespace-nowrap rounded-full bg-[#FFF2EC] px-3 text-[11px] font-semibold tracking-[0.5px] text-[#FF4800]">
                         Offer
@@ -186,7 +189,7 @@ export const RestaurantTable = ({
                     )}
                   </td>
 
-                  <td className="px-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
+                  <td className="px-4 py-4 align-middle text-[13px] leading-[18px] tracking-[0.5px]">
                     <div className="flex items-center justify-end gap-1">
                       {/* VIEW */}
                       <Button
