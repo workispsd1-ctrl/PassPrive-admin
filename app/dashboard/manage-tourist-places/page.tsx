@@ -243,13 +243,13 @@ function TouristPlacesPageContent() {
               <>
                 <table className="min-w-full border-collapse bg-white">
                   <thead>
-                    <tr className="border-b border-gray-200 h-[40px]">
-                      <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">PLACE</th>
-                      <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">LOCATION</th>
-                      <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">PAYMENT</th>
-                      <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">PRICE</th>
-                      <th className="px-6 py-2 text-center text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">STATUS</th>
-                      <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
+                    <tr className="border-b border-gray-200 h-[36px]">
+                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">PLACE</th>
+                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">LOCATION</th>
+                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">PAYMENT</th>
+                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">PRICE</th>
+                      <th className="px-4 py-1.5 text-center text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">STATUS</th>
+                      <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody className="bg-[#FFFFFF]">
@@ -259,12 +259,12 @@ function TouristPlacesPageContent() {
                       return (
                         <tr
                           key={place.id}
-                          className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-sm ${
+                          className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-xs ${
                             idx !== places.length - 1 ? "border-b" : ""
                           }`}
                           onClick={() => router.push(`/dashboard/manage-tourist-places/${place.id}`)}
                         >
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-1.5">
                             <div className="flex items-center gap-3">
                               {imgUrl ? (
                                 <Image
@@ -280,15 +280,15 @@ function TouristPlacesPageContent() {
                                 </div>
                               )}
                               <div>
-                                <div className="text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{place.place_name}</div>
+                                <div className="text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{place.place_name}</div>
                                 <div className="text-[12px] text-[#8A92A6]">Rating: {Number(place.rating || 5.0).toFixed(1)} ★ ({place.reviews_count || 0})</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                          <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                             {place.city ? `${place.area ? `${place.area}, ` : ""}${place.city}` : place.location_name || "—"}
                           </td>
-                          <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                          <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                             <div className="flex flex-wrap gap-1">
                               {(() => {
                                 const opts = Array.isArray(place.payment_option)
@@ -332,13 +332,13 @@ function TouristPlacesPageContent() {
                               })()}
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                          <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                             {Number(place.price) > 0 ? `$${Number(place.price).toFixed(2)}` : "Free"}
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-4 py-1.5 text-center">
                             <button
                               onClick={(e) => handleToggleActive(place, e)}
-                              className={`px-3 py-1 rounded-full text-[14px] font-semibold tracking-[0.5px] ${
+                              className={`px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.5px] ${
                                 place.is_active
                                   ? "bg-purple-100 text-purple-700"
                                   : "bg-gray-100 text-gray-700"
@@ -347,7 +347,7 @@ function TouristPlacesPageContent() {
                               {place.is_active ? "Active" : "Inactive"}
                             </button>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-1.5">
                             <div className="flex items-center gap-3">
                               {/* VIEW DETAILS */}
                               <Button

@@ -128,23 +128,23 @@ export const StoreTable = ({
     <>
       <table className="min-w-full border-collapse bg-white">
         <thead className="bg-white">
-          <tr className="border-b border-gray-200 h-[40px]">
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+          <tr className="border-b border-gray-200 h-[36px]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
               NAME
             </th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
               LOCATION
             </th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
               CATEGORY
             </th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
               STATUS
             </th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
               FEATURED
             </th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
               ACTIONS
             </th>
           </tr>
@@ -157,21 +157,21 @@ export const StoreTable = ({
             return (
               <tr
                 key={s.id}
-                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-sm ${
+                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-xs ${
                   idx !== stores.length - 1 ? "border-b" : ""
                 }`}
                 onClick={() => onRowClick?.(s.id)}
               >
-                <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{s.name}</td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">{formatLocation(s)}</td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#AEA9B1]">
+                <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{s.name}</td>
+                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#AEA9B1]">{formatLocation(s)}</td>
+                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#AEA9B1]">
                   {s.category || "-"}
                   {s.subcategory ? (
-                    <span className="text-[14px] text-[#AEA9B1]"> • {s.subcategory}</span>
+                    <span className="text-[12px] text-[#AEA9B1]"> • {s.subcategory}</span>
                   ) : null}
                 </td>
 
-                <td className="px-6 py-3">
+                <td className="px-4 py-1.5">
                   {s.is_active === false ? (
                     <span className="text-xs font-semibold text-red-600">Disabled</span>
                   ) : (
@@ -179,7 +179,7 @@ export const StoreTable = ({
                   )}
                 </td>
 
-                <td className="px-6 py-3">
+                <td className="px-4 py-1.5">
                   {s.is_featured ? (
                     <span className="text-xs font-semibold text-[#FF4800]">Yes</span>
                   ) : (
@@ -187,7 +187,7 @@ export const StoreTable = ({
                   )}
                 </td>
 
-                <td className="px-6 py-4">
+                <td className="px-4 py-1.5">
                   <div className="flex items-center gap-3">
                     {/* VIEW */}
                     <Button

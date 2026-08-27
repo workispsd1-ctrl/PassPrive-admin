@@ -199,29 +199,29 @@ export const UserTable = ({
         </div> */}
         <table className="min-w-full border-collapse">
           <thead className="bg-white">
-            <tr className="border-b border-gray-200 h-[40px]">
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+            <tr className="border-b border-gray-200 h-[36px]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 NAME
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 PHONE
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 EMAIL
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 PLAN
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 SUBSCRIPTION DATE
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 JOIN DATE
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 LAST OPENED
               </th>
-              <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+              <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                 ACTIONS
               </th>
             </tr>
@@ -231,18 +231,18 @@ export const UserTable = ({
               users.map((user, idx) => (
                 <tr
                   key={user.id}
-                  className={`border-b border-gray-200 hover:bg-white/20 transition-colors lg:text-md md:text-md text-sm ${idx !== users.length - 1 ? "border-b" : ""
+                  className={`border-b border-gray-200 hover:bg-white/20 transition-colors text-xs ${idx !== users.length - 1 ? "border-b" : ""
                     }`}
                 >
-                  <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{user.full_name || user.display_name || "-"}</td>
-                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                  <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{user.full_name || user.display_name || "-"}</td>
+                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                     {user.phone ?? "-"}
                   </td>
-                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{user.email}</td>
-                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">{user.email}</td>
+                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                     <StatusBadge status={user.membership_tier || user.membership || "none"} />
                   </td>
-                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                     {(user.user_subscription?.length ?? 0) > 0
                       ? formatStartDateIST(
                         user.user_subscription?.[0]?.start_date ??
@@ -250,14 +250,14 @@ export const UserTable = ({
                       )
                       : formatStartDateIST(user.membership_started)}
                   </td>
-                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                     {/* {format(parseISO(user.created_at), "MMM dd, yyyy")} */}
                     {displayValidTill(user.created_at || "", user.created_at || "")}
                   </td>
-                  <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                  <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                     {formatToIndia(user.last_opened)}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-1.5">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => {

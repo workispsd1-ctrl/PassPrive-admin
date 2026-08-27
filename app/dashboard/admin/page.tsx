@@ -543,20 +543,20 @@ export default function AdminPage() {
           <div className="w-full overflow-x-auto bg-[#FFFFFF] rounded-[16px] p-[16px] shadow-[0px_8px_32px_0px_rgba(31,38,135,0.15)]">
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
               <thead className="bg-white">
-                <tr className="border-b border-gray-200 h-[40px]">
-                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+                <tr className="border-b border-gray-200 h-[36px]">
+                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                     Email
                   </th>
-                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                     Name
                   </th>
-                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                     Role
                   </th>
-                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                     Phone
                   </th>
-                  <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">
+                  <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">
                     Actions
                   </th>
                 </tr>
@@ -565,23 +565,23 @@ export default function AdminPage() {
               <tbody className="bg-[#FFFFFF] divide-y divide-gray-200">
                 {admins.map((admmin, idx) => (
                   <tr key={admmin.id} className={`border-b border-gray-200 hover:bg-white/20 transition ${idx !== admins.length - 1 ? "border-b" : ""}`}>
-                    <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000] wrap-break-word">
+                    <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000] wrap-break-word">
                       {admmin?.email}
                     </td>
-                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                       <span className="flex items-center">
                         {admmin?.full_name || admmin?.name}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                       <span className="flex items-center">
                         {formatRole(admmin?.role)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                       {admmin?.phone}
                     </td>
-                    <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                    <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                       <div className="flex items-center gap-3">
                         <Button
                           variant="ghost"

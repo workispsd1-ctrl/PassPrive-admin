@@ -109,13 +109,13 @@ export const RestaurantTable = ({
     <>
       <table className="min-w-full border-collapse bg-white">
         <thead className="bg-white">
-          <tr className="border-b border-gray-200 h-[40px]">
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">NAME</th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">LOCATION</th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">RATING</th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">COST FOR TWO</th>
-            <th className="px-6 py-2 text-center text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">OFFER</th>
-            <th className="px-6 py-2 text-left text-[16px] font-semibold leading-[20px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
+          <tr className="border-b border-gray-200 h-[36px]">
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">NAME</th>
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">LOCATION</th>
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">RATING</th>
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">COST FOR TWO</th>
+            <th className="px-4 py-1.5 text-center text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">OFFER</th>
+            <th className="px-4 py-1.5 text-left text-[13px] font-bold leading-[18px] tracking-[0.5px] text-[#000000]">ACTIONS</th>
           </tr>
         </thead>
 
@@ -126,22 +126,22 @@ export const RestaurantTable = ({
             return (
               <tr
                 key={r.id}
-                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-sm ${
+                className={`border-b border-gray-200 hover:bg-white/20 transition cursor-pointer text-xs ${
                   idx !== restaurants.length - 1 ? "border-b" : ""
                 }`}
                 onClick={() => onRowClick?.(r.id)}
               >
-                <td className="px-6 py-4 text-[16px] font-medium leading-[20px] tracking-[0.5px] text-[#000000]">{r.name}</td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                <td className="px-4 py-1.5 text-[13px] font-medium leading-[18px] tracking-[0.5px] text-[#000000]">{r.name}</td>
+                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                   {r.area}, {r.city}
                 </td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">{r.rating ?? "-"}</td>
-                <td className="px-6 py-4 text-[16px] font-normal leading-[20px] tracking-[0.5px] text-[#8A92A6]">
+                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">{r.rating ?? "-"}</td>
+                <td className="px-4 py-1.5 text-[13px] font-normal leading-[18px] tracking-[0.5px] text-[#8A92A6]">
                   {r.cost_for_two ? `Rs ${r.cost_for_two}` : "-"}
                 </td>
-                <td className="px-6 py-4 text-center">
+                <td className="px-4 py-1.5 text-center">
                   {r.offer ? (
-                    <span className="bg-[#FFF2EC] text-[#FF4800] px-4 py-1.5 rounded-full text-[14px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
+                    <span className="bg-[#FFF2EC] text-[#FF4800] px-3 py-1 rounded-full text-[11px] font-semibold tracking-[0.5px] whitespace-nowrap inline-block">
                       Offer
                     </span>
                   ) : (
@@ -149,7 +149,7 @@ export const RestaurantTable = ({
                   )}
                 </td>
 
-                <td className="px-4 py-4">
+                <td className="px-4 py-1.5">
                   <div className="flex items-center gap-3">
                     {/* VIEW */}
                     <Button
