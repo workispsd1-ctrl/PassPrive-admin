@@ -1,4 +1,14 @@
-export type BannerKind = "homehero" | "dinein" | "store" | "wellness" | "tourist";
+export type BannerKind =
+  | "homehero"
+  | "dinein"
+  | "store"
+  | "wellness"
+  | "tourist"
+  | "website_home"
+  | "website_dinein"
+  | "website_store"
+  | "website_wellness"
+  | "website_tourist";
 
 export type BannerConfig = {
   key: BannerKind;
@@ -12,6 +22,8 @@ export type BannerConfig = {
   editLabel: string;
   /** Home hero uses its own /new and /[id] pages; the rest create inline and edit via /banner/[kind]/[id]. */
   usesDedicatedPages: boolean;
+  /** Which surface this banner is shown on. Website creatives use different dimensions than app ones, so they are always separate rows/tables, never shared. */
+  platform: "app" | "web";
 };
 
 export const bannerConfigs: BannerConfig[] = [
@@ -26,6 +38,7 @@ export const bannerConfigs: BannerConfig[] = [
     addLabel: "Add Home Hero Offer",
     editLabel: "Edit Home Hero Offer",
     usesDedicatedPages: true,
+    platform: "app",
   },
   {
     key: "dinein",
@@ -38,6 +51,7 @@ export const bannerConfigs: BannerConfig[] = [
     addLabel: "Add Dine-In Banner",
     editLabel: "Edit Dine-In Banner",
     usesDedicatedPages: false,
+    platform: "app",
   },
   {
     key: "store",
@@ -50,6 +64,7 @@ export const bannerConfigs: BannerConfig[] = [
     addLabel: "Add Store Banner",
     editLabel: "Edit Store Banner",
     usesDedicatedPages: false,
+    platform: "app",
   },
   {
     key: "wellness",
@@ -62,6 +77,7 @@ export const bannerConfigs: BannerConfig[] = [
     addLabel: "Add Wellness Banner",
     editLabel: "Edit Wellness Banner",
     usesDedicatedPages: false,
+    platform: "app",
   },
   {
     key: "tourist",
@@ -74,6 +90,72 @@ export const bannerConfigs: BannerConfig[] = [
     addLabel: "Add Explore Banner",
     editLabel: "Edit Explore Banner",
     usesDedicatedPages: false,
+    platform: "app",
+  },
+  {
+    key: "website_home",
+    title: "Website Home Banners",
+    description: "Promotional banners shown on the public website's home page. Use web-sized creatives (wider aspect ratio than the app).",
+    collectionLabel: "Website home banners",
+    table: "websitehomebanners",
+    storageBucket: "WebsiteHomeBanners",
+    emptyLabel: "No website home banners available yet.",
+    addLabel: "Add Website Home Banner",
+    editLabel: "Edit Website Home Banner",
+    usesDedicatedPages: false,
+    platform: "web",
+  },
+  {
+    key: "website_dinein",
+    title: "Website Dine-In Banners",
+    description: "Promotional banners shown on the website's dine-in section.",
+    collectionLabel: "Website dine-in banners",
+    table: "websitedineinbanners",
+    storageBucket: "WebsiteDineinBanners",
+    emptyLabel: "No website dine-in banners available yet.",
+    addLabel: "Add Website Dine-In Banner",
+    editLabel: "Edit Website Dine-In Banner",
+    usesDedicatedPages: false,
+    platform: "web",
+  },
+  {
+    key: "website_store",
+    title: "Website Store Banners",
+    description: "Promotional banners shown on the website's store section.",
+    collectionLabel: "Website store banners",
+    table: "websitestorebanners",
+    storageBucket: "WebsiteStoreBanners",
+    emptyLabel: "No website store banners available yet.",
+    addLabel: "Add Website Store Banner",
+    editLabel: "Edit Website Store Banner",
+    usesDedicatedPages: false,
+    platform: "web",
+  },
+  {
+    key: "website_wellness",
+    title: "Website Wellness Banners",
+    description: "Promotional banners shown on the website's wellness section.",
+    collectionLabel: "Website wellness banners",
+    table: "websitewellnessbanners",
+    storageBucket: "WebsiteWellnessBanners",
+    emptyLabel: "No website wellness banners available yet.",
+    addLabel: "Add Website Wellness Banner",
+    editLabel: "Edit Website Wellness Banner",
+    usesDedicatedPages: false,
+    platform: "web",
+  },
+  {
+    key: "website_tourist",
+    title: "Website Explore Banners",
+    description: "Promotional banners shown on the website's explore (tourist) section.",
+    collectionLabel: "Website explore banners",
+    table: "websitetouristbanners",
+    storageBucket: "WebsiteTouristBanners",
+    emptyLabel: "No website explore banners available yet.",
+    addLabel: "Add Website Explore Banner",
+    editLabel: "Edit Website Explore Banner",
+    usesDedicatedPages: false,
+    platform: "web",
   },
 ];
 

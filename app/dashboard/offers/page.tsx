@@ -256,45 +256,31 @@ function UploadPanel({
   );
 }
 
+function keyedState<T>(value: T): Record<BannerKind, T> {
+  return Object.fromEntries(
+    bannerConfigs.map((config) => [config.key, value])
+  ) as Record<BannerKind, T>;
+}
+
 export default function OffersPage() {
   const router = useRouter();
-  const [records, setRecords] = useState<Record<BannerKind, BannerRecord[]>>({
-    homehero: [],
-    dinein: [],
-    store: [],
-    wellness: [],
-    tourist: [],
-  });
-  const [loading, setLoading] = useState<Record<BannerKind, boolean>>({
-    homehero: true,
-    dinein: true,
-    store: true,
-    wellness: true,
-    tourist: true,
-  });
+  const [records, setRecords] = useState<Record<BannerKind, BannerRecord[]>>(() =>
+    keyedState<BannerRecord[]>([])
+  );
+  const [loading, setLoading] = useState<Record<BannerKind, boolean>>(() =>
+    keyedState(true)
+  );
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [saving, setSaving] = useState<Record<BannerKind, boolean>>({
-    homehero: false,
-    dinein: false,
-    store: false,
-    wellness: false,
-    tourist: false,
-  });
+  const [saving, setSaving] = useState<Record<BannerKind, boolean>>(() =>
+    keyedState(false)
+  );
   const [openForm, setOpenForm] = useState<BannerKind | null>(null);
-  const [forms, setForms] = useState<Record<BannerKind, UploadFormState>>({
-    homehero: { ...initialUploadForm },
-    dinein: { ...initialUploadForm },
-    store: { ...initialUploadForm },
-    wellness: { ...initialUploadForm },
-    tourist: { ...initialUploadForm },
-  });
-  const [files, setFiles] = useState<Record<BannerKind, File | null>>({
-    homehero: null,
-    dinein: null,
-    store: null,
-    wellness: null,
-    tourist: null,
-  });
+  const [forms, setForms] = useState<Record<BannerKind, UploadFormState>>(() =>
+    keyedState({ ...initialUploadForm })
+  );
+  const [files, setFiles] = useState<Record<BannerKind, File | null>>(() =>
+    keyedState<File | null>(null)
+  );
 
   const summary = useMemo(
     () =>
@@ -510,15 +496,22 @@ export default function OffersPage() {
           </div>
         </section>
 
-        {bannerConfigs.map((config) => {
+        {bannerConfigs.map((config, index) => {
           const items = records[config.key] || [];
           const formOpen = openForm === config.key;
+          const isFirstOfPlatform =
+            index === 0 || bannerConfigs[index - 1].platform !== config.platform;
 
           return (
-            <section
-              key={config.key}
-              className="rounded-[18px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm"
-            >
+            <div key={config.key}>
+              {isFirstOfPlatform && (
+                <h3 className="mb-3 mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {config.platform === "web" ? "Website Banners" : "App Banners"}
+                </h3>
+              )}
+              <section
+                className="rounded-[18px] border border-slate-200/90 bg-white/95 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm"
+              >
               <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-start md:justify-between">
                 <div className="max-w-2xl">
                   <h2 className="text-xl font-semibold text-slate-900">{config.title}</h2>
@@ -647,7 +640,8 @@ export default function OffersPage() {
                   </div>
                 )}
               </div>
-            </section>
+              </section>
+            </div>
           );
         })}
       </div>
