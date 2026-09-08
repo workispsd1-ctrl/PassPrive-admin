@@ -29,32 +29,61 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function RestaurantsTableSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3]">
-      <div className="flex h-[44px] items-center gap-4 border-b border-[#EDEFF3] bg-[#FAFAFB] px-4">
-        <Skeleton className="h-3 w-[22%]" />
-        <Skeleton className="h-3 w-[20%]" />
-        <Skeleton className="h-3 w-[8%]" />
-        <Skeleton className="h-3 w-[12%]" />
-        <Skeleton className="h-3 w-[8%]" />
-      </div>
-
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex h-[104px] items-center gap-4 border-b border-[#F1F2F5] px-4 last:border-b-0"
-        >
-          <Skeleton className="h-3.5 w-[24%]" />
-          <Skeleton className="h-3.5 w-[20%]" />
-          <Skeleton className="h-3.5 w-[6%]" />
-          <Skeleton className="h-3.5 w-[10%]" />
-          <Skeleton className="h-6 w-[9%] rounded-full" />
-          <div className="ml-auto flex gap-1">
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <Skeleton className="h-8 w-8 rounded-md" />
-          </div>
-        </div>
-      ))}
+    <div className="overflow-x-auto overflow-y-hidden rounded-[12px] border border-[#EDEFF3]">
+      <table className="w-full min-w-[960px] table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[27%]" />
+          <col className="w-[22%]" />
+          <col className="w-[9%]" />
+          <col className="w-[14%]" />
+          <col className="w-[13%]" />
+          <col className="w-[15%]" />
+        </colgroup>
+        <thead>
+          <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Name</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Location</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Rating</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Cost for two</th>
+            <th className="px-4 py-3 text-center text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Offer</th>
+            <th className="px-4 py-3 text-right text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i} className="h-[104px] border-b border-[#F1F2F5] last:border-b-0">
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-28" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-12" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-24" />
+              </td>
+              <td className="px-4 py-4 text-center">
+                <Skeleton className="mx-auto h-6 w-16 rounded-full" />
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex justify-end gap-1">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -599,64 +599,84 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* KPI skeletons */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+            className="h-[90px] rounded-2xl border border-[#E0E7FF] border-l-4 border-l-[#FF4800] bg-white px-4 py-3 shadow-sm"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <Skeleton className="h-4 w-24" />
+            <div className="flex h-full items-center gap-3">
+              <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 w-24" />
               </div>
-              <Skeleton className="h-4 w-10" />
-            </div>
-            <div className="mt-3">
-              <Skeleton className="h-7 w-24" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* charts row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm lg:col-span-2">
-          <div className="border-b border-gray-200 p-4">
-            <Skeleton className="h-5 w-44" />
-            <Skeleton className="mt-2 h-3 w-28" />
+      {/* OVERVIEW + SUBSCRIPTIONS */}
+      <div className="flex flex-col gap-4">
+        {/* Overview Skeleton */}
+        <div className="flex min-h-[116px] flex-col rounded-2xl border border-[#E0E7FF] bg-white px-4 py-3 shadow-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-14" />
           </div>
-          <div className="h-80 p-4">
-            <Skeleton className="h-full w-full rounded-xl" />
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 pt-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <React.Fragment key={i}>
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="ml-auto h-4 w-20" />
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
-        <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
-            >
-              <Skeleton className="h-4 w-28" />
+        {/* Subscriptions Chart Skeleton */}
+        <div className="flex h-[460px] flex-col rounded-2xl border border-[#E0E7FF] bg-white p-4 shadow-sm">
+          <div className="flex items-start justify-between pb-4">
+            <div className="space-y-1">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className="flex gap-3">
               <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-28" />
             </div>
-          ))}
+          </div>
+          <Skeleton className="h-[360px] w-full rounded-xl" />
         </div>
       </div>
 
-      {/* weekly charts */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-          >
-            <Skeleton className="mb-3 h-5 w-52" />
-            <Skeleton className="h-[260px] w-full rounded-xl" />
+      {/* WEEKLY CHARTS */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Weekly Restaurant Growth Skeleton */}
+        <div className="flex h-[380px] flex-col rounded-2xl border border-[#E0E7FF] bg-white p-4 shadow-sm">
+          <div className="flex items-start justify-between pb-4">
+            <div className="space-y-1">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-4 w-16" />
           </div>
-        ))}
+          <Skeleton className="h-[280px] w-full rounded-xl" />
+        </div>
+
+        {/* Weekly Stores Growth Skeleton */}
+        <div className="flex h-[380px] flex-col rounded-2xl border border-[#E0E7FF] bg-white p-4 shadow-sm">
+          <div className="flex items-start justify-between pb-4">
+            <div className="space-y-1">
+              <Skeleton className="h-5 w-44" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <Skeleton className="h-[280px] w-full rounded-xl" />
+        </div>
       </div>
     </div>
   );

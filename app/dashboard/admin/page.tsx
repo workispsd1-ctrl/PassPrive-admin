@@ -65,6 +65,60 @@ type CreateUserPayload = {
   role: string;
 };
 
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-gray-200/70 ${className}`} />;
+}
+
+function AdminsTableSkeleton() {
+  return (
+    <div className="overflow-x-auto overflow-y-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
+      <table className="w-full min-w-[960px] table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[30%]" />
+          <col className="w-[25%]" />
+          <col className="w-[17%]" />
+          <col className="w-[15%]" />
+          <col className="w-[13%]" />
+        </colgroup>
+        <thead>
+          <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Email</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Name</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Role</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Phone</th>
+            <th className="px-4 py-3 text-right text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i} className="h-[104px] border-b border-[#F1F2F5] last:border-b-0">
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-36" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-28" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-20" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-24" />
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex justify-end gap-1">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const ADMIN_MANAGEMENT_ROLES = [
   "admin",
   "superadmin",
@@ -281,17 +335,7 @@ export default function AdminPage() {
     };
   }, [searchTerm, page, limit, deleteRefresh, handleFetchuser]);
 
-  if (loading && admins.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-6 text-center h-screen">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 className="text-lg font-semibold text-gray-800">Loading...</h2>
-        <p className="text-sm text-gray-500 mt-2 max-w-sm">
-          Please wait while we fetch the latest data for you.
-        </p>
-      </div>
-    );
-  }
+
 
   if (error) {
     return (
@@ -553,7 +597,11 @@ export default function AdminPage() {
             </div>
 
             <div className="w-full overflow-x-auto">
-              <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
+              {loading ? (
+                <AdminsTableSkeleton />
+              ) : (
+                <>
+                <div className="overflow-hidden rounded-[12px] border border-[#EDEFF3] mb-4">
                 <table className="w-full min-w-[960px] table-fixed border-collapse">
                   <colgroup>
                     <col className="w-[30%]" />
@@ -673,6 +721,8 @@ export default function AdminPage() {
                 limit={limit}
                 setLimit={setLimit}
               />
+              </>
+              )}
             </div>
           </div>
         )}

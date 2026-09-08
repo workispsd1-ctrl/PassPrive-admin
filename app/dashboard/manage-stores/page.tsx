@@ -38,65 +38,61 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function StoresTableSkeleton() {
   return (
-    <div className="p-4">
-      {/* header-ish row */}
-      <div className="mb-4 flex items-center justify-between">
-        <Skeleton className="h-5 w-44" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-28 rounded-xl" />
-          <Skeleton className="h-9 w-24 rounded-xl" />
-        </div>
-      </div>
-
-      {/* table header */}
-      <div className="grid grid-cols-12 gap-3 border-b border-gray-100 pb-3">
-        <Skeleton className="col-span-3 h-4 w-24" />
-        <Skeleton className="col-span-2 h-4 w-20" />
-        <Skeleton className="col-span-2 h-4 w-20" />
-        <Skeleton className="col-span-2 h-4 w-24" />
-        <Skeleton className="col-span-3 h-4 w-24" />
-      </div>
-
-      {/* rows */}
-      <div className="mt-3 space-y-3">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-12 items-center gap-3 rounded-xl border border-gray-100 bg-white p-3"
-          >
-            <div className="col-span-3 space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-3 w-28" />
-            </div>
-
-            <div className="col-span-2">
-              <Skeleton className="h-4 w-24" />
-            </div>
-
-            <div className="col-span-2">
-              <Skeleton className="h-4 w-24" />
-            </div>
-
-            <div className="col-span-2">
-              <Skeleton className="h-4 w-28" />
-            </div>
-
-            <div className="col-span-3 flex justify-end gap-2">
-              <Skeleton className="h-9 w-20 rounded-xl" />
-              <Skeleton className="h-9 w-20 rounded-xl" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* pagination-ish */}
-      <div className="mt-5 flex items-center justify-between">
-        <Skeleton className="h-4 w-40" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-24 rounded-xl" />
-          <Skeleton className="h-9 w-24 rounded-xl" />
-        </div>
-      </div>
+    <div className="overflow-x-auto overflow-y-hidden rounded-[12px] border border-[#EDEFF3]">
+      <table className="w-full min-w-[960px] table-fixed border-collapse">
+        <colgroup>
+          <col className="w-[27%]" />
+          <col className="w-[22%]" />
+          <col className="w-[18%]" />
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
+          <col className="w-[13%]" />
+        </colgroup>
+        <thead>
+          <tr className="h-[44px] border-b border-[#EDEFF3] bg-[#FAFAFB]">
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Name</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Location</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Category</th>
+            <th className="px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Status</th>
+            <th className="px-4 py-3 text-center text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Active Offers</th>
+            <th className="px-4 py-3 text-right text-[12px] font-semibold uppercase tracking-[0.6px] text-[#6B7280]">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i} className="h-[104px] border-b border-[#F1F2F5] last:border-b-0">
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-28" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-4 w-24" />
+              </td>
+              <td className="px-4 py-4">
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </td>
+              <td className="px-4 py-4 text-center">
+                <Skeleton className="mx-auto h-4 w-8" />
+              </td>
+              <td className="px-4 py-4">
+                <div className="flex justify-end gap-1">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
