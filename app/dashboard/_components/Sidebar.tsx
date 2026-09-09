@@ -361,7 +361,7 @@ export default function Sidebar({
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
                           ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.18)]"
-                          : "text-[#000000] hover:bg-[#F7F2FF]"
+                          : "text-[#000000] hover:bg-gradient-to-r hover:from-[#FFF0EB] hover:to-[#FFE2D6] hover:text-[#FF4800]"
                       )}
                     >
                       {item.iconSrc ? (
@@ -406,7 +406,7 @@ export default function Sidebar({
                           collapsed ? "justify-center px-0" : "justify-between gap-3",
                           groupActive
                             ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.18)]"
-                            : "text-[#000000] hover:bg-[#F7F2FF]"
+                            : "text-[#000000] hover:bg-gradient-to-r hover:from-[#FFF0EB] hover:to-[#FFE2D6] hover:text-[#FF4800]"
                         )}
                       >
                         <span className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")}> 
@@ -455,7 +455,7 @@ export default function Sidebar({
                                   "flex h-9 items-center rounded-[10px] px-4 text-[14px] leading-[20px] font-normal tracking-[0px] transition-all duration-200",
                                   active
                                     ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.16)]"
-                                    : "text-[#000000] hover:bg-[#F7F2FF]"
+                                    : "text-[#000000] hover:bg-gradient-to-r hover:from-[#FFF0EB] hover:to-[#FFE2D6] hover:text-[#FF4800]"
                                 )}
                               >
                                 {item.iconSrc ? (
@@ -514,7 +514,7 @@ export default function Sidebar({
                         collapsed ? "justify-center px-0" : "gap-3",
                         active
                           ? "bg-[linear-gradient(91.59deg,#FF4800_2.56%,#FFA680_97.05%)] text-white shadow-[0_10px_18px_rgba(255, 72, 0,0.18)]"
-                          : "text-[#000000] hover:bg-[#F7F2FF]"
+                          : "text-[#000000] hover:bg-gradient-to-r hover:from-[#FFF0EB] hover:to-[#FFE2D6] hover:text-[#FF4800]"
                       )}
                     >
                       {item.iconSrc ? (
