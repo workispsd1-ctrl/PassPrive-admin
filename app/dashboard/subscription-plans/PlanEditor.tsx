@@ -112,6 +112,14 @@ export function tierTheme(tier: string): PlanTheme {
   return TIER_DEFAULT_THEME[tier] ?? TIER_DEFAULT_THEME[FALLBACK_TIER];
 }
 
+/** Tier must satisfy the subscription_tier_check format guard: a lowercase slug. */
+export function slugifyTier(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^[^a-z0-9]+/, "");
+}
+
 /** cashback_label is always derived from the numeric percent, so they can't drift. */
 export function cashbackLabel(cashback: number | null | undefined) {
   if (cashback == null || !Number.isFinite(cashback)) return null;
@@ -534,7 +542,7 @@ export default function PlanEditor({
                     list="plan-tier-options"
                     value={plan.tier}
                     placeholder="black"
-                    onChange={(e) => set({ tier: e.target.value.trim().toLowerCase() })}
+                    onChange={(e) => set({ tier: slugifyTier(e.target.value) })}
                   />
                   <datalist id="plan-tier-options">
                     {tierSuggestions.map((tier) => (

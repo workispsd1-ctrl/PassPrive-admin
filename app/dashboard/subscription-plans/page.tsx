@@ -126,6 +126,10 @@ export default function SubscriptionPlansPage() {
   };
 
   const handleSavePlan = async (plan: SubscriptionPlan) => {
+    if (!plan.tier?.trim()) {
+      showToast({ title: "error", description: "Tier is required" });
+      return;
+    }
     const payload = {
       plan_name: plan.plan_name,
       amount: plan.amount ?? "",
