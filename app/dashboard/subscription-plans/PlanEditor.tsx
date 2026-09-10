@@ -196,7 +196,7 @@ function money(value: string | null | undefined) {
 
 export function dealsLabel(perMonth: number | null, perRestaurant: number | null) {
   const monthly =
-    perMonth == null ? "Unlimited deal redemptions/month" : `${perMonth} deal redemptions/month`;
+    perMonth == null ? "Unlimited deal reveals/month" : `${perMonth} deal reveals/month`;
   if (perRestaurant == null) return monthly;
   return `${monthly} · up to ${perRestaurant} per restaurant`;
 }
@@ -622,10 +622,10 @@ export default function PlanEditor({
               />
             </Section>
 
-            <Section title="Deal redemption">
+            <Section title="Deal reveals">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-gray-600">Deals per month</label>
+                  <label className="text-[11px] font-medium text-gray-600">Reveals per month</label>
                   <Input
                     type="number"
                     min={0}
@@ -649,8 +649,9 @@ export default function PlanEditor({
                   />
                 </div>
               </div>
-              <p className="rounded bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
-                Shown to users as a plan point. Not enforced at redemption yet.
+              <p className="rounded bg-blue-50 px-2 py-1.5 text-[11px] text-blue-800">
+                Enforced when the app calls reveal_deal(). Blank means unlimited. Revealing the
+                same deal again in the same month does not count twice.
               </p>
             </Section>
 

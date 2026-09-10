@@ -46,6 +46,93 @@ export type RestaurantSubscriptionInput = {
   expires_at?: string | null;
 };
 
+export const DEAL_TYPE_OPTIONS = [
+  { value: "percentage", label: "Percentage off bill" },
+  { value: "flat", label: "Flat amount off" },
+  { value: "bogo", label: "Buy X get Y free" },
+  { value: "fixed_price", label: "Fixed price / set menu" },
+  { value: "free_item", label: "Free item" },
+] as const;
+
+export const DEAL_PER_USER_PERIODS = ["day", "week", "month", "year", "lifetime"] as const;
+
+export const DAY_OF_WEEK_OPTIONS = [
+  { value: 0, label: "Sun" },
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+] as const;
+
+export type RestaurantDealTierInput = {
+  tier: string;
+  benefit_percent?: number | null;
+  benefit_amount?: number | null;
+  max_discount_amount?: number | null;
+  deal_price?: number | null;
+  buy_quantity?: number | null;
+  get_quantity?: number | null;
+  free_item_label?: string | null;
+  per_user_limit?: number | null;
+  is_active?: boolean;
+};
+
+export type RestaurantDealInput = {
+  id?: string | null;
+  title: string;
+  description?: string | null;
+  badge_text?: string | null;
+  image_url?: string | null;
+  terms?: string[];
+  deal_type: string;
+  currency_code?: string | null;
+  min_spend?: number | null;
+  max_spend?: number | null;
+  min_party_size?: number | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  days_of_week?: number[];
+  start_time?: string | null;
+  end_time?: string | null;
+  dine_in?: boolean;
+  takeaway?: boolean;
+  delivery?: boolean;
+  total_redemption_limit?: number | null;
+  per_user_limit?: number | null;
+  per_user_period?: string | null;
+  per_day_limit?: number | null;
+  advance_booking_required?: boolean;
+  is_stackable?: boolean;
+  priority?: number | null;
+  is_active?: boolean;
+  tiers: RestaurantDealTierInput[];
+};
+
+/**
+ * Which per-tier benefit a deal type needs. Mirrors the
+ * restaurant_deal_tier_requires_benefit() trigger in the database, so the form
+ * rejects what Postgres would reject anyway — but with a usable message.
+ */
+export const DEAL_TYPE_BENEFIT_FIELDS: Record<string, (keyof RestaurantDealTierInput)[]> = {
+  percentage: ["benefit_percent"],
+  flat: ["benefit_amount"],
+  bogo: ["buy_quantity", "get_quantity"],
+  fixed_price: ["deal_price"],
+  free_item: ["free_item_label"],
+};
+
+export const DEAL_BENEFIT_LABELS: Record<string, string> = {
+  benefit_percent: "discount %",
+  benefit_amount: "amount off",
+  max_discount_amount: "max discount",
+  deal_price: "deal price",
+  buy_quantity: "buy qty",
+  get_quantity: "get qty",
+  free_item_label: "free item",
+};
+
 export function formatDateTimeLocal(value: Date = new Date()) {
   const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 16);
@@ -1585,4 +1672,403 @@ export async function mirrorRestaurantUpdate(
   payload: Record<string, unknown>
 ) {
   await updateRestaurantBothDBs(restaurantId, payload);
+}
+
+// ---------------------------------------------------------------------------
+// Deals
+//
+// A deal is what a membership plan's deals_per_month quota counts, and its
+// benefit varies per membership tier (10% for black, 5% for plus, ...), so the
+// values live in restaurant_deal_tiers rather than on the deal row.
+// ---------------------------------------------------------------------------
+
+function asBool(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function asDayArray(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const days = value
+    .map((entry) => asNumber(entry))
+    .filter((entry): entry is number => entry !== null && entry >= 0 && entry <= 6);
+  return Array.from(new Set(days)).sort((left, right) => left - right);
+}
+
+function toTimeValue(value: unknown): string | null {
+  const raw = asString(value);
+  if (!raw) return null;
+  const match = raw.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+export function defaultDealTier(tier: string): RestaurantDealTierInput {
+  return {
+    tier,
+    benefit_percent: null,
+    benefit_amount: null,
+    max_discount_amount: null,
+    deal_price: null,
+    buy_quantity: null,
+    get_quantity: null,
+    free_item_label: null,
+    per_user_limit: null,
+    is_active: true,
+  };
+}
+
+export function defaultDeal(): RestaurantDealInput {
+  return {
+    title: "",
+    description: null,
+    badge_text: null,
+    image_url: null,
+    terms: [],
+    deal_type: "percentage",
+    currency_code: "MUR",
+    min_spend: null,
+    max_spend: null,
+    min_party_size: null,
+    starts_at: null,
+    ends_at: null,
+    days_of_week: [],
+    start_time: null,
+    end_time: null,
+    dine_in: true,
+    takeaway: false,
+    delivery: false,
+    total_redemption_limit: null,
+    per_user_limit: null,
+    per_user_period: "month",
+    per_day_limit: null,
+    advance_booking_required: false,
+    is_stackable: false,
+    priority: 100,
+    is_active: true,
+    tiers: [],
+  };
+}
+
+function normalizeDealTierRow(row: DatabaseRow): RestaurantDealTierInput {
+  return {
+    tier: asString(row?.tier) ?? "",
+    benefit_percent: asNumber(row?.benefit_percent),
+    benefit_amount: asNumber(row?.benefit_amount),
+    max_discount_amount: asNumber(row?.max_discount_amount),
+    deal_price: asNumber(row?.deal_price),
+    buy_quantity: asNumber(row?.buy_quantity),
+    get_quantity: asNumber(row?.get_quantity),
+    free_item_label: asString(row?.free_item_label),
+    per_user_limit: asNumber(row?.per_user_limit),
+    is_active: row?.is_active !== false,
+  };
+}
+
+export function normalizeDealRow(row: DatabaseRow, tierRows: DatabaseRow[]): RestaurantDealInput {
+  const dealId = String(row?.id || "");
+  return {
+    id: dealId,
+    title: asString(row?.title) ?? "",
+    description: asString(row?.description),
+    badge_text: asString(row?.badge_text),
+    image_url: asString(row?.image_url),
+    terms: asStringArray(row?.terms),
+    deal_type: asString(row?.deal_type) ?? "percentage",
+    currency_code: asString(row?.currency_code) ?? "MUR",
+    min_spend: asNumber(row?.min_spend),
+    max_spend: asNumber(row?.max_spend),
+    min_party_size: asNumber(row?.min_party_size),
+    starts_at: toDateTimeLocal(row?.starts_at),
+    ends_at: toDateTimeLocal(row?.ends_at),
+    days_of_week: asDayArray(row?.days_of_week),
+    start_time: toTimeValue(row?.start_time),
+    end_time: toTimeValue(row?.end_time),
+    dine_in: asBool(row?.dine_in, true),
+    takeaway: asBool(row?.takeaway, false),
+    delivery: asBool(row?.delivery, false),
+    total_redemption_limit: asNumber(row?.total_redemption_limit),
+    per_user_limit: asNumber(row?.per_user_limit),
+    per_user_period: asString(row?.per_user_period) ?? "month",
+    per_day_limit: asNumber(row?.per_day_limit),
+    advance_booking_required: asBool(row?.advance_booking_required, false),
+    is_stackable: asBool(row?.is_stackable, false),
+    priority: asNumber(row?.priority) ?? 100,
+    is_active: row?.is_active !== false,
+    tiers: (tierRows || [])
+      .filter((tierRow) => String(tierRow?.deal_id || "") === dealId)
+      .sort((left, right) => (asNumber(left?.sort_order) ?? 0) - (asNumber(right?.sort_order) ?? 0))
+      .map(normalizeDealTierRow),
+  };
+}
+
+/**
+ * `previousDeals` is the record as loaded, so editing an unrelated field never
+ * fails on a deal whose window already started in the past. Same contract as
+ * validateRestaurantOffers.
+ */
+export function validateRestaurantDeals(
+  deals: RestaurantDealInput[] | undefined,
+  previousDeals?: RestaurantDealInput[] | null,
+) {
+  const now = Date.now();
+  const knownTypes = DEAL_TYPE_OPTIONS.map((option) => option.value) as readonly string[];
+  const unchanged = (index: number, field: "starts_at" | "ends_at", value: string) =>
+    asString(previousDeals?.[index]?.[field]) === value;
+
+  for (const [index, deal] of (deals || []).entries()) {
+    const label = `Deal ${index + 1}`;
+    const title = asString(deal?.title);
+
+    if (!title) return `${label}: title is required.`;
+    if (!knownTypes.includes(deal?.deal_type)) return `${label}: choose a deal type.`;
+
+    if (!deal.dine_in && !deal.takeaway && !deal.delivery) {
+      return `${label}: enable at least one channel (dine-in, takeaway or delivery).`;
+    }
+
+    const minSpend = asNumber(deal?.min_spend);
+    const maxSpend = asNumber(deal?.max_spend);
+    if (minSpend !== null && minSpend < 0) return `${label}: minimum spend cannot be negative.`;
+    if (maxSpend !== null && maxSpend < 0) return `${label}: maximum spend cannot be negative.`;
+    if (minSpend !== null && maxSpend !== null && maxSpend < minSpend) {
+      return `${label}: maximum spend must be at least the minimum spend.`;
+    }
+
+    const partySize = asNumber(deal?.min_party_size);
+    if (partySize !== null && partySize < 1) return `${label}: minimum party size must be at least 1.`;
+
+    for (const [field, limitLabel] of [
+      ["total_redemption_limit", "total redemption limit"],
+      ["per_user_limit", "per-user limit"],
+      ["per_day_limit", "per-day limit"],
+    ] as const) {
+      const limit = asNumber(deal?.[field]);
+      if (limit !== null && limit < 1) return `${label}: ${limitLabel} must be at least 1.`;
+    }
+
+    const startsAt = asString(deal?.starts_at);
+    const endsAt = asString(deal?.ends_at);
+    if (startsAt) {
+      const parsed = new Date(startsAt);
+      if (Number.isNaN(parsed.getTime())) return `${label}: start date is invalid.`;
+      if (parsed.getTime() < now && !unchanged(index, "starts_at", startsAt)) {
+        return `${label}: start date cannot be in the past.`;
+      }
+    }
+    if (endsAt) {
+      const parsed = new Date(endsAt);
+      if (Number.isNaN(parsed.getTime())) return `${label}: end date is invalid.`;
+      if (parsed.getTime() < now && !unchanged(index, "ends_at", endsAt)) {
+        return `${label}: end date cannot be in the past.`;
+      }
+    }
+    if (startsAt && endsAt && new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      return `${label}: end date must be later than start date.`;
+    }
+
+    const startTime = toTimeValue(deal?.start_time);
+    const endTime = toTimeValue(deal?.end_time);
+    if (Boolean(startTime) !== Boolean(endTime)) {
+      return `${label}: set both a start and end time for the daily window, or neither.`;
+    }
+
+    const tiers = deal.tiers || [];
+    const activeTiers = tiers.filter((tier) => asString(tier?.tier));
+    if (activeTiers.length === 0) {
+      return `${label}: configure the benefit for at least one membership tier.`;
+    }
+
+    const seen = new Set<string>();
+    const requiredFields = DEAL_TYPE_BENEFIT_FIELDS[deal.deal_type] || [];
+
+    for (const tier of activeTiers) {
+      const tierName = asString(tier.tier) as string;
+      if (!/^[a-z0-9][a-z0-9_-]*$/.test(tierName)) {
+        return `${label}: tier "${tierName}" must be a lowercase slug.`;
+      }
+      if (seen.has(tierName)) return `${label}: tier "${tierName}" is configured twice.`;
+      seen.add(tierName);
+
+      for (const field of requiredFields) {
+        const value = tier[field];
+        const missing = field === "free_item_label" ? !asString(value) : asNumber(value) === null;
+        if (missing) {
+          return `${label}: tier "${tierName}" needs a ${DEAL_BENEFIT_LABELS[field] ?? field}.`;
+        }
+      }
+
+      const percent = asNumber(tier.benefit_percent);
+      if (percent !== null && (percent < 0 || percent > 100)) {
+        return `${label}: tier "${tierName}" discount % must be between 0 and 100.`;
+      }
+      for (const [field, valueLabel] of [
+        ["benefit_amount", "amount off"],
+        ["max_discount_amount", "max discount"],
+        ["deal_price", "deal price"],
+      ] as const) {
+        const value = asNumber(tier[field]);
+        if (value !== null && value < 0) {
+          return `${label}: tier "${tierName}" ${valueLabel} cannot be negative.`;
+        }
+      }
+      for (const [field, valueLabel] of [
+        ["buy_quantity", "buy quantity"],
+        ["get_quantity", "get quantity"],
+        ["per_user_limit", "per-user limit"],
+      ] as const) {
+        const value = asNumber(tier[field]);
+        if (value !== null && value < 1) {
+          return `${label}: tier "${tierName}" ${valueLabel} must be at least 1.`;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Deal ids are generated here rather than by the database so the tier rows can
+ * reference their parent in the same delete-then-insert pass the other
+ * restaurant relations use.
+ */
+export function buildDealRows(restaurantId: string, deals: RestaurantDealInput[] | undefined) {
+  const dealRows: Record<string, unknown>[] = [];
+  const tierRows: Record<string, unknown>[] = [];
+
+  for (const deal of deals || []) {
+    const title = asString(deal?.title);
+    if (!title) continue;
+
+    const dealId = asString(deal?.id) || generateUuid();
+    const requiredFields = DEAL_TYPE_BENEFIT_FIELDS[deal.deal_type] || [];
+
+    dealRows.push({
+      id: dealId,
+      restaurant_id: restaurantId,
+      title,
+      description: asString(deal.description),
+      badge_text: asString(deal.badge_text),
+      image_url: asString(deal.image_url),
+      terms: asStringArray(deal.terms),
+      deal_type: deal.deal_type,
+      currency_code: asString(deal.currency_code) ?? "MUR",
+      min_spend: asNumber(deal.min_spend),
+      max_spend: asNumber(deal.max_spend),
+      min_party_size: asNumber(deal.min_party_size),
+      starts_at: asString(deal.starts_at),
+      ends_at: asString(deal.ends_at),
+      days_of_week: asDayArray(deal.days_of_week),
+      start_time: toTimeValue(deal.start_time),
+      end_time: toTimeValue(deal.end_time),
+      dine_in: asBool(deal.dine_in, true),
+      takeaway: asBool(deal.takeaway, false),
+      delivery: asBool(deal.delivery, false),
+      total_redemption_limit: asNumber(deal.total_redemption_limit),
+      per_user_limit: asNumber(deal.per_user_limit),
+      per_user_period: asString(deal.per_user_period) ?? "month",
+      per_day_limit: asNumber(deal.per_day_limit),
+      advance_booking_required: asBool(deal.advance_booking_required, false),
+      is_stackable: asBool(deal.is_stackable, false),
+      priority: asNumber(deal.priority) ?? 100,
+      is_active: deal.is_active !== false,
+    });
+
+    (deal.tiers || []).forEach((tier, sortOrder) => {
+      const tierName = asString(tier?.tier);
+      if (!tierName) return;
+
+      // Only the fields this deal type uses are persisted, so switching type in
+      // the form never leaves a stale benefit behind on the row.
+      const keep = (field: keyof RestaurantDealTierInput) =>
+        requiredFields.includes(field) ||
+        (field === "max_discount_amount" && deal.deal_type === "percentage");
+
+      tierRows.push({
+        deal_id: dealId,
+        tier: tierName,
+        benefit_percent: keep("benefit_percent") ? asNumber(tier.benefit_percent) : null,
+        benefit_amount: keep("benefit_amount") ? asNumber(tier.benefit_amount) : null,
+        max_discount_amount: keep("max_discount_amount") ? asNumber(tier.max_discount_amount) : null,
+        deal_price: keep("deal_price") ? asNumber(tier.deal_price) : null,
+        buy_quantity: keep("buy_quantity") ? asNumber(tier.buy_quantity) : null,
+        get_quantity: keep("get_quantity") ? asNumber(tier.get_quantity) : null,
+        free_item_label: keep("free_item_label") ? asString(tier.free_item_label) : null,
+        per_user_limit: asNumber(tier.per_user_limit),
+        is_active: tier.is_active !== false,
+        sort_order: sortOrder,
+      });
+    });
+  }
+
+  return { deals: dealRows, tiers: tierRows };
+}
+
+function generateUuid() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // Fallback for older runtimes; only needs to be unique, not cryptographic.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0;
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+export async function fetchRestaurantDeals(restaurantId: string): Promise<RestaurantDealInput[]> {
+  const dealsResult = await supabaseBrowser
+    .from("restaurant_deals")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .order("priority", { ascending: true });
+
+  if (dealsResult.error) throw dealsResult.error;
+
+  const dealRows = (dealsResult.data || []) as DatabaseRow[];
+  const dealIds = dealRows.map((row) => String(row?.id || "")).filter(Boolean);
+  if (dealIds.length === 0) return [];
+
+  const tiersResult = await supabaseBrowser
+    .from("restaurant_deal_tiers")
+    .select("*")
+    .in("deal_id", dealIds);
+
+  if (tiersResult.error) throw tiersResult.error;
+
+  const tierRows = (tiersResult.data || []) as DatabaseRow[];
+  return dealRows.map((row) => normalizeDealRow(row, tierRows));
+}
+
+/**
+ * Deleting the deals cascades to their tier rows, so the parents go first and
+ * the children are inserted against the ids we just wrote.
+ */
+export async function replaceRestaurantDeals(
+  restaurantId: string,
+  deals: RestaurantDealInput[] | undefined
+) {
+  const { deals: dealRows, tiers: tierRows } = buildDealRows(restaurantId, deals);
+
+  const { error: deleteError } = await supabaseBrowser
+    .from("restaurant_deals")
+    .delete()
+    .eq("restaurant_id", restaurantId);
+  if (deleteError) {
+    throw new Error(`Failed to clear restaurant_deals: ${deleteError.message || JSON.stringify(deleteError)}`);
+  }
+
+  if (!dealRows.length) return;
+
+  const { error: dealError } = await supabaseBrowser.from("restaurant_deals").insert(dealRows);
+  if (dealError) {
+    throw new Error(`Failed to insert deals: ${dealError.message || JSON.stringify(dealError)}`);
+  }
+
+  if (!tierRows.length) return;
+
+  const { error: tierError } = await supabaseBrowser.from("restaurant_deal_tiers").insert(tierRows);
+  if (tierError) {
+    throw new Error(`Failed to insert deal tiers: ${tierError.message || JSON.stringify(tierError)}`);
+  }
 }

@@ -255,7 +255,7 @@ export default function SubscriptionPlansPage() {
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Amount (MUR)</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Duration</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Tags</th>
-                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Deals / month</th>
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Reveals / month</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Live</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Sort</th>
                   <th className="px-6 py-3 text-right text-[12px] font-semibold text-[#1D293D]">Actions</th>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { MERCHANT_PLAN_OPTIONS, togglesToServiceLevel } from "@/lib/restaurantAdmin";
 import ServiceSwitches from "@/components/ServiceSwitches";
+import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsPanel";
 
 const STORE_API_BASE =
   (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
@@ -748,6 +749,14 @@ export default function StoreDetailPage() {
             />
           </Field>
         </Grid>
+      </Section>
+
+      <Section title="Cashback Boost">
+        <MerchantBoostsPanel
+          entityType="STORE"
+          entityId={String(id)}
+          merchantName={(store.name as string) || undefined}
+        />
       </Section>
 
       {/* STORE PARTNER LOGIN */}

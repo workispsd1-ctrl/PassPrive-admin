@@ -8,6 +8,8 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   ArrowLeftRight,
   BookOpen,
+  Target,
+  Zap,
   Gift,
   HelpCircle,
   Inbox,
@@ -77,6 +79,8 @@ const topLevelItems: MenuItem[] = [
   { title: "Bank Offers", href: "/dashboard/offers-for-you", iconSrc: "/request_quote.png" },
   { title: "Gift Events", href: "/dashboard/gift-events", icon: Gift },
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
+  { title: "Cashback Boosts", href: "/dashboard/cashback-boosts", icon: Zap },
+  { title: "Transaction Milestones", href: "/dashboard/transaction-milestones", icon: Target },
   //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
   { title: "Corporate Membership", href: "/dashboard/corporate-membership", icon: Users },

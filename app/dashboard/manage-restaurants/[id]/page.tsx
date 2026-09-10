@@ -53,7 +53,13 @@ import {
   buildSubscriptionRows,
   buildOpeningHoursRows,
   buildTillProviderRows,
+  fetchRestaurantDeals,
+  replaceRestaurantDeals,
+  validateRestaurantDeals,
+  type RestaurantDealInput,
 } from "@/lib/restaurantAdmin";
+import DealsSection from "./DealsSection";
+import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsPanel";
 
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
@@ -175,6 +181,9 @@ export default function RestaurantDetailPage() {
   const [restaurant, setRestaurant] = useState<RestaurantFlatRecord | null>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<RestaurantFlatRecord | null>(null);
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
+  const [deals, setDeals] = useState<RestaurantDealInput[]>([]);
+  const [dealsOriginal, setDealsOriginal] = useState<RestaurantDealInput[]>([]);
+  const [tierOptions, setTierOptions] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [creatingCredentials, setCreatingCredentials] = useState(false);
@@ -213,6 +222,37 @@ export default function RestaurantDetailPage() {
 
     void loadRestaurant();
   }, [id]);
+
+  useEffect(() => {
+    const loadDeals = async () => {
+      try {
+        const rows = await fetchRestaurantDeals(id);
+        setDeals(rows);
+        setDealsOriginal(rows.map((deal) => ({ ...deal, tiers: deal.tiers.map((t) => ({ ...t })) })));
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Failed to load deals";
+        showToast({ type: "error", title: "Failed to load deals", description: message });
+      }
+    };
+
+    void loadDeals();
+  }, [id]);
+
+  useEffect(() => {
+    const loadTierOptions = async () => {
+      const { data } = await supabaseBrowser
+        .from("subscription")
+        .select("tier, sort_order")
+        .eq("is_active", true)
+        .order("sort_order");
+      const tiers = (data || [])
+        .map((row) => (typeof row.tier === "string" ? row.tier.trim() : ""))
+        .filter(Boolean);
+      setTierOptions(Array.from(new Set(tiers)));
+    };
+
+    void loadTierOptions();
+  }, []);
 
   useEffect(() => {
     const loadXlentTillProvider = async () => {
@@ -293,6 +333,7 @@ export default function RestaurantDetailPage() {
     if (!restaurantOriginal) return;
     setRestaurant(cloneRestaurant(restaurantOriginal));
     setXlentEnabled(xlentEnabledOriginal);
+    setDeals(dealsOriginal.map((deal) => ({ ...deal, tiers: deal.tiers.map((t) => ({ ...t })) })));
     setFoodImagesToAdd([]);
     setAmbienceImagesToAdd([]);
     setMenuImagesToAdd([]);
@@ -314,6 +355,16 @@ export default function RestaurantDetailPage() {
         type: "error",
         title: "Invalid offer details",
         description: offerValidationError,
+      });
+      return;
+    }
+
+    const dealValidationError = validateRestaurantDeals(deals, dealsOriginal);
+    if (dealValidationError) {
+      showToast({
+        type: "error",
+        title: "Invalid deal details",
+        description: dealValidationError,
       });
       return;
     }
@@ -470,6 +521,13 @@ export default function RestaurantDetailPage() {
         console.error("Failed to sync updates to databases", patchErr);
         throw patchErr;
       }
+
+      await replaceRestaurantDeals(restaurant.id, deals);
+      const refreshedDeals = await fetchRestaurantDeals(restaurant.id);
+      setDeals(refreshedDeals);
+      setDealsOriginal(
+        refreshedDeals.map((deal) => ({ ...deal, tiers: deal.tiers.map((t) => ({ ...t })) }))
+      );
 
       // Refresh merged view so both DBs are reflected
       const refreshed = await fetchRestaurantDetailMerged(restaurant.id);
@@ -1124,6 +1182,23 @@ export default function RestaurantDetailPage() {
         {editMode && (
           <Button variant="outline" onClick={() => setRestaurant({ ...restaurant, offers: [...restaurant.offers, defaultOffer()] })}>Add offer</Button>
         )}
+      </Section>
+
+      <Section title="Cashback Boost">
+        <MerchantBoostsPanel
+          entityType="RESTAURANT"
+          entityId={restaurant.id}
+          merchantName={restaurant.name}
+        />
+      </Section>
+
+      <Section title="Deals">
+        <DealsSection
+          deals={deals}
+          onChange={setDeals}
+          editMode={editMode}
+          tierOptions={tierOptions}
+        />
       </Section>
 
       <Section title="Subscription">
