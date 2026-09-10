@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import PlanEditor, {
   PLAN_COLUMNS,
   TYPE_OPTIONS,
+  cashbackLabel,
   emptyPlan,
   type SubscriptionPlan,
 } from "./PlanEditor";
@@ -138,7 +139,8 @@ export default function SubscriptionPlansPage() {
       benefits: plan.benefits ?? [],
       deals_per_month: plan.deals_per_month,
       deals_per_restaurant_per_month: plan.deals_per_restaurant_per_month,
-      cashback_label: plan.cashback_label?.trim() || null,
+      cashback: plan.cashback,
+      cashback_label: cashbackLabel(plan.cashback),
       cta_label: plan.cta_label?.trim() || null,
       card_bg_url: plan.card_bg_url?.trim() || null,
       badge_url: plan.badge_url?.trim() || null,
@@ -263,9 +265,10 @@ export default function SubscriptionPlansPage() {
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
                         plan.tier === "black" ? "bg-gray-900 text-amber-300"
                           : plan.tier === "plus" ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
+                          : plan.tier === "free" ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-700"
                       }`}>
-                        {plan.tier}
+                        {plan.tier || "\u2014"}
                       </span>
                     </td>
                     <td className="px-6 py-3 text-[#5b6473]">
@@ -382,6 +385,7 @@ export default function SubscriptionPlansPage() {
         plan={editingPlan}
         onChange={setEditingPlan}
         onSave={handleSavePlan}
+        knownTiers={plans.map((p) => p.tier).filter(Boolean)}
       />
 
       <Dialog open={deletePlanDialogOpen} onOpenChange={setDeletePlanDialogOpen}>

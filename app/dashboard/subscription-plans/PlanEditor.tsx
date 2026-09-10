@@ -42,6 +42,7 @@ export type SubscriptionPlan = {
   benefits: string[];
   deals_per_month: number | null;
   deals_per_restaurant_per_month: number | null;
+  cashback: number | null;
   cashback_label: string | null;
   cta_label: string | null;
   card_bg_url: string | null;
@@ -52,7 +53,7 @@ export type SubscriptionPlan = {
 };
 
 export const PLAN_COLUMNS =
-  "id, plan_name, amount, original_amount, type, product_id, price_id, sort_order, tier, tags, benefits, deals_per_month, deals_per_restaurant_per_month, cashback_label, cta_label, card_bg_url, badge_url, hero_bg_url, theme, is_active";
+  "id, plan_name, amount, original_amount, type, product_id, price_id, sort_order, tier, tags, benefits, deals_per_month, deals_per_restaurant_per_month, cashback, cashback_label, cta_label, card_bg_url, badge_url, hero_bg_url, theme, is_active";
 
 export const TYPE_OPTIONS = [
   { value: "free", label: "Free (no expiry)" },
@@ -61,11 +62,14 @@ export const TYPE_OPTIONS = [
   { value: "1year", label: "1 year" },
 ];
 
+/** Tiers we ship themes for. Admins may type any other tier — see tierTheme(). */
 export const TIER_OPTIONS = [
   { value: "free", label: "Free" },
   { value: "plus", label: "Plus" },
   { value: "black", label: "Black" },
 ];
+
+export const FALLBACK_TIER = "plus";
 
 export const TIER_DEFAULT_THEME: Record<string, PlanTheme> = {
   free: {
@@ -103,6 +107,17 @@ export const TIER_DEFAULT_THEME: Record<string, PlanTheme> = {
   },
 };
 
+/** Default palette for a tier, falling back for admin-defined tiers. */
+export function tierTheme(tier: string): PlanTheme {
+  return TIER_DEFAULT_THEME[tier] ?? TIER_DEFAULT_THEME[FALLBACK_TIER];
+}
+
+/** cashback_label is always derived from the numeric percent, so they can't drift. */
+export function cashbackLabel(cashback: number | null | undefined) {
+  if (cashback == null || !Number.isFinite(cashback)) return null;
+  return `${Number(cashback.toFixed(2))}%`;
+}
+
 const THEME_FIELDS: { key: keyof PlanTheme; label: string }[] = [
   { key: "baseColor", label: "Card background" },
   { key: "borderColor", label: "Card border" },
@@ -130,12 +145,13 @@ export function emptyPlan(sortOrder: number): SubscriptionPlan {
     benefits: [],
     deals_per_month: null,
     deals_per_restaurant_per_month: null,
+    cashback: null,
     cashback_label: "",
     cta_label: "",
     card_bg_url: "",
     badge_url: "",
     hero_bg_url: "",
-    theme: TIER_DEFAULT_THEME.plus,
+    theme: tierTheme(FALLBACK_TIER),
     is_active: true,
   };
 }
@@ -155,6 +171,14 @@ function numOrNull(value: string) {
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+}
+
+function pctOrNull(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.min(100, Number(parsed.toFixed(2)));
 }
 
 function money(value: string | null | undefined) {
@@ -358,7 +382,7 @@ function ImageField({
 }
 
 function CardPreview({ plan }: { plan: SubscriptionPlan }) {
-  const theme = { ...TIER_DEFAULT_THEME[plan.tier], ...plan.theme };
+  const theme = { ...tierTheme(plan.tier), ...plan.theme };
   const amount = money(plan.amount);
   const original = money(plan.original_amount);
   const monthly = amount > 0 ? Math.round(amount / 12) : 0;
@@ -470,15 +494,22 @@ export default function PlanEditor({
   plan,
   onChange,
   onSave,
+  knownTiers = [],
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   plan: SubscriptionPlan | null;
   onChange: (next: SubscriptionPlan) => void;
   onSave: (plan: SubscriptionPlan) => void;
+  /** Tiers already in use by other plans, offered as suggestions. */
+  knownTiers?: string[];
 }) {
   if (!plan) return null;
-  const theme = { ...TIER_DEFAULT_THEME[plan.tier], ...plan.theme };
+
+  const tierSuggestions = Array.from(
+    new Set([...TIER_OPTIONS.map((opt) => opt.value), ...knownTiers].filter(Boolean))
+  );
+  const theme = { ...tierTheme(plan.tier), ...plan.theme };
   const set = (patch: Partial<SubscriptionPlan>) => onChange({ ...plan, ...patch });
 
   return (
@@ -499,21 +530,20 @@ export default function PlanEditor({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-gray-600">Tier</label>
-                  <select
+                  <Input
+                    list="plan-tier-options"
                     value={plan.tier}
-                    onChange={(e) =>
-                      set({ tier: e.target.value, theme: TIER_DEFAULT_THEME[e.target.value] })
-                    }
-                    className="w-full rounded border px-3 py-2 text-sm"
-                  >
-                    {TIER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
+                    placeholder="black"
+                    onChange={(e) => set({ tier: e.target.value.trim().toLowerCase() })}
+                  />
+                  <datalist id="plan-tier-options">
+                    {tierSuggestions.map((tier) => (
+                      <option key={tier} value={tier} />
                     ))}
-                  </select>
+                  </datalist>
                   <p className="text-[11px] text-gray-400">
-                    Drives the app&apos;s default look and the tier saved on the user after payment.
+                    The tier saved on the user after payment. Type any name to define a new
+                    tier &mdash; set its look under Colours.
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -619,12 +649,21 @@ export default function PlanEditor({
             <Section title="Copy">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-gray-600">Cashback label</label>
+                  <label className="text-[11px] font-medium text-gray-600">Cashback %</label>
                   <Input
-                    value={plan.cashback_label ?? ""}
-                    placeholder="3%"
-                    onChange={(e) => set({ cashback_label: e.target.value })}
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    value={plan.cashback ?? ""}
+                    placeholder="4"
+                    onChange={(e) => set({ cashback: pctOrNull(e.target.value) })}
                   />
+                  <p className="text-[11px] text-gray-400">
+                    {plan.cashback == null
+                      ? "Blank means no cashback for this plan."
+                      : `Shown in the app as ${cashbackLabel(plan.cashback)} \u00b7 used for corporate quotes.`}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-gray-600">CTA label</label>
@@ -675,13 +714,19 @@ export default function PlanEditor({
                   />
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={() => set({ theme: TIER_DEFAULT_THEME[plan.tier] })}
-                className="cursor-pointer text-xs text-[#FF4800] hover:underline"
-              >
-                Reset to {plan.tier} defaults
-              </button>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                <span className="text-gray-400">Start from a palette:</span>
+                {TIER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => set({ theme: { ...TIER_DEFAULT_THEME[opt.value] } })}
+                    className="cursor-pointer text-[#FF4800] hover:underline"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </Section>
 
             <Section title="Billing IDs">

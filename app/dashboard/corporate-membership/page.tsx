@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { showToast } from "@/hooks/useToast";
 import CorporateForm from "./_components/CorporateForm";
 import PromocodeTable, { GeneratedPromocode } from "./_components/PromocodeTable";
+import { usePassRates } from "./_components/usePassRates";
 import { exportToExcel } from "@/lib/exportToExcel";
 
 export default function CorporateMembershipPage() {
@@ -14,6 +15,9 @@ export default function CorporateMembershipPage() {
   const [companyDetails, setCompanyDetails] = useState("");
   const [companyDomain, setCompanyDomain] = useState("");
   const [companySize, setCompanySize] = useState("");
+
+  // Rates come from the configured subscription plans, not hardcoded constants.
+  const { rates } = usePassRates();
 
   // Pass Config State
   const [passType, setPassType] = useState<"Black" | "Premium">("Black");
@@ -82,8 +86,7 @@ export default function CorporateMembershipPage() {
         timeStyle: "short",
       });
 
-      const basePrice = passType === "Black" ? 7000 : 4000;
-      const cashbackRate = passType === "Black" ? 0.04 : 0.02;
+      const { basePrice, cashbackRate } = rates[passType];
       const typeCode = passType === "Black" ? "BLK" : "PRM";
 
       for (let i = 1; i <= qty; i++) {
@@ -173,6 +176,7 @@ export default function CorporateMembershipPage() {
       <div className="max-w-6xl space-y-6">
         {/* Form Container */}
         <CorporateForm
+          rate={rates[passType]}
           email={email}
           setEmail={setEmail}
           companyName={companyName}

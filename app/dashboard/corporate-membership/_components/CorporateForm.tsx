@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+import type { PassRate } from "./usePassRates";
+
 interface CorporateFormProps {
   email: string;
   setEmail: (val: string) => void;
@@ -30,6 +32,8 @@ interface CorporateFormProps {
   setMdr: (val: number | "") => void;
   cashback: number | "";
   setCashback: (val: number | "") => void;
+  /** Base price and cashback for the selected pass, from the configured plan. */
+  rate: PassRate;
   onSubmit: (e: React.FormEvent) => void;
   isGenerating: boolean;
 }
@@ -59,14 +63,14 @@ export default function CorporateForm({
   setMdr,
   cashback,
   setCashback,
+  rate,
   onSubmit,
   isGenerating,
 }: CorporateFormProps) {
   const inputClass = "border border-gray-200 focus:border-[#FF4800] focus:ring-0 focus-visible:ring-0 rounded-lg text-black bg-white";
 
   // Calculations for inline preview
-  const basePrice = passType === "Black" ? 7000 : 4000;
-  const cashbackRate = passType === "Black" ? 0.04 : 0.02;
+  const { basePrice, cashbackRate } = rate;
   const discPct = Number(discount) || 0;
   const qtyVal = Number(quantity) || 0;
 
@@ -312,7 +316,7 @@ export default function CorporateForm({
               </div>
               <div className="space-y-0.5">
                 <span className="text-gray-500 font-medium">Cashback Percentage</span>
-                <p className="text-sm font-bold text-[#FF4800]">{(cashbackRate * 100)}% Cashback</p>
+                <p className="text-sm font-bold text-[#FF4800]">{Number((cashbackRate * 100).toFixed(2))}% Cashback</p>
               </div>
             </div>
 

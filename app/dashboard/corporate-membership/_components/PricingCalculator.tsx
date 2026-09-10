@@ -2,20 +2,24 @@
 
 import React from "react";
 
+import { FALLBACK_PASS_RATES, type PassRate } from "./usePassRates";
+
 interface PricingCalculatorProps {
   passType: "Black" | "Premium";
   quantity: number | "";
   discount: number | "";
+  /** Base price and cashback for the selected pass, from the configured plan. */
+  rate?: PassRate;
 }
 
 export default function PricingCalculator({
   passType,
   quantity,
   discount,
+  rate,
 }: PricingCalculatorProps) {
-  // Constants
-  const BASE_PRICE = passType === "Black" ? 7000 : 4000;
-  const CASHBACK_RATE = passType === "Black" ? 0.04 : 0.02; // 4% for Black, 2% for Premium
+  const { basePrice: BASE_PRICE, cashbackRate: CASHBACK_RATE } =
+    rate ?? FALLBACK_PASS_RATES[passType];
 
   const qty = Number(quantity) || 0;
   const discPct = Number(discount) || 0;
