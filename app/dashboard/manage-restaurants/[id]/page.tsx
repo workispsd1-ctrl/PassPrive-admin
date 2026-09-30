@@ -52,13 +52,13 @@ import {
   buildOfferRows,
   buildSubscriptionRows,
   buildOpeningHoursRows,
-  buildTillProviderRows,
   fetchRestaurantDeals,
   replaceRestaurantDeals,
   validateRestaurantDeals,
   type RestaurantDealInput,
 } from "@/lib/restaurantAdmin";
 import DealsSection from "./DealsSection";
+import { XlentPosPanel } from "../_components/XlentPos";
 import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsPanel";
 
 
@@ -190,8 +190,6 @@ export default function RestaurantDetailPage() {
   const [credentialEmail, setCredentialEmail] = useState("");
   const [credentialPassword, setCredentialPassword] = useState("");
   const [existingCredEmail, setExistingCredEmail] = useState<string | null>(null);
-  const [xlentEnabled, setXlentEnabled] = useState(false);
-  const [xlentEnabledOriginal, setXlentEnabledOriginal] = useState(false);
 
   const [foodImagesToAdd, setFoodImagesToAdd] = useState<File[]>([]);
   const [ambienceImagesToAdd, setAmbienceImagesToAdd] = useState<File[]>([]);
@@ -255,22 +253,6 @@ export default function RestaurantDetailPage() {
   }, []);
 
   useEffect(() => {
-    const loadXlentTillProvider = async () => {
-      const { data } = await supabaseBrowser
-        .from("restaurant_till_providers")
-        .select("is_enabled")
-        .eq("restaurant_id", id)
-        .eq("provider_name", "xlent")
-        .maybeSingle();
-      const enabled = data?.is_enabled === true;
-      setXlentEnabled(enabled);
-      setXlentEnabledOriginal(enabled);
-    };
-
-    void loadXlentTillProvider();
-  }, [id]);
-
-  useEffect(() => {
     const ownerId = restaurant?.owner_user_id;
     if (!ownerId) {
       setExistingCredEmail(null);
@@ -332,7 +314,6 @@ export default function RestaurantDetailPage() {
   const handleCancel = () => {
     if (!restaurantOriginal) return;
     setRestaurant(cloneRestaurant(restaurantOriginal));
-    setXlentEnabled(xlentEnabledOriginal);
     setDeals(dealsOriginal.map((deal) => ({ ...deal, tiers: deal.tiers.map((t) => ({ ...t })) })));
     setFoodImagesToAdd([]);
     setAmbienceImagesToAdd([]);
@@ -494,10 +475,7 @@ export default function RestaurantDetailPage() {
           };
 
 
-          const primaryRelationsRows = {
-            ...relationsRows,
-            till_providers: buildTillProviderRows(restaurant.id, xlentEnabled),
-          };
+          const primaryRelationsRows = relationsRows;
 
           // Update primary database (both base fields and relation tables) in a single request
           const primaryRes = await fetch(`/api/restaurants/${restaurant.id}`, {
@@ -533,7 +511,6 @@ export default function RestaurantDetailPage() {
       const refreshed = await fetchRestaurantDetailMerged(restaurant.id);
       setRestaurant(cloneRestaurant(refreshed));
       setRestaurantOriginal(cloneRestaurant(refreshed));
-      setXlentEnabledOriginal(xlentEnabled);
       setFoodImagesToAdd([]);
       setAmbienceImagesToAdd([]);
       setMenuImagesToAdd([]);
@@ -752,7 +729,6 @@ export default function RestaurantDetailPage() {
         <Grid>
           <ToggleField label="Active" checked={restaurant.is_active} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_active: value })} />
           <ToggleField label="Onboarded" checked={restaurant.on_boarded} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, on_boarded: value })} />
-          <ToggleField label="Xlent" checked={xlentEnabled} disabled={!editMode} onCheckedChange={setXlentEnabled} />
           {isAdmin && (
             <Field label="Owner User ID">
               <Input className={inputClass} disabled={!editMode} value={restaurant.owner_user_id ?? ""} onChange={(e) => setRestaurant({ ...restaurant, owner_user_id: e.target.value || null })} />
@@ -1086,6 +1062,10 @@ export default function RestaurantDetailPage() {
         <Field label="Booking Terms">
           <Textarea className={inputClass} disabled={!editMode} value={bookingTermsToTextarea(restaurant.booking_terms)} onChange={(e) => setRestaurant({ ...restaurant, booking_terms: bookingTermsToPayload(e.target.value) || [] })} />
         </Field>
+      </Section>
+
+      <Section title="XL-ENT POS (CashMag)">
+        <XlentPosPanel restaurantId={restaurant.id} canEdit={isAdmin} />
       </Section>
 
       <Section title="Media">

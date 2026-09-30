@@ -277,9 +277,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (relations.opening_hours) {
         tasks.push(replaceTableRows("restaurant_opening_hours", relations.opening_hours));
       }
-      if (relations.till_providers) {
-        tasks.push(replaceTableRows("restaurant_till_providers", relations.till_providers));
-      }
+      // restaurant_till_providers is intentionally not synced here: it holds the
+      // XL-ENT config (key in Vault) and is managed only via the backend /api/pos/xlent routes.
 
       await Promise.all(tasks);
     }

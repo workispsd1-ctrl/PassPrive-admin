@@ -34,6 +34,8 @@ import {
   validateRestaurantAdvertising,
   validateRestaurantOffers,
 } from "@/lib/restaurantAdmin";
+import { saveXlentConfig, validateXlentConfig, type XlentConfigInput } from "@/lib/xlentPos";
+import { EMPTY_XLENT_INPUT, XlentPosFields } from "../_components/XlentPos";
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
@@ -219,6 +221,8 @@ export default function AddRestaurantPage() {
     merchant_reward_rate: "" as string,
   });
 
+  const [xlent, setXlent] = useState<XlentConfigInput>(EMPTY_XLENT_INPUT);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => setForm((previous) => ({ ...previous, [e.target.name]: e.target.value }));
@@ -331,6 +335,12 @@ export default function AddRestaurantPage() {
         title: "Invalid advertising dates",
         description: advertisingValidationError,
       });
+      return;
+    }
+
+    const xlentValidationError = validateXlentConfig(xlent, false);
+    if (xlentValidationError) {
+      showToast({ type: "error", title: "XL-ENT POS", description: xlentValidationError });
       return;
     }
 
@@ -457,6 +467,11 @@ export default function AddRestaurantPage() {
       ]);
 
       if (coverResult.error) throw coverResult.error;
+
+      // Verified against XL-ENT by the backend; a bad key rolls the restaurant back below.
+      if (xlent.enabled) {
+        await saveXlentConfig(restaurant.id, xlent);
+      }
 
       showToast({
         type: "success",
@@ -717,6 +732,11 @@ export default function AddRestaurantPage() {
           <ToggleField label="Cover Charge Enabled" checked={form.cover_charge_enabled} onCheckedChange={(value) => setForm((previous) => ({ ...previous, cover_charge_enabled: value }))} />
           <Input type="number" step="0.01" className={inputClass} name="cover_charge_amount" placeholder="Cover charge amount" value={form.cover_charge_amount} onChange={handleChange} />
         </div>
+      </section>
+
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">XL-ENT POS (CashMag)</h2>
+        <XlentPosFields value={xlent} onChange={setXlent} disabled={loading} />
       </section>
 
       <section className="space-y-4 border-b py-8">
