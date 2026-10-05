@@ -129,6 +129,7 @@ export default function MoodCategoryManager({
       "/api/service-categories",
       "/api/moodcategories",
       "/api/storemoodcategories",
+      "/api/touristmoodcategories",
     ]).has(String(path || "").trim());
   }
 

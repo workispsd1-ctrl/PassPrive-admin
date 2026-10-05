@@ -118,6 +118,7 @@ const groups: MenuGroup[] = [
     items: [
       { title: "Restaurant Mood Category", href: "/dashboard/mood-categories", iconSrc: "/menu.png" },
       { title: "Store Mood Category", href: "/dashboard/store-mood-categories", iconSrc: "/menu.png" },
+      { title: "Tourist Mood Category", href: "/dashboard/tourist-mood-categories", iconSrc: "/menu.png" },
       { title: "Service Categories", href: "/dashboard/service-categories", iconSrc: "/menu.png" },
     ],
   },
@@ -243,6 +244,11 @@ export default function Sidebar({
     {
       title: "Store Mood Categories",
       href: "/dashboard/store-mood-categories",
+      iconSrc: "/menu.png",
+    },
+    {
+      title: "Tourist Mood Categories",
+      href: "/dashboard/tourist-mood-categories",
       iconSrc: "/menu.png",
     },
     {
