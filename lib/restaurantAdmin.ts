@@ -342,6 +342,7 @@ export type RestaurantFlatRecord = {
   merchant_plan: MerchantPlan;
   service_level: ServiceLevel;
   pay_bill_enabled: boolean;
+  order_collect_enabled: boolean;
   booking_service_type: BookingServiceType;
   onboarding_charge: number | null;
   monthly_charge: number | null;
@@ -771,6 +772,7 @@ export function normalizeRestaurantRecord({
     merchant_plan: (asString(restaurant?.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(restaurant?.service_level) as ServiceLevel | null) ?? "discoverable",
     pay_bill_enabled: restaurant?.pay_bill_enabled === true,
+    order_collect_enabled: restaurant?.order_collect_enabled === true,
     booking_service_type:
       (asString(restaurant?.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(restaurant?.onboarding_charge),
@@ -901,6 +903,7 @@ export function mergeRestaurantRecords(
     merchant_plan: primary.merchant_plan === "paid" || secondary.merchant_plan === "paid" ? "paid" : "free",
     service_level: mergeScalar(primary.service_level, secondary.service_level) ?? "discoverable",
     pay_bill_enabled: primary.pay_bill_enabled || secondary.pay_bill_enabled,
+    order_collect_enabled: primary.order_collect_enabled === true,
     booking_service_type:
       mergeScalar(primary.booking_service_type, secondary.booking_service_type) ?? "instant",
     onboarding_charge: mergeScalar(primary.onboarding_charge, secondary.onboarding_charge),
@@ -1377,6 +1380,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
     pay_bill_enabled: input.pay_bill_enabled === true,
+    order_collect_enabled: input.order_collect_enabled === true,
     booking_service_type:
       (asString(input.booking_service_type) as BookingServiceType | null) ?? "instant",
     onboarding_charge: asNumber(input.onboarding_charge),

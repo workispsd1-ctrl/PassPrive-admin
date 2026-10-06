@@ -184,6 +184,16 @@ export default function RestaurantDetailPage() {
   const [deals, setDeals] = useState<RestaurantDealInput[]>([]);
   const [dealsOriginal, setDealsOriginal] = useState<RestaurantDealInput[]>([]);
   const [tierOptions, setTierOptions] = useState<string[]>([]);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const { data: auth } = await supabaseBrowser.auth.getUser();
+      if (!auth?.user) return;
+      const { data } = await supabaseBrowser.from("users").select("role").eq("id", auth.user.id).maybeSingle();
+      setIsSuperadmin(String(data?.role || "").toLowerCase().replace(/[\s_]+/g, "") === "superadmin");
+    })();
+  }, []);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [creatingCredentials, setCreatingCredentials] = useState(false);
@@ -850,6 +860,20 @@ export default function RestaurantDetailPage() {
               }
             />
           </Field>
+          {isSuperadmin && (
+            <Field label="Order & Collect">
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={restaurant.order_collect_enabled}
+                  disabled={!editMode}
+                  onCheckedChange={(value) => setRestaurant({ ...restaurant, order_collect_enabled: value })}
+                />
+                <span className="text-sm text-gray-700">
+                  Pickup ordering from this restaurant&apos;s menu. Shows in the app only when the menu has available items.
+                </span>
+              </div>
+            </Field>
+          )}
           {restaurant.service_level !== "discoverable" && (
             <Field label="Booking type">
               <select

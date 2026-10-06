@@ -10,6 +10,20 @@ type RouteContext = {
   }>;
 };
 
+async function getCallerRole(accessToken: string): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabaseFromToken(accessToken).auth.getUser();
+  if (!user) return null;
+  const { data: profile } = await supabaseAdmin
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const role = profile?.role ?? user.user_metadata?.role ?? null;
+  return role ? String(role).toLowerCase().replace(/[\s_]+/g, "") : null;
+}
+
 async function isAllowedToDeleteRestaurant(accessToken: string) {
   const supabase = supabaseFromToken(accessToken);
   const {
@@ -221,13 +235,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Missing authorization token" }, { status: 401 });
     }
 
-    const allowed = true; // Temporarily bypass check to confirm DB writes succeed
-    if (!allowed) {
+    const callerRole = await getCallerRole(accessToken);
+    if (callerRole !== "admin" && callerRole !== "superadmin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
-    const { basePayload, relations, syncPrimaryOnly } = body;
+    const { relations, syncPrimaryOnly } = body;
+    const basePayload = body.basePayload ? { ...body.basePayload } : undefined;
+    if (basePayload && callerRole !== "superadmin") {
+      delete basePayload.order_collect_enabled;
+    }
 
     const targetDb = syncPrimaryOnly ? supabaseAdmin : supabaseAdminSecond;
     const errors: string[] = [];
