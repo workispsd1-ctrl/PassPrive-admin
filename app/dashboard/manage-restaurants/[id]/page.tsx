@@ -748,7 +748,6 @@ export default function RestaurantDetailPage() {
         <Grid>
           <ToggleField label="Active" checked={restaurant.is_active} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_active: value })} />
           <ToggleField label="Onboarded" checked={restaurant.on_boarded} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, on_boarded: value })} />
-          <ToggleField label="PassPrive Promoted" checked={restaurant.is_advertised} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_advertised: value })} />
           {isAdmin && (
             <Field label="Owner User ID">
               <Input className={inputClass} disabled={!editMode} value={restaurant.owner_user_id ?? ""} onChange={(e) => setRestaurant({ ...restaurant, owner_user_id: e.target.value || null })} />
@@ -866,6 +865,8 @@ export default function RestaurantDetailPage() {
                 payBill: restaurant.pay_bill_enabled,
               }}
               disabled={!editMode}
+              promoted={restaurant.is_promoted}
+              onPromotedChange={(value) => setRestaurant({ ...restaurant, is_promoted: value })}
               onChange={(next) =>
                 setRestaurant({
                   ...restaurant,

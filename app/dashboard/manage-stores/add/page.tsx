@@ -184,6 +184,7 @@ function AddStorePageInner() {
   const [serviceLevel, setServiceLevel] = useState<ServiceLevel>("discoverable");
   const [bookingEnabled, setBookingEnabled] = useState(false);
   const [payBillEnabled, setPayBillEnabled] = useState(false);
+  const [promoted, setPromoted] = useState(false);
   const [onboardingCharge, setOnboardingCharge] = useState("");
   const [monthlyCharge, setMonthlyCharge] = useState("");
   const [mdrAgreedCim, setMdrAgreedCim] = useState("");
@@ -590,6 +591,7 @@ function AddStorePageInner() {
         service_level: serviceLevel,
         booking_enabled: bookingEnabled,
         pay_bill_enabled: payBillEnabled,
+        is_promoted: promoted,
         onboarding_charge: onboardingCharge ? Number(onboardingCharge) : null,
         monthly_charge: monthlyCharge ? Number(monthlyCharge) : null,
         mdr_agreed_cim: mdrAgreedCim ? Number(mdrAgreedCim) : null,
@@ -857,6 +859,8 @@ function AddStorePageInner() {
               disabled={loading}
               lockToDiscoverable={form.store_type !== "SERVICE"}
               lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
+              promoted={promoted}
+              onPromotedChange={setPromoted}
               onChange={(next) => {
                 setBookingEnabled(next.booking);
                 setPayBillEnabled(next.payBill);

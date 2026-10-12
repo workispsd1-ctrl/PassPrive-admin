@@ -362,6 +362,7 @@ export type RestaurantFlatRecord = {
   created_at: string | null;
   updated_at: string | null;
   is_advertised: boolean;
+  is_promoted: boolean;
   ad_priority: number | null;
   ad_starts_at: string | null;
   ad_ends_at: string | null;
@@ -729,6 +730,7 @@ export function normalizeRestaurantRecord({
     created_at: asString(restaurant?.created_at),
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
+    is_promoted: asBoolean(restaurant?.is_promoted),
     on_boarded: restaurant?.on_boarded === true,
     created_creds: restaurant?.created_creds === true,
     ad_priority: asNumber(restaurant?.ad_priority),
@@ -914,6 +916,7 @@ export function mergeRestaurantRecords(
     // Boolean: primary wins (already has default false, so only override if primary is false and secondary is true)
     is_active: primary.is_active || secondary.is_active,
     is_advertised: primary.is_advertised || secondary.is_advertised,
+    is_promoted: primary.is_promoted || secondary.is_promoted,
     is_pure_veg: primary.is_pure_veg || secondary.is_pure_veg,
     booking_enabled: primary.booking_enabled || secondary.booking_enabled,
     modification_available: primary.modification_available || secondary.modification_available,
@@ -1372,6 +1375,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     cover_charge_amount: coverChargeAmount,
     on_boarded: Boolean(input.on_boarded),
     is_advertised: Boolean(input.is_advertised),
+    is_promoted: Boolean(input.is_promoted),
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
@@ -1402,6 +1406,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     cancellation_available: Boolean(input.cancellation_available),
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
     is_advertised: Boolean(input.is_advertised),
+    is_promoted: Boolean(input.is_promoted),
     on_boarded: Boolean(input.on_boarded),
   };
 

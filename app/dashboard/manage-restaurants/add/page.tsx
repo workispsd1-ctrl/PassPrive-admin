@@ -205,6 +205,7 @@ export default function AddRestaurantPage() {
     cover_charge_enabled: false,
     cover_charge_amount: "",
     is_advertised: false,
+    is_promoted: false,
     ad_priority: "",
     ad_badge_text: "",
     ad_starts_at: "",
@@ -417,6 +418,7 @@ export default function AddRestaurantPage() {
             ? Number(form.cover_charge_amount)
             : undefined,
         is_advertised: form.is_advertised,
+        is_promoted: form.is_promoted,
         ad_priority: form.ad_priority ? Number(form.ad_priority) : undefined,
         ad_badge_text: form.ad_badge_text || undefined,
         ad_starts_at: form.ad_starts_at || undefined,
@@ -615,6 +617,8 @@ export default function AddRestaurantPage() {
             booking: form.booking_enabled,
             payBill: form.pay_bill_enabled,
           }}
+          promoted={form.is_promoted}
+          onPromotedChange={(value) => setForm((prev) => ({ ...prev, is_promoted: value }))}
           onChange={(next) =>
             setForm((prev) => ({
               ...prev,
@@ -802,7 +806,7 @@ export default function AddRestaurantPage() {
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Advertising</h2>
         <div className="grid grid-cols-2 gap-4">
-          <ToggleField label="PassPrive Promoted" checked={form.is_advertised} onCheckedChange={(value) => setForm((previous) => ({ ...previous, is_advertised: value }))} />
+          <ToggleField label="Advertised" checked={form.is_advertised} onCheckedChange={(value) => setForm((previous) => ({ ...previous, is_advertised: value }))} />
           <Input type="number" className={inputClass} name="ad_priority" placeholder="Ad priority" value={form.ad_priority} onChange={handleChange} />
           <Input className={inputClass} name="ad_badge_text" placeholder="Ad badge text" value={form.ad_badge_text} onChange={handleChange} />
           <Input type="datetime-local" min={formatDateTimeLocal()} className={inputClass} name="ad_starts_at" value={form.ad_starts_at} onChange={handleChange} />

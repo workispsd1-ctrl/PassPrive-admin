@@ -473,7 +473,7 @@ export default function StoreDetailPage() {
         is_active: !!store.is_active,
         is_featured: !!store.is_featured,
         on_boarded: !!store.on_boarded,
-        is_advertised: !!store.is_advertised,
+        is_promoted: !!store.is_promoted,
         logo_url: finalLogoUrl || null,
         cover_image: finalCoverUrl || null,
       });
@@ -650,15 +650,6 @@ export default function StoreDetailPage() {
               onCheckedChange={(v) => setStore({ ...store, on_boarded: v })}
             />
           </div>
-
-          <div className="flex items-center gap-4">
-            <span>PassPrive Promoted</span>
-            <Switch
-              checked={!!store.is_advertised}
-              disabled={!editMode}
-              onCheckedChange={(v) => setStore({ ...store, is_advertised: v })}
-            />
-          </div>
         </div>
       </Section>
 
@@ -688,6 +679,8 @@ export default function StoreDetailPage() {
               disabled={!editMode}
               lockToDiscoverable={(store.store_type || "PRODUCT") !== "SERVICE"}
               lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
+              promoted={!!store.is_promoted}
+              onPromotedChange={(value) => setStore({ ...store, is_promoted: value })}
               onChange={(next) =>
                 setStore({
                   ...store,

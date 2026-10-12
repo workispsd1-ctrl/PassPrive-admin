@@ -10,6 +10,8 @@ type Props = {
   /** Product stores sell over the counter: discoverable only, no booking, no pay bill. */
   lockToDiscoverable?: boolean;
   lockReason?: string;
+  promoted?: boolean;
+  onPromotedChange?: (next: boolean) => void;
 };
 
 const ROWS = [
@@ -39,6 +41,8 @@ export default function ServiceSwitches({
   disabled,
   lockToDiscoverable = false,
   lockReason,
+  promoted,
+  onPromotedChange,
 }: Props) {
   const toggles = lockToDiscoverable
     ? { discoverable: true, booking: false, payBill: false }
@@ -71,6 +75,19 @@ export default function ServiceSwitches({
           />
         </div>
       ))}
+      {onPromotedChange ? (
+        <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+          <div>
+            <p className="text-sm font-medium">PassPrive Promoted</p>
+            <p className="text-xs text-muted-foreground">Shows the PassPrive Promoted badge on this merchant&apos;s cards instead of the cashback badge.</p>
+          </div>
+          <Switch
+            checked={!!promoted}
+            disabled={disabled}
+            onCheckedChange={onPromotedChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
