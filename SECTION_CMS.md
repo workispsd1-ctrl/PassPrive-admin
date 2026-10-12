@@ -34,9 +34,11 @@ template (`template` set, `section_key` null).
 
 Defined in `PassPrive/components/Home/HomeContent.jsx`:
 
-**Native `section_key`s** (the 8 shipped sections):
-`foodie-frontrow`, `more-with-passprive`, `shop-this-weekend`, `family-feast`,
+**Native `section_key`s** (the 9 shipped sections):
+`foodie-frontrow`, `fresh-spots`, `more-with-passprive`, `shop-this-weekend`, `family-feast`,
 `new-kick-in-stores`, `plan-your-salon-visit`, `now-trending`, `whats-hot`.
+
+> `fresh-spots` ("New Dining Spots") shows the newest restaurants (by `restaurants.created_at`) within the 15 km scope.
 
 > `more-with-passprive` is a tile grid with **no heading**, so `title` is ignored for it.
 

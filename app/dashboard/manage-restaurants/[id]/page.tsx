@@ -340,6 +340,15 @@ export default function RestaurantDetailPage() {
   const handleSave = async () => {
     if (!restaurant) return;
 
+    if ((restaurant.latitude == null) !== (restaurant.longitude == null)) {
+      showToast({
+        type: "error",
+        title: "Latitude and longitude go together",
+        description: "Fill in both (copy from Google Maps) or clear both.",
+      });
+      return;
+    }
+
     const offerValidationError = validateRestaurantOffers(restaurant.offers, restaurantOriginal?.offers);
     if (offerValidationError) {
       showToast({
@@ -739,6 +748,7 @@ export default function RestaurantDetailPage() {
         <Grid>
           <ToggleField label="Active" checked={restaurant.is_active} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_active: value })} />
           <ToggleField label="Onboarded" checked={restaurant.on_boarded} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, on_boarded: value })} />
+          <ToggleField label="PassPrive Promoted" checked={restaurant.is_advertised} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, is_advertised: value })} />
           {isAdmin && (
             <Field label="Owner User ID">
               <Input className={inputClass} disabled={!editMode} value={restaurant.owner_user_id ?? ""} onChange={(e) => setRestaurant({ ...restaurant, owner_user_id: e.target.value || null })} />
@@ -814,6 +824,12 @@ export default function RestaurantDetailPage() {
           </Field>
           <Field label="Area">
             <Input className={inputClass} disabled={!editMode} value={restaurant.area ?? ""} onChange={(e) => setRestaurant({ ...restaurant, area: e.target.value })} />
+          </Field>
+          <Field label="Latitude">
+            <Input className={inputClass} type="number" step="0.000001" disabled={!editMode} value={restaurant.latitude ?? ""} onChange={(e) => setRestaurant({ ...restaurant, latitude: e.target.value ? Number(e.target.value) : null })} />
+          </Field>
+          <Field label="Longitude">
+            <Input className={inputClass} type="number" step="0.000001" disabled={!editMode} value={restaurant.longitude ?? ""} onChange={(e) => setRestaurant({ ...restaurant, longitude: e.target.value ? Number(e.target.value) : null })} />
           </Field>
           <Field label="Cost For Two">
             <Input className={inputClass} type="number" disabled={!editMode} value={restaurant.cost_for_two ?? ""} onChange={(e) => setRestaurant({ ...restaurant, cost_for_two: e.target.value ? Number(e.target.value) : null })} />
@@ -1014,12 +1030,6 @@ export default function RestaurantDetailPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </Field>
-          <Field label="Latitude">
-            <Input className={inputClass} type="number" step="0.000001" disabled={!editMode} value={restaurant.latitude ?? ""} onChange={(e) => setRestaurant({ ...restaurant, latitude: e.target.value ? Number(e.target.value) : null })} />
-          </Field>
-          <Field label="Longitude">
-            <Input className={inputClass} type="number" step="0.000001" disabled={!editMode} value={restaurant.longitude ?? ""} onChange={(e) => setRestaurant({ ...restaurant, longitude: e.target.value ? Number(e.target.value) : null })} />
           </Field>
         </Grid>
       </Section>

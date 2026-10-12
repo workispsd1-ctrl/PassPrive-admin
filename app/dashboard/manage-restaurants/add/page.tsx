@@ -314,6 +314,14 @@ export default function AddRestaurantPage() {
       showToast({ type: "error", title: "Password must be at least 6 characters" });
       return;
     }
+    if (!String(form.latitude).trim() || !String(form.longitude).trim()) {
+      showToast({
+        type: "error",
+        title: "Latitude and longitude are required",
+        description: "Copy both from Google Maps so distance shows in the app.",
+      });
+      return;
+    }
 
     const offerValidationError = validateRestaurantOffers(offers);
     if (offerValidationError) {
@@ -794,7 +802,7 @@ export default function AddRestaurantPage() {
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Advertising</h2>
         <div className="grid grid-cols-2 gap-4">
-          <ToggleField label="Advertised" checked={form.is_advertised} onCheckedChange={(value) => setForm((previous) => ({ ...previous, is_advertised: value }))} />
+          <ToggleField label="PassPrive Promoted" checked={form.is_advertised} onCheckedChange={(value) => setForm((previous) => ({ ...previous, is_advertised: value }))} />
           <Input type="number" className={inputClass} name="ad_priority" placeholder="Ad priority" value={form.ad_priority} onChange={handleChange} />
           <Input className={inputClass} name="ad_badge_text" placeholder="Ad badge text" value={form.ad_badge_text} onChange={handleChange} />
           <Input type="datetime-local" min={formatDateTimeLocal()} className={inputClass} name="ad_starts_at" value={form.ad_starts_at} onChange={handleChange} />

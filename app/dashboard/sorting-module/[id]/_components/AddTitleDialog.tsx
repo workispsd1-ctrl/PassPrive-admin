@@ -13,6 +13,7 @@ const SCREEN_SECTIONS: Record<string, ScreenCatalog> = {
   "Home Screen": {
     keys: [
       "foodie-frontrow",
+      "fresh-spots",
       "offers-for-you",
       "foodie-frontrow-classic",
       "more-with-passprive",
@@ -25,6 +26,7 @@ const SCREEN_SECTIONS: Record<string, ScreenCatalog> = {
     ],
     labels: {
       "foodie-frontrow": "In the Limelight",
+      "fresh-spots": "New Dining Spots",
       "offers-for-you": "Offers for you",
       "foodie-frontrow-classic": "Foodie Frontrow",
     },
