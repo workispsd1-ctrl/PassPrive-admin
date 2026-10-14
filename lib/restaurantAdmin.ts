@@ -363,6 +363,7 @@ export type RestaurantFlatRecord = {
   updated_at: string | null;
   is_advertised: boolean;
   is_promoted: boolean;
+  cashback_enabled: boolean;
   ad_priority: number | null;
   ad_starts_at: string | null;
   ad_ends_at: string | null;
@@ -731,6 +732,7 @@ export function normalizeRestaurantRecord({
     updated_at: asString(restaurant?.updated_at),
     is_advertised: asBoolean(restaurant?.is_advertised),
     is_promoted: asBoolean(restaurant?.is_promoted),
+    cashback_enabled: restaurant?.cashback_enabled !== false,
     on_boarded: restaurant?.on_boarded === true,
     created_creds: restaurant?.created_creds === true,
     ad_priority: asNumber(restaurant?.ad_priority),
@@ -917,6 +919,7 @@ export function mergeRestaurantRecords(
     is_active: primary.is_active || secondary.is_active,
     is_advertised: primary.is_advertised || secondary.is_advertised,
     is_promoted: primary.is_promoted || secondary.is_promoted,
+    cashback_enabled: primary.cashback_enabled,
     is_pure_veg: primary.is_pure_veg || secondary.is_pure_veg,
     booking_enabled: primary.booking_enabled || secondary.booking_enabled,
     modification_available: primary.modification_available || secondary.modification_available,
@@ -1376,6 +1379,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     on_boarded: Boolean(input.on_boarded),
     is_advertised: Boolean(input.is_advertised),
     is_promoted: Boolean(input.is_promoted),
+    cashback_enabled: input.cashback_enabled !== false,
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
@@ -1407,6 +1411,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
     is_advertised: Boolean(input.is_advertised),
     is_promoted: Boolean(input.is_promoted),
+    cashback_enabled: input.cashback_enabled !== false,
     on_boarded: Boolean(input.on_boarded),
   };
 

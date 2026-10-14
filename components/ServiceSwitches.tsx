@@ -12,6 +12,8 @@ type Props = {
   lockReason?: string;
   promoted?: boolean;
   onPromotedChange?: (next: boolean) => void;
+  cashbackEnabled?: boolean;
+  onCashbackChange?: (next: boolean) => void;
 };
 
 const ROWS = [
@@ -43,6 +45,8 @@ export default function ServiceSwitches({
   lockReason,
   promoted,
   onPromotedChange,
+  cashbackEnabled = true,
+  onCashbackChange,
 }: Props) {
   const toggles = lockToDiscoverable
     ? { discoverable: true, booking: false, payBill: false }
@@ -75,6 +79,19 @@ export default function ServiceSwitches({
           />
         </div>
       ))}
+      {onCashbackChange ? (
+        <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+          <div>
+            <p className="text-sm font-medium">Cashback</p>
+            <p className="text-xs text-muted-foreground">On for every merchant by default. Turn off to stop all cashback here: receipt uploads, pay bill and cashback badges.</p>
+          </div>
+          <Switch
+            checked={cashbackEnabled}
+            disabled={disabled}
+            onCheckedChange={onCashbackChange}
+          />
+        </div>
+      ) : null}
       {onPromotedChange ? (
         <div className="flex items-start justify-between gap-4 rounded-md border p-3">
           <div>

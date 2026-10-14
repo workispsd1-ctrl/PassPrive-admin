@@ -159,17 +159,30 @@ function toIsoOrNull(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === "string") resolve(result);
-      else reject(new Error("Unable to read the selected image."));
-    };
-    reader.onerror = () => reject(new Error("Unable to read the selected image."));
-    reader.readAsDataURL(file);
-  });
+const BANNER_BUCKET = "offer-cards";
+const BANNER_MAX_WIDTH = 1170;
+
+async function compressBanner(file: File) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, BANNER_MAX_WIDTH / bitmap.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+  if (!blob) throw new Error("Unable to compress the selected image.");
+  return blob;
+}
+
+async function uploadBanner(file: File) {
+  const blob = await compressBanner(file);
+  const path = `promotional-banners/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.webp`;
+  const { error } = await supabaseBrowser.storage
+    .from(BANNER_BUCKET)
+    .upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
+  if (error) throw error;
+  return supabaseBrowser.storage.from(BANNER_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
 function BannerUploadField({
@@ -192,11 +205,10 @@ function BannerUploadField({
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      onUpload(dataUrl);
+      onUpload(await uploadBanner(file));
       event.target.value = "";
     } catch (error: unknown) {
-      showToast({ type: "error", title: "Failed to load banner image", description: error instanceof Error ? error.message : "Try another file." });
+      showToast({ type: "error", title: "Failed to upload banner image", description: error instanceof Error ? error.message : "Try another file." });
     }
   }
 

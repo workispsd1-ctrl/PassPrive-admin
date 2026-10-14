@@ -474,6 +474,7 @@ export default function StoreDetailPage() {
         is_featured: !!store.is_featured,
         on_boarded: !!store.on_boarded,
         is_promoted: !!store.is_promoted,
+        cashback_enabled: store.cashback_enabled !== false,
         logo_url: finalLogoUrl || null,
         cover_image: finalCoverUrl || null,
       });
@@ -681,6 +682,8 @@ export default function StoreDetailPage() {
               lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
               promoted={!!store.is_promoted}
               onPromotedChange={(value) => setStore({ ...store, is_promoted: value })}
+              cashbackEnabled={store.cashback_enabled !== false}
+              onCashbackChange={(value) => setStore({ ...store, cashback_enabled: value })}
               onChange={(next) =>
                 setStore({
                   ...store,

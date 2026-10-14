@@ -185,6 +185,7 @@ function AddStorePageInner() {
   const [bookingEnabled, setBookingEnabled] = useState(false);
   const [payBillEnabled, setPayBillEnabled] = useState(false);
   const [promoted, setPromoted] = useState(false);
+  const [cashbackEnabled, setCashbackEnabled] = useState(true);
   const [onboardingCharge, setOnboardingCharge] = useState("");
   const [monthlyCharge, setMonthlyCharge] = useState("");
   const [mdrAgreedCim, setMdrAgreedCim] = useState("");
@@ -592,6 +593,7 @@ function AddStorePageInner() {
         booking_enabled: bookingEnabled,
         pay_bill_enabled: payBillEnabled,
         is_promoted: promoted,
+        cashback_enabled: cashbackEnabled,
         onboarding_charge: onboardingCharge ? Number(onboardingCharge) : null,
         monthly_charge: monthlyCharge ? Number(monthlyCharge) : null,
         mdr_agreed_cim: mdrAgreedCim ? Number(mdrAgreedCim) : null,
@@ -861,6 +863,8 @@ function AddStorePageInner() {
               lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
               promoted={promoted}
               onPromotedChange={setPromoted}
+              cashbackEnabled={cashbackEnabled}
+              onCashbackChange={setCashbackEnabled}
               onChange={(next) => {
                 setBookingEnabled(next.booking);
                 setPayBillEnabled(next.payBill);
