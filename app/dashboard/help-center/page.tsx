@@ -611,7 +611,7 @@ export default function HelpCenterPage() {
                             {topic.content}
                           </p>
                           <p className="text-xs text-gray-400 mt-3">
-                            Order: {topic.display_order} &middot; Updated: {new Date(topic.updated_at).toLocaleDateString()}
+                            Order: {topic.display_order} &middot; Updated: {new Date(topic.updated_at).toLocaleDateString("en-GB", { timeZone: "Indian/Mauritius" })}
                           </p>
                         </div>
                       )}

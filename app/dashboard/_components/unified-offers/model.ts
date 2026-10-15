@@ -1,6 +1,7 @@
 "use client";
 
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { isoToMauritiusInput, mauritiusDateAtCurrentTimeIso, mauritiusInputToIso } from "@/lib/mauritiusTime";
 
 export const OFFER_SOURCE_TYPES = ["PLATFORM", "MERCHANT", "BANK"] as const;
 export const OFFER_MODULES = ["STORES", "DINEIN", "BOTH"] as const;
@@ -42,7 +43,6 @@ export const PAYMENT_INSTRUMENT_TYPES = [
   "CARD",
   "CREDIT_CARD",
   "DEBIT_CARD",
-  "UPI",
   "NET_BANKING",
   "WALLET",
   "EMI",
@@ -275,51 +275,24 @@ export function stringifyJson(value: unknown) {
 }
 
 export function toDateTimeInput(value?: string | null) {
-  if (!value) return "";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  return isoToMauritiusInput(value);
 }
 
 export function toDateInput(value?: string | null) {
-  if (!value) return "";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return isoToMauritiusInput(value, "date");
 }
 
 export function toIsoString(value: string) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString();
+  return mauritiusInputToIso(value);
 }
 
 export function toEndOfDayIsoString(value: string) {
   if (!value) return null;
-  const parsed = new Date(`${value}T23:59:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString();
+  return mauritiusInputToIso(`${value}T23:59`);
 }
 
 export function toStartDateWithCurrentTimeIsoString(value: string) {
-  if (!value) return null;
-  const now = new Date();
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return null;
-
-  const parsed = new Date(
-    year,
-    month - 1,
-    day,
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds(),
-    0
-  );
-
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString();
+  return mauritiusDateAtCurrentTimeIso(value);
 }
 
 export function createEmptyOfferForm(sourceType: OfferSourceType = "PLATFORM"): OfferFormValues {

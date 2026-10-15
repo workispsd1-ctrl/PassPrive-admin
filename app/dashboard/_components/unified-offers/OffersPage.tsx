@@ -39,7 +39,7 @@ import { showToast } from "@/hooks/useToast";
 
 function formatDateRange(offer: OfferRecord) {
   if (!offer.starts_at && !offer.ends_at) return "No schedule";
-  const fmt = (value?: string | null) => (value ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(value)) : "Open");
+  const fmt = (value?: string | null) => (value ? new Intl.DateTimeFormat("en-GB", { timeZone: "Indian/Mauritius", dateStyle: "medium" }).format(new Date(value)) : "Open");
   return `${fmt(offer.starts_at)} - ${fmt(offer.ends_at)}`;
 }
 

@@ -1,5 +1,5 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { toDateTimeLocal } from "@/lib/restaurantAdmin";
+import { localInputToIso, toDateTimeLocal } from "@/lib/restaurantAdmin";
 
 export const STORE_STORAGE_BUCKET = "stores";
 
@@ -457,8 +457,8 @@ function normalizeSubscription(rows: DatabaseRow[]): StoreSubscriptionInput | nu
     status: asString(row.status),
     pickup_premium_enabled: asBoolean(row.pickup_premium_enabled),
     repeat_rewards_enabled: asBoolean(row.repeat_rewards_enabled),
-    starts_at: asString(row.starts_at),
-    expires_at: asString(row.expires_at),
+    starts_at: toDateTimeLocal(row.starts_at),
+    expires_at: toDateTimeLocal(row.expires_at),
   };
 }
 
@@ -635,8 +635,8 @@ function normalizeStore({
     brn: asString(store.brn) ?? "",
     registered_name: asString(store.registered_name) ?? "",
     ad_priority: asNumber(store.ad_priority),
-    ad_starts_at: asString(store.ad_starts_at),
-    ad_ends_at: asString(store.ad_ends_at),
+    ad_starts_at: toDateTimeLocal(store.ad_starts_at),
+    ad_ends_at: toDateTimeLocal(store.ad_ends_at),
     ad_badge_text: asString(store.ad_badge_text),
     created_at: asString(store.created_at),
     updated_at: asString(store.updated_at),
@@ -797,8 +797,8 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("brn", typeof store.brn === "string" ? asString(store.brn) : undefined);
   assign("registered_name", typeof store.registered_name === "string" ? asString(store.registered_name) : undefined);
   assign("ad_priority", asNumber(store.ad_priority));
-  assign("ad_starts_at", asString(store.ad_starts_at));
-  assign("ad_ends_at", asString(store.ad_ends_at));
+  assign("ad_starts_at", localInputToIso(store.ad_starts_at));
+  assign("ad_ends_at", localInputToIso(store.ad_ends_at));
   assign("ad_badge_text", asString(store.ad_badge_text));
 
   return payload;
@@ -870,8 +870,8 @@ function buildStoreOfferRows(storeId: string, offers: StoreRelationsInput["offer
       offer_type: asString(offer.offer_type),
       discount_value: asNumber(offer.discount_value),
       min_spend: asNumber(offer.min_spend),
-      start_at: asString(offer.start_at),
-      end_at: asString(offer.end_at),
+      start_at: localInputToIso(offer.start_at),
+      end_at: localInputToIso(offer.end_at),
       is_active: offer.is_active !== false,
       metadata: offer.metadata && typeof offer.metadata === "object" ? offer.metadata : null,
     }));
@@ -895,8 +895,8 @@ function buildStoreSubscriptionRows(
       status: asString(subscription.status) || "active",
       pickup_premium_enabled: Boolean(subscription.pickup_premium_enabled),
       repeat_rewards_enabled: Boolean(subscription.repeat_rewards_enabled),
-      starts_at: asString(subscription.starts_at),
-      expires_at: asString(subscription.expires_at),
+      starts_at: localInputToIso(subscription.starts_at),
+      expires_at: localInputToIso(subscription.expires_at),
     },
   ];
 }

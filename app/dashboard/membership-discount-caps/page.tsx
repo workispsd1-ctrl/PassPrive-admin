@@ -153,7 +153,7 @@ export default function MembershipDiscountCapsPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-500">
                         {row.updated_at
-                          ? new Date(row.updated_at).toLocaleString()
+                          ? new Date(row.updated_at).toLocaleString("en-GB", { timeZone: "Indian/Mauritius" })
                           : "—"}
                       </td>
                     </tr>

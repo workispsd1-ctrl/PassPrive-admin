@@ -72,7 +72,7 @@ function extractErrorMessage(error: unknown, fallback: string) {
 
 function formatDate(value?: string) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(value).toLocaleString("en-GB", { timeZone: "Indian/Mauritius", dateStyle: "medium", timeStyle: "short" });
 }
 
 type Props = {

@@ -1,6 +1,7 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 import { BOOST_COLUMNS, BOOST_ENTITY_TYPES, type CashbackBoost } from "./types";
+import { mauritiusInputToIso, mauritiusNowInput } from "@/lib/mauritiusTime";
 
 /** Shared by the cross-merchant page and the per-merchant panel. */
 export function boostPayload(boost: CashbackBoost) {
@@ -15,8 +16,8 @@ export function boostPayload(boost: CashbackBoost) {
     max_cashback_per_transaction: boost.max_cashback_per_transaction,
     budget_amount: boost.budget_amount,
     min_bill_amount: boost.min_bill_amount,
-    starts_at: new Date(boost.starts_at).toISOString(),
-    ends_at: new Date(boost.ends_at).toISOString(),
+    starts_at: mauritiusInputToIso(boost.starts_at),
+    ends_at: mauritiusInputToIso(boost.ends_at),
     days_of_week: boost.days_of_week,
     start_time: boost.start_time || null,
     end_time: boost.end_time || null,
@@ -110,8 +111,7 @@ export async function resolveMerchantNames(rows: CashbackBoost[]) {
 export function emptyBoost(entityType = "RESTAURANT", entityId = ""): CashbackBoost {
   const now = new Date();
   const inAWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const toLocal = (date: Date) =>
-    new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const toLocal = (date: Date) => mauritiusNowInput(date);
 
   return {
     id: "",

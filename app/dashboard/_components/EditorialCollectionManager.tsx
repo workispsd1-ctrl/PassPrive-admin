@@ -113,7 +113,7 @@ type Props = {
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
-  return new Date(value).toLocaleString("en-IN", {
+  return new Date(value).toLocaleString("en-GB", { timeZone: "Indian/Mauritius",
     dateStyle: "medium",
     timeStyle: "short",
   });

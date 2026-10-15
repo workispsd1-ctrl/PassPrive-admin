@@ -194,7 +194,7 @@ export default function EditUserForm({ user }: { user: User }) {
       {/* BUSINESS */}
       <InputField label="Business Name" name="business_name" value={formData.business_name ?? ""} onChange={handleChange} />
       <InputField label="Business Address" name="business_address" value={formData.business_address ?? ""} onChange={handleChange} />
-      <InputField label="GST Number" name="gst_number" value={formData.gst_number ?? ""} onChange={handleChange} />
+      <InputField label="VAT Number" name="gst_number" value={formData.gst_number ?? ""} onChange={handleChange} />
 
       {/* OTP */}
       <InputField label="OTP Code" name="otp_code" value={formData.otp_code ?? ""} onChange={handleChange} />

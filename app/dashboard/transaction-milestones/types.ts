@@ -1,3 +1,4 @@
+import { isoToMauritiusInput } from "@/lib/mauritiusTime";
 export const MILESTONE_PERIODS = [
   { value: "DAY", label: "Per day" },
   { value: "WEEK", label: "Per week" },
@@ -204,10 +205,5 @@ export function validateMilestone(milestone: Milestone): string | null {
 }
 
 export function toDateTimeLocal(value: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
+  return isoToMauritiusInput(value);
 }

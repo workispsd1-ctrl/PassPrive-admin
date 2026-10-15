@@ -18,6 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/hooks/useToast";
 import { getTokenClient } from "@/lib/getTokenClient";
+import { mauritiusInputToIso } from "@/lib/mauritiusTime";
 
 const backendUrl = "";
 
@@ -119,9 +120,7 @@ const initialForm: CreateOfferForm = {
 };
 
 function toIsoString(value: string) {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  return mauritiusInputToIso(value) ?? undefined;
 }
 
 async function getAdminHeaders() {

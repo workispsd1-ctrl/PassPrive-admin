@@ -1161,7 +1161,6 @@ export default function StoreDetailPage() {
               }
             >
               <option value="BANK_TRANSFER">BANK_TRANSFER</option>
-              <option value="UPI">UPI</option>
               <option value="MANUAL">MANUAL</option>
             </select>
           </Field>
@@ -1217,26 +1216,6 @@ export default function StoreDetailPage() {
             />
           </Field>
 
-          <Field label="UPI ID">
-            <Input
-              className={inputClass}
-              disabled={!editMode}
-              value={payment.payout_upi_id || ""}
-              onChange={(e) =>
-                setPayment((prev) => ({ ...prev, payout_upi_id: e.target.value }))
-              }
-            />
-          </Field>
-
-          <Field label="IFSC">
-            <Input
-              className={inputClass}
-              disabled={!editMode}
-              value={payment.ifsc || ""}
-              onChange={(e) => setPayment((prev) => ({ ...prev, ifsc: e.target.value }))}
-            />
-          </Field>
-
           <Field label="IBAN">
             <Input
               className={inputClass}
@@ -1288,7 +1267,6 @@ export default function StoreDetailPage() {
               }
             >
               <option value="VAT">VAT</option>
-              <option value="GST">GST</option>
               <option value="BRN">BRN</option>
               <option value="TIN">TIN</option>
               <option value="OTHER">OTHER</option>
@@ -1534,11 +1512,11 @@ export default function StoreDetailPage() {
         <Grid>
           <ReadOnly
             label="Created At"
-            value={store.created_at ? new Date(store.created_at).toLocaleString() : "-"}
+            value={store.created_at ? new Date(store.created_at).toLocaleString("en-GB", { timeZone: "Indian/Mauritius" }) : "-"}
           />
           <ReadOnly
             label="Updated At"
-            value={store.updated_at ? new Date(store.updated_at).toLocaleString() : "-"}
+            value={store.updated_at ? new Date(store.updated_at).toLocaleString("en-GB", { timeZone: "Indian/Mauritius" }) : "-"}
           />
         </Grid>
       </Section>

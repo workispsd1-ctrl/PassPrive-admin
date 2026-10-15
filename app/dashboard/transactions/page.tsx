@@ -71,9 +71,8 @@ function formatDateTime(value: string | null) {
 
 function formatAmount(value: number, currencyCode: string) {
   const code = (currencyCode || "MUR").toUpperCase();
-  if (code === "MUR" || code === "INR") {
-    const displayCode = code === "INR" ? "MUR" : code;
-    return `${displayCode} ${Number(value).toLocaleString("en-US", {
+  if (code === "MUR") {
+    return `MUR ${Number(value).toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;

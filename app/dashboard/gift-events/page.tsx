@@ -17,6 +17,7 @@ import {
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 import CategoryManager from "./CategoryManager";
+import { isoToMauritiusInput, mauritiusInputToIso } from "@/lib/mauritiusTime";
 
 const STORAGE_BUCKET = "gift-events";
 
@@ -74,22 +75,15 @@ function fileExt(file: File) {
   return file.type.split("/").pop() || "jpg";
 }
 
-// "2026-06-04T10:30:00Z" -> "2026-06-04T10:30" for <input type="datetime-local">
 function toLocalInput(value: string | null) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+  return isoToMauritiusInput(value);
 }
 
 function formatDate(value: string | null) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(undefined, { timeZone: "Indian/Mauritius",
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -267,12 +261,12 @@ export default function GiftEventsPage() {
         description: form.description.trim() || null,
         image_url,
         image_path,
-        start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
+        start_date: form.start_date ? mauritiusInputToIso(form.start_date) : null,
         // Always-available events never expire.
         end_date:
           form.is_always_available || !form.end_date
             ? null
-            : new Date(form.end_date).toISOString(),
+            : mauritiusInputToIso(form.end_date),
         is_always_available: form.is_always_available,
         is_active: form.is_active,
         category_id: form.category_id || null,

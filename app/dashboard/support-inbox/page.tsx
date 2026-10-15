@@ -58,7 +58,7 @@ type PendingRetry = { ticketId: string; text: string } | null;
 
 function formatLocal(iso?: string | null): string {
   if (!iso) return "-";
-  return new Date(iso).toLocaleString();
+  return new Date(iso).toLocaleString("en-GB", { timeZone: "Indian/Mauritius" });
 }
 
 function fromNow(iso?: string | null): string {

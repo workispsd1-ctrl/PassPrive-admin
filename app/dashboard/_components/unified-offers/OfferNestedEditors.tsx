@@ -559,7 +559,7 @@ export function OfferRedemptionsPanel({ redemptions }: { redemptions: OfferRedem
                 <TableCell>{row.status || "—"}</TableCell>
                 <TableCell>{row.bill_amount ?? "—"}</TableCell>
                 <TableCell>{row.discount_amount ?? "—"}</TableCell>
-                <TableCell>{row.redeemed_at ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(row.redeemed_at)) : "—"}</TableCell>
+                <TableCell>{row.redeemed_at ? new Intl.DateTimeFormat("en-GB", { timeZone: "Indian/Mauritius", dateStyle: "medium", timeStyle: "short" }).format(new Date(row.redeemed_at)) : "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

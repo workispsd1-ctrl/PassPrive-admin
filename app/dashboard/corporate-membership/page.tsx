@@ -81,7 +81,7 @@ export default function CorporateMembershipPage() {
       const companyCode = getCleanCompanyCode(companyName);
       const codesList: GeneratedPromocode[] = [];
 
-      const nowStr = new Date().toLocaleString("en-IN", {
+      const nowStr = new Date().toLocaleString("en-GB", { timeZone: "Indian/Mauritius",
         dateStyle: "medium",
         timeStyle: "short",
       });
@@ -143,9 +143,9 @@ export default function CorporateMembershipPage() {
       "Promo Code": p.code,
       "Pass Type": p.passType,
       "Pass Name": p.passName,
-      "Actual Price (INR)": p.actualPrice,
+      "Actual Price (MUR)": p.actualPrice,
       "Corporate Discount (%)": p.discountPct,
-      "Discounted Price (INR)": p.discountedPrice,
+      "Discounted Price (MUR)": p.discountedPrice,
       "MDR": p.mdr,
       "Cashback": p.cashback,
       "Company Name": p.companyName,

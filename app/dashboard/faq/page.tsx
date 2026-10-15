@@ -406,7 +406,7 @@ export default function FaqPage() {
                             {faq.answer}
                           </p>
                           <p className="text-xs text-gray-400 mt-3">
-                            Order: {faq.display_order} &middot; Updated: {new Date(faq.updated_at).toLocaleDateString()}
+                            Order: {faq.display_order} &middot; Updated: {new Date(faq.updated_at).toLocaleDateString("en-GB", { timeZone: "Indian/Mauritius" })}
                           </p>
                         </div>
                       )}

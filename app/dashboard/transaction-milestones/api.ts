@@ -7,6 +7,7 @@ import {
   type Milestone,
   type MilestoneTier,
 } from "./types";
+import { mauritiusInputToIso } from "@/lib/mauritiusTime";
 
 type Row = Record<string, unknown>;
 
@@ -91,8 +92,8 @@ export async function saveMilestone(milestone: Milestone) {
     amount_basis: milestone.amount_basis,
     min_transaction_amount: milestone.min_transaction_amount,
     currency_code: milestone.currency_code || "MUR",
-    starts_at: milestone.starts_at ? new Date(milestone.starts_at).toISOString() : null,
-    ends_at: milestone.ends_at ? new Date(milestone.ends_at).toISOString() : null,
+    starts_at: milestone.starts_at ? mauritiusInputToIso(milestone.starts_at) : null,
+    ends_at: milestone.ends_at ? mauritiusInputToIso(milestone.ends_at) : null,
     budget_amount: milestone.budget_amount,
     max_awards_total: milestone.max_awards_total,
     priority: milestone.priority,

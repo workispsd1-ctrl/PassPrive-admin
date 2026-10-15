@@ -44,7 +44,7 @@ export type PaymentDetails = {
   legal_business_name: string;
   display_name_on_invoice?: string;
 
-  payout_method: "BANK_TRANSFER" | "UPI" | "MANUAL";
+  payout_method: "BANK_TRANSFER" | "MANUAL";
   beneficiary_name?: string;
   bank_name?: string;
   account_number?: string;
@@ -57,7 +57,7 @@ export type PaymentDetails = {
   commission_percent?: string;
   currency: string;
 
-  tax_id_label?: "VAT" | "GST" | "BRN" | "TIN" | "OTHER";
+  tax_id_label?: "VAT" | "BRN" | "TIN" | "OTHER";
   tax_id_value?: string;
 
   billing_email?: string;

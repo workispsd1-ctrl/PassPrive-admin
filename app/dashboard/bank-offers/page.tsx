@@ -42,7 +42,7 @@ const OFFER_TYPES = [
   "REWARD_POINTS",
 ] as const;
 const BENEFIT_KINDS = ["MONETARY", "NON_MONETARY"] as const;
-const PAYMENT_INSTRUMENTS = ["CREDIT_CARD", "DEBIT_CARD", "UPI", "NET_BANKING", "WALLET", "EMI", "CARD"] as const;
+const PAYMENT_INSTRUMENTS = ["CREDIT_CARD", "DEBIT_CARD", "NET_BANKING", "WALLET", "EMI", "CARD"] as const;
 const CARD_NETWORKS = ["VISA", "MASTERCARD", "RUPAY", "AMEX", "DINERS", "ANY"] as const;
 const MODULE_TYPES = ["DINEIN", "STORES", "BOTH"] as const;
 const PAYMENT_FLOWS = ["BOOKING", "BILL_PAYMENT", "ORDER_PAYMENT", "ANY"] as const;
@@ -178,7 +178,7 @@ const initialForm: BankOfferForm = {
   cashback_percent: "",
   min_transaction_amount: "",
   max_transaction_amount: "",
-  currency_code: "INR",
+  currency_code: "MUR",
   payment_instrument_type: "CARD",
   card_network: "ANY",
   issuer_bank_name: "",
@@ -293,9 +293,8 @@ function getBankLogoStoragePath(url: string | null | undefined) {
 function formatCurrency(value: number | null, currencyCode: string) {
   if (value == null) return "—";
   const code = (currencyCode || "MUR").toUpperCase();
-  if (code === "MUR" || code === "INR") {
-    const displayCode = code === "INR" ? "MUR" : code;
-    return `${displayCode} ${Number(value).toLocaleString("en-US", {
+  if (code === "MUR") {
+    return `MUR ${Number(value).toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     })}`;
@@ -338,7 +337,7 @@ function buildOfferPayload(form: BankOfferForm, bankLogoUrl: string | null) {
     max_discount_amount: numberOrNull(form.max_discount_amount),
     min_bill_amount: numberOrNull(form.min_transaction_amount),
     max_bill_amount: numberOrNull(form.max_transaction_amount),
-    currency_code: (form.currency_code.trim() || "INR").toUpperCase(),
+    currency_code: (form.currency_code.trim() || "MUR").toUpperCase(),
     module: form.applies_to_module,
     payment_flow: form.applies_to_payment_flow,
     starts_at: isoString(form.valid_from),
@@ -478,7 +477,7 @@ export default function BankOffersPage() {
         bank_name: typeof metadata.bank_name === "string" ? metadata.bank_name : typeof item.sponsor_name === "string" ? item.sponsor_name : "",
         bank_logo_url: typeof item.logo_url === "string" ? item.logo_url : null,
         bank_brand_color: typeof metadata.bank_brand_color === "string" ? metadata.bank_brand_color : null,
-        currency_code: typeof item.currency_code === "string" ? item.currency_code : "INR",
+        currency_code: typeof item.currency_code === "string" ? item.currency_code : "MUR",
         discount_percent: typeof metadata.discount_percent === "number" ? metadata.discount_percent : typeof item.benefit_percent === "number" ? item.benefit_percent : null,
         discount_amount: typeof metadata.discount_amount === "number" ? metadata.discount_amount : typeof item.benefit_value === "number" ? item.benefit_value : null,
         cashback_amount: typeof metadata.cashback_amount === "number" ? metadata.cashback_amount : null,
@@ -649,7 +648,7 @@ export default function BankOffersPage() {
         cashback_percent: (typeof metadata.cashback_percent === "number" ? metadata.cashback_percent : null)?.toString() || "",
         min_transaction_amount: data.min_bill_amount?.toString() || "",
         max_transaction_amount: data.max_bill_amount?.toString() || "",
-        currency_code: data.currency_code || "INR",
+        currency_code: data.currency_code || "MUR",
         payment_instrument_type: (metadata.payment_instrument_type as BankOfferForm["payment_instrument_type"]) || "CARD",
         card_network: (metadata.card_network as string) || "ANY",
         issuer_bank_name: (metadata.issuer_bank_name as string) || "",
@@ -2072,7 +2071,7 @@ function RedemptionTable({
                   <div className="text-xs text-slate-500">{row.settlement_status}</div>
                 </td>
                 <td className="px-3 py-2 text-slate-500">
-                  {new Date(row.redeemed_at).toLocaleDateString()}
+                  {new Date(row.redeemed_at).toLocaleDateString("en-GB", { timeZone: "Indian/Mauritius" })}
                 </td>
               </tr>
             ))}

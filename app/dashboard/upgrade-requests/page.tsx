@@ -39,7 +39,7 @@ function fetchRequests(tab: "pending" | "done") {
 function stamp(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("en-GB", { timeZone: "Indian/Mauritius" });
 }
 
 export default function UpgradeRequestsPage() {

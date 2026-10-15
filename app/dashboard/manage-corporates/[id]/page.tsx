@@ -76,7 +76,7 @@ function formatDate(d: any) {
   try {
     const date = new Date(d);
     if (Number.isNaN(date.getTime())) return String(d);
-    return date.toLocaleDateString();
+    return date.toLocaleDateString("en-GB", { timeZone: "Indian/Mauritius" });
   } catch {
     return String(d);
   }

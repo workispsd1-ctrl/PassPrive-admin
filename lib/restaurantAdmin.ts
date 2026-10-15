@@ -1,5 +1,6 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { supabaseBrowserSecond } from "@/lib/supabaseBrowserSecond";
+import { isoToMauritiusInput, mauritiusInputToIso, mauritiusNowInput } from "@/lib/mauritiusTime";
 
 export const RESTAURANT_STORAGE_BUCKET = "restaurant";
 export const RESTAURANT_STORAGE_PREFIX = "restaurant";
@@ -134,8 +135,7 @@ export const DEAL_BENEFIT_LABELS: Record<string, string> = {
 };
 
 export function formatDateTimeLocal(value: Date = new Date()) {
-  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
+  return mauritiusNowInput(value);
 }
 
 export function getOfferDateMinimum(startAt?: string | null) {
@@ -434,21 +434,12 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+export function localInputToIso(value: unknown): string | null {
+  return mauritiusInputToIso(asString(value));
+}
+
 export function toDateTimeLocal(value: unknown): string | null {
-  const raw = asString(value);
-  if (!raw) return null;
-
-  // Already in datetime-local format (or with seconds) from previous edits.
-  const directMatch = raw.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
-  if (directMatch?.[1]) return directMatch[1];
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return raw;
-
-  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
-  return local;
+  return isoToMauritiusInput(asString(value)) || null;
 }
 
 function asNumber(value: unknown): number | null {
@@ -1393,8 +1384,8 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     brn: asString(input.brn),
     registered_name: asString(input.registered_name),
     ad_priority: asNumber(input.ad_priority),
-    ad_starts_at: asString(input.ad_starts_at),
-    ad_ends_at: asString(input.ad_ends_at),
+    ad_starts_at: localInputToIso(input.ad_starts_at),
+    ad_ends_at: localInputToIso(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
     booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
@@ -1449,8 +1440,8 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     cancellation_cutoff_minutes: input.cancellation_available ? asNumber(input.cancellation_cutoff_minutes) : null,
     cover_charge_amount: input.cover_charge_enabled ? asNumber(input.cover_charge_amount) : null,
     ad_priority: asNumber(input.ad_priority),
-    ad_starts_at: asString(input.ad_starts_at),
-    ad_ends_at: asString(input.ad_ends_at),
+    ad_starts_at: localInputToIso(input.ad_starts_at),
+    ad_ends_at: localInputToIso(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
     booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : undefined,
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
@@ -1581,8 +1572,8 @@ export function buildOfferRows(restaurantId: string, offers: RestaurantOfferInpu
         })(),
       discount_value: asNumber(offer.discount_value),
       min_spend: asNumber(offer.min_spend),
-      start_at: asString(offer.start_at),
-      end_at: asString(offer.end_at),
+      start_at: localInputToIso(offer.start_at),
+      end_at: localInputToIso(offer.end_at),
       is_active: offer.is_active !== false,
       metadata: (() => {
         const metadata = { ...(normalizeMetadata(offer.metadata) || {}) };
@@ -1612,8 +1603,8 @@ export function buildSubscriptionRows(
       time_slot_enabled: Boolean(subscription.time_slot_enabled),
       repeat_rewards_enabled: Boolean(subscription.repeat_rewards_enabled),
       dish_discounts_enabled: Boolean(subscription.dish_discounts_enabled),
-      starts_at: asString(subscription.starts_at),
-      expires_at: asString(subscription.expires_at),
+      starts_at: localInputToIso(subscription.starts_at),
+      expires_at: localInputToIso(subscription.expires_at),
     },
   ];
 }
@@ -1973,8 +1964,8 @@ export function buildDealRows(restaurantId: string, deals: RestaurantDealInput[]
       min_spend: asNumber(deal.min_spend),
       max_spend: asNumber(deal.max_spend),
       min_party_size: asNumber(deal.min_party_size),
-      starts_at: asString(deal.starts_at),
-      ends_at: asString(deal.ends_at),
+      starts_at: localInputToIso(deal.starts_at),
+      ends_at: localInputToIso(deal.ends_at),
       days_of_week: asDayArray(deal.days_of_week),
       start_time: toTimeValue(deal.start_time),
       end_time: toTimeValue(deal.end_time),

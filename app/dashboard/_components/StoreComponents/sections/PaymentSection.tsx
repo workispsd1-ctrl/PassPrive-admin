@@ -152,8 +152,7 @@ export default function PaymentSection({
                 }
               >
                 <option value="BANK_TRANSFER">Bank transfer</option>
-                <option value="UPI">UPI</option>
-                <option value="MANUAL">Manual settlement</option>
+                                <option value="MANUAL">Manual settlement</option>
               </select>
             </div>
 
@@ -188,14 +187,6 @@ export default function PaymentSection({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <Label>IFSC</Label>
-                    <Input
-                      className={inputClass}
-                      value={payment.ifsc || ""}
-                      onChange={(e) => setPayment((p) => ({ ...p, ifsc: e.target.value }))}
-                    />
-                  </div>
-                  <div>
                     <Label>IBAN</Label>
                     <Input
                       className={inputClass}
@@ -216,17 +207,6 @@ export default function PaymentSection({
               </>
             ) : null}
 
-            {payment.payout_method === "UPI" ? (
-              <div>
-                <Label required>UPI ID</Label>
-                <Input
-                  className={inputClass}
-                  value={payment.payout_upi_id || ""}
-                  onChange={(e) => setPayment((p) => ({ ...p, payout_upi_id: e.target.value }))}
-                  placeholder="example@upi"
-                />
-              </div>
-            ) : null}
           </div>
         </div>
       </div>

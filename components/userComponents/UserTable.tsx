@@ -83,7 +83,7 @@ export const UserTable = ({
     if (!d) return "-";
     const dt = new Date(d);
     const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kolkata",
+      timeZone: "Indian/Mauritius",
       year: "numeric",
       month: "long",
       day: "2-digit",
@@ -170,8 +170,7 @@ export const UserTable = ({
   const formatToIndia = (iso?: string | null) => {
     if (!iso) return "-";
     try {
-      return new Date(iso).toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
+      return new Date(iso).toLocaleString("en-GB", { timeZone: "Indian/Mauritius",
         weekday: "long",
         year: "numeric",
         month: "short",
@@ -515,7 +514,7 @@ export const UserTable = ({
             </div>
 
             <div className="flex justify-between">
-              <span className="font-semibold text-gray-600">GST Number:</span>
+              <span className="font-semibold text-gray-600">VAT Number:</span>
               <span>{selectedData?.gst_number || "-"}</span>
             </div>
 

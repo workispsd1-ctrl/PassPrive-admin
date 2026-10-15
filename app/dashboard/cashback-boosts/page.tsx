@@ -42,7 +42,7 @@ const STATUS_FILTERS: (BoostStatus | "all")[] = [
 
 function formatWindow(boost: CashbackBoost) {
   const format = (value: string) =>
-    new Date(value).toLocaleDateString("en-GB", {
+    new Date(value).toLocaleDateString("en-GB", { timeZone: "Indian/Mauritius",
       day: "2-digit",
       month: "short",
       year: "numeric",
