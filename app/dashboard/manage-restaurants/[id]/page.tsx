@@ -22,6 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
+import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
+import RestaurantAccessPanel from "./RestaurantAccessPanel";
+import {
+  emptyAuthorisedContact,
+  fetchAuthorisedContact,
+  saveAuthorisedContact,
+} from "@/lib/merchantContacts";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -152,6 +159,8 @@ export default function RestaurantDetailPage() {
   const [restaurantOriginal, setRestaurantOriginal] = useState<RestaurantFlatRecord | null>(null);
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
   const [deals, setDeals] = useState<RestaurantDealInput[]>([]);
+  const [contact, setContact] = useState(emptyAuthorisedContact);
+  const [contactOriginal, setContactOriginal] = useState(emptyAuthorisedContact);
   const [dealsOriginal, setDealsOriginal] = useState<RestaurantDealInput[]>([]);
   const [tierOptions, setTierOptions] = useState<string[]>([]);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
@@ -214,6 +223,18 @@ export default function RestaurantDetailPage() {
     };
 
     void loadDeals();
+  }, [id]);
+
+  useEffect(() => {
+    fetchAuthorisedContact("restaurant", id)
+      .then((row) => {
+        setContact(row);
+        setContactOriginal(row);
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Failed to load authorised contact";
+        showToast({ type: "error", title: "Failed to load authorised contact", description: message });
+      });
   }, [id]);
 
   useEffect(() => {
@@ -304,6 +325,7 @@ export default function RestaurantDetailPage() {
     setFoodImagesToReplace({});
     setAmbienceImagesToReplace({});
     setMenuImagesToReplace({});
+    setContact(contactOriginal);
     setEditMode(false);
   };
 
@@ -490,6 +512,8 @@ export default function RestaurantDetailPage() {
       }
 
       await replaceRestaurantDeals(restaurant.id, deals);
+      await saveAuthorisedContact("restaurant", restaurant.id, contact);
+      setContactOriginal(contact);
       const refreshedDeals = await fetchRestaurantDeals(restaurant.id);
       setDeals(refreshedDeals);
       setDealsOriginal(
@@ -976,6 +1000,21 @@ export default function RestaurantDetailPage() {
         <Field label="Description">
           <Textarea className={inputClass} disabled={!editMode} value={restaurant.description ?? ""} onChange={(e) => setRestaurant({ ...restaurant, description: e.target.value })} />
         </Field>
+      </Section>
+
+      <Section title="Master & Branches">
+        <RestaurantAccessPanel restaurantId={restaurant.id} />
+      </Section>
+
+      <Section title="Business Registration" defaultOpen={true}>
+        <BusinessRegistrationFields
+          disabled={!editMode}
+          value={{ brn: restaurant.brn, registered_name: restaurant.registered_name, ...contact }}
+          onChange={({ brn, registered_name, ...rest }) => {
+            setRestaurant({ ...restaurant, brn, registered_name });
+            setContact(rest);
+          }}
+        />
       </Section>
 
       <Section title="Cuisine & Tags">

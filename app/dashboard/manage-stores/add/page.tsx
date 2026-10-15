@@ -36,6 +36,8 @@ import type {
 import { safeNumberOrNull, slugify } from "@/app/dashboard/_components/StoreComponents/utils";
 
 import { usePreserveScroll } from "@/app/dashboard/_components/StoreComponents/hooks/usePreserveScroll";
+import BusinessRegistrationFields, { type BusinessRegistration } from "@/components/BusinessRegistrationFields";
+import { emptyAuthorisedContact, normaliseBrn, saveAuthorisedContact } from "@/lib/merchantContacts";
 import { useStoreOffers } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreOffers";
 import { useStoreCatalogue } from "@/app/dashboard/_components/StoreComponents/hooks/useStoreCatalogue";
 
@@ -187,6 +189,11 @@ function AddStorePageInner() {
   const [promoted, setPromoted] = useState(false);
   const [cashbackEnabled, setCashbackEnabled] = useState(true);
   const [dealsEnabled, setDealsEnabled] = useState(true);
+  const [registration, setRegistration] = useState<BusinessRegistration>(() => ({
+    brn: "",
+    registered_name: "",
+    ...emptyAuthorisedContact(),
+  }));
   const [onboardingCharge, setOnboardingCharge] = useState("");
   const [monthlyCharge, setMonthlyCharge] = useState("");
   const [mdrAgreedCim, setMdrAgreedCim] = useState("");
@@ -596,6 +603,8 @@ function AddStorePageInner() {
         is_promoted: promoted,
         cashback_enabled: cashbackEnabled,
         deals_enabled: dealsEnabled,
+        brn: normaliseBrn(registration.brn) || null,
+        registered_name: registration.registered_name.trim() || null,
         onboarding_charge: onboardingCharge ? Number(onboardingCharge) : null,
         monthly_charge: monthlyCharge ? Number(monthlyCharge) : null,
         mdr_agreed_cim: mdrAgreedCim ? Number(mdrAgreedCim) : null,
@@ -604,6 +613,11 @@ function AddStorePageInner() {
       };
       const { error: createError } = await supabaseBrowser.from("stores").insert(storePayload);
       if (createError) throw createError;
+      await saveAuthorisedContact("store", storeId, {
+        authorised_contact_name: registration.authorised_contact_name,
+        authorised_contact_phone: registration.authorised_contact_phone,
+        authorised_contact_email: registration.authorised_contact_email,
+      });
 
       // Repeat-rewards subscription (parity with restaurants)
       const { error: subError } = await supabaseBrowser.from("store_subscriptions").insert({
@@ -813,6 +827,13 @@ function AddStorePageInner() {
             </div>
           </div>
         )}
+
+        <div className="mt-6 border-t pt-4">
+          <h3 className="text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Business Registration</h3>
+          <div className="mt-3">
+            <BusinessRegistrationFields value={registration} onChange={setRegistration} disabled={loading} />
+          </div>
+        </div>
 
         <div className="mt-6 border-t pt-4">
           <h3 className="text-sm font-semibold text-slate-900 uppercase text-muted-foreground">Merchant Plan</h3>

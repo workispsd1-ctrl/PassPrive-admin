@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
+import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
+import { emptyAuthorisedContact, saveAuthorisedContact } from "@/lib/merchantContacts";
+import { addBranchAdmin, findMasterByEmail } from "@/lib/restaurantAccess";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -145,8 +148,20 @@ export default function AddRestaurantPage() {
   const [menuImages, setMenuImages] = useState<File[]>([]);
   const [partnerEmail, setPartnerEmail] = useState("");
   const [partnerPassword, setPartnerPassword] = useState("");
+  const [ownerMode, setOwnerMode] = useState<"new" | "existing">("new");
+  const [masterEmail, setMasterEmail] = useState("");
+  const [branchAdmin, setBranchAdmin] = useState({ full_name: "", email: "", password: "" });
+
+  useEffect(() => {
+    const master = new URLSearchParams(window.location.search).get("master");
+    if (master) {
+      setOwnerMode("existing");
+      setMasterEmail(master);
+    }
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [offers, setOffers] = useState<RestaurantOfferInput[]>([]);
+  const [contact, setContact] = useState(emptyAuthorisedContact);
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const [subscription, setSubscription] = useState<RestaurantSubscriptionInput>(defaultSubscription());
 
@@ -181,6 +196,8 @@ export default function AddRestaurantPage() {
     is_promoted: false,
     cashback_enabled: true,
     deals_enabled: true,
+    brn: "",
+    registered_name: "",
     ad_priority: "",
     ad_badge_text: "",
     ad_starts_at: "",
@@ -282,13 +299,24 @@ export default function AddRestaurantPage() {
       showToast({ type: "error", title: "Restaurant name is required" });
       return;
     }
-    if (!partnerEmail || !partnerPassword) {
-      showToast({ type: "error", title: "Partner Email & Password are required" });
-      return;
-    }
-    if (partnerPassword.length < 6) {
-      showToast({ type: "error", title: "Password must be at least 6 characters" });
-      return;
+    if (ownerMode === "existing") {
+      if (!masterEmail.trim()) {
+        showToast({ type: "error", title: "Master account email is required" });
+        return;
+      }
+      if (branchAdmin.email.trim() && (!branchAdmin.full_name.trim() || branchAdmin.password.length < 8)) {
+        showToast({ type: "error", title: "Branch partner needs a name and an 8+ character password" });
+        return;
+      }
+    } else {
+      if (!partnerEmail || !partnerPassword) {
+        showToast({ type: "error", title: "Partner Email & Password are required" });
+        return;
+      }
+      if (partnerPassword.length < 6) {
+        showToast({ type: "error", title: "Password must be at least 6 characters" });
+        return;
+      }
     }
     if (!String(form.latitude).trim() || !String(form.longitude).trim()) {
       showToast({
@@ -346,7 +374,7 @@ export default function AddRestaurantPage() {
         },
       });
 
-      const partner = await createPartnerViaBackend({
+      const partner = ownerMode === "existing" ? await findMasterByEmail(masterEmail) : await createPartnerViaBackend({
         email: partnerEmail.trim().toLowerCase(),
         password: partnerPassword,
         full_name: form.name.trim(),
@@ -396,6 +424,8 @@ export default function AddRestaurantPage() {
         is_promoted: form.is_promoted,
         cashback_enabled: form.cashback_enabled,
         deals_enabled: form.deals_enabled,
+        brn: form.brn,
+        registered_name: form.registered_name,
         ad_priority: form.ad_priority ? Number(form.ad_priority) : undefined,
         ad_badge_text: form.ad_badge_text || undefined,
         ad_starts_at: form.ad_starts_at || undefined,
@@ -425,6 +455,10 @@ export default function AddRestaurantPage() {
       }
 
       createdRestaurantId = restaurant.id;
+      if (ownerMode === "existing" && branchAdmin.email.trim()) {
+        await addBranchAdmin(restaurant.id, branchAdmin);
+      }
+      await saveAuthorisedContact("restaurant", restaurant.id, contact);
 
       const [foodUrls, ambienceUrls, menuUrls] = await Promise.all([
         uploadRestaurantImages(restaurant.id, foodImages, "food"),
@@ -503,6 +537,17 @@ export default function AddRestaurantPage() {
         </div>
         <Textarea className={inputClass} name="full_address" placeholder="Full address" onChange={handleChange} />
         <Textarea className={inputClass} name="description" placeholder="Description" onChange={handleChange} />
+      </section>
+
+      <section className="space-y-4 border-b py-8">
+        <h2 className="text-sm font-medium uppercase text-muted-foreground">Business Registration</h2>
+        <BusinessRegistrationFields
+          value={{ brn: form.brn, registered_name: form.registered_name, ...contact }}
+          onChange={({ brn, registered_name, ...rest }) => {
+            setForm((prev) => ({ ...prev, brn, registered_name }));
+            setContact(rest);
+          }}
+        />
       </section>
 
       
@@ -641,6 +686,28 @@ export default function AddRestaurantPage() {
 
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Restaurant Partner Login</h2>
+        <div className="flex gap-4 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="radio" checked={ownerMode === "new"} onChange={() => setOwnerMode("new")} />
+            New restaurant (creates a master login)
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" checked={ownerMode === "existing"} onChange={() => setOwnerMode("existing")} />
+            Branch of an existing master
+          </label>
+        </div>
+        {ownerMode === "existing" ? (
+          <div className="space-y-3">
+            <Input type="email" className={inputClass} placeholder="Master account login email" value={masterEmail} onChange={(e) => setMasterEmail(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Optional: a login for whoever runs this branch. They will manage only this branch.</p>
+            <div className="grid grid-cols-3 gap-3">
+              <Input className={inputClass} placeholder="Branch partner name" value={branchAdmin.full_name} onChange={(e) => setBranchAdmin({ ...branchAdmin, full_name: e.target.value })} />
+              <Input type="email" className={inputClass} placeholder="Branch partner email" value={branchAdmin.email} onChange={(e) => setBranchAdmin({ ...branchAdmin, email: e.target.value })} />
+              <Input type="password" className={inputClass} placeholder="Password (min 8)" value={branchAdmin.password} onChange={(e) => setBranchAdmin({ ...branchAdmin, password: e.target.value })} />
+            </div>
+          </div>
+        ) : (
+        <>
         <Input type="email" className={inputClass} placeholder="Partner Email (login)" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} />
         <div className="space-y-1 relative">
           <label className="text-sm font-medium">Partner Password</label>
@@ -651,6 +718,8 @@ export default function AddRestaurantPage() {
             </span>
           </div>
         </div>
+        </>
+        )}
       </section>
 
       <section className="space-y-4 border-b py-8">

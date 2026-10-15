@@ -13,6 +13,12 @@ import { Switch } from "@/components/ui/switch";
 import { MERCHANT_PLAN_OPTIONS, togglesToServiceLevel } from "@/lib/restaurantAdmin";
 import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
+import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
+import {
+  emptyAuthorisedContact,
+  fetchAuthorisedContact,
+  saveAuthorisedContact,
+} from "@/lib/merchantContacts";
 import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsPanel";
 
 const STORE_API_BASE =
@@ -133,6 +139,8 @@ export default function StoreDetailPage() {
   const router = useRouter();
 
   const [store, setStore] = useState<StoreFlatRecord | null>(null);
+  const [contact, setContact] = useState(emptyAuthorisedContact);
+  const [contactOriginal, setContactOriginal] = useState(emptyAuthorisedContact);
   const [storeOriginal, setStoreOriginal] = useState<StoreFlatRecord | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -370,9 +378,26 @@ export default function StoreDetailPage() {
     setHasMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!id) return;
+    fetchAuthorisedContact("store", String(id))
+      .then((row) => {
+        setContact(row);
+        setContactOriginal(row);
+      })
+      .catch((err: unknown) => {
+        showToast({
+          type: "error",
+          title: "Failed to load authorised contact",
+          description: err instanceof Error ? err.message : "Unable to load the authorised contact.",
+        });
+      });
+  }, [id]);
+
   const handleCancel = () => {
     setStore(storeOriginal);
     setPayment(paymentOriginal);
+    setContact(contactOriginal);
     // ✅ Reset image changes
     setLogoToAdd(null);
     setCoverToAdd(null);
@@ -487,6 +512,8 @@ export default function StoreDetailPage() {
       const isPreferred = merchantType === "Preferred";
       basePayload.merchant_type = merchantType;
       basePayload.mdr_rate = asNullableNumber(store.mdr_rate);
+      basePayload.brn = asTrimmedString(store.brn);
+      basePayload.registered_name = asTrimmedString(store.registered_name);
       basePayload.merchant_total_rate = isPreferred
         ? asNullableNumber(store.merchant_total_rate)
         : null;
@@ -558,7 +585,9 @@ export default function StoreDetailPage() {
               : null,
         }),
         upsertStorePaymentDetails(String(id), normalizedPayment),
+        saveAuthorisedContact("store", String(id), contact),
       ]);
+      setContactOriginal(contact);
 
       const refreshedStore = await fetchStoreDetail(String(id));
 
@@ -1006,6 +1035,17 @@ export default function StoreDetailPage() {
       </Section>
 
       {/* CONTACT */}
+      <Section title="Business Registration">
+        <BusinessRegistrationFields
+          disabled={!editMode}
+          value={{ brn: store.brn || "", registered_name: store.registered_name || "", ...contact }}
+          onChange={({ brn, registered_name, ...rest }) => {
+            setStore({ ...store, brn, registered_name });
+            setContact(rest);
+          }}
+        />
+      </Section>
+
       <Section title="Contact">
         <Grid>
           <Field label="Phone">
