@@ -117,6 +117,7 @@ export type StoreFlatRecord = Record<string, unknown> & {
   is_advertised: boolean;
   is_promoted: boolean;
   cashback_enabled: boolean;
+  deals_enabled: boolean;
   ad_priority: number | null;
   ad_starts_at: string | null;
   ad_ends_at: string | null;
@@ -627,6 +628,7 @@ function normalizeStore({
     is_advertised: asBoolean(store.is_advertised),
     is_promoted: asBoolean(store.is_promoted),
     cashback_enabled: store.cashback_enabled !== false,
+    deals_enabled: store.deals_enabled !== false,
     ad_priority: asNumber(store.ad_priority),
     ad_starts_at: asString(store.ad_starts_at),
     ad_ends_at: asString(store.ad_ends_at),
@@ -786,6 +788,7 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("is_advertised", typeof store.is_advertised === "boolean" ? store.is_advertised : undefined);
   assign("is_promoted", typeof store.is_promoted === "boolean" ? store.is_promoted : undefined);
   assign("cashback_enabled", typeof store.cashback_enabled === "boolean" ? store.cashback_enabled : undefined);
+  assign("deals_enabled", typeof store.deals_enabled === "boolean" ? store.deals_enabled : undefined);
   assign("ad_priority", asNumber(store.ad_priority));
   assign("ad_starts_at", asString(store.ad_starts_at));
   assign("ad_ends_at", asString(store.ad_ends_at));

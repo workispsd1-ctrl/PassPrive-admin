@@ -869,6 +869,8 @@ export default function RestaurantDetailPage() {
               onPromotedChange={(value) => setRestaurant({ ...restaurant, is_promoted: value })}
               cashbackEnabled={restaurant.cashback_enabled}
               onCashbackChange={(value) => setRestaurant({ ...restaurant, cashback_enabled: value })}
+              dealsEnabled={restaurant.deals_enabled}
+              onDealsChange={(value) => setRestaurant({ ...restaurant, deals_enabled: value })}
               onChange={(next) =>
                 setRestaurant({
                   ...restaurant,

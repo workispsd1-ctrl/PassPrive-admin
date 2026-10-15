@@ -364,6 +364,7 @@ export type RestaurantFlatRecord = {
   is_advertised: boolean;
   is_promoted: boolean;
   cashback_enabled: boolean;
+  deals_enabled: boolean;
   ad_priority: number | null;
   ad_starts_at: string | null;
   ad_ends_at: string | null;
@@ -733,6 +734,7 @@ export function normalizeRestaurantRecord({
     is_advertised: asBoolean(restaurant?.is_advertised),
     is_promoted: asBoolean(restaurant?.is_promoted),
     cashback_enabled: restaurant?.cashback_enabled !== false,
+    deals_enabled: restaurant?.deals_enabled !== false,
     on_boarded: restaurant?.on_boarded === true,
     created_creds: restaurant?.created_creds === true,
     ad_priority: asNumber(restaurant?.ad_priority),
@@ -920,6 +922,7 @@ export function mergeRestaurantRecords(
     is_advertised: primary.is_advertised || secondary.is_advertised,
     is_promoted: primary.is_promoted || secondary.is_promoted,
     cashback_enabled: primary.cashback_enabled,
+    deals_enabled: primary.deals_enabled,
     is_pure_veg: primary.is_pure_veg || secondary.is_pure_veg,
     booking_enabled: primary.booking_enabled || secondary.booking_enabled,
     modification_available: primary.modification_available || secondary.modification_available,
@@ -1380,6 +1383,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     is_advertised: Boolean(input.is_advertised),
     is_promoted: Boolean(input.is_promoted),
     cashback_enabled: input.cashback_enabled !== false,
+    deals_enabled: input.deals_enabled !== false,
     ad_priority: asNumber(input.ad_priority),
     ad_starts_at: asString(input.ad_starts_at),
     ad_ends_at: asString(input.ad_ends_at),
@@ -1412,6 +1416,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     is_advertised: Boolean(input.is_advertised),
     is_promoted: Boolean(input.is_promoted),
     cashback_enabled: input.cashback_enabled !== false,
+    deals_enabled: input.deals_enabled !== false,
     on_boarded: Boolean(input.on_boarded),
   };
 

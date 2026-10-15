@@ -186,6 +186,7 @@ function AddStorePageInner() {
   const [payBillEnabled, setPayBillEnabled] = useState(false);
   const [promoted, setPromoted] = useState(false);
   const [cashbackEnabled, setCashbackEnabled] = useState(true);
+  const [dealsEnabled, setDealsEnabled] = useState(true);
   const [onboardingCharge, setOnboardingCharge] = useState("");
   const [monthlyCharge, setMonthlyCharge] = useState("");
   const [mdrAgreedCim, setMdrAgreedCim] = useState("");
@@ -594,6 +595,7 @@ function AddStorePageInner() {
         pay_bill_enabled: payBillEnabled,
         is_promoted: promoted,
         cashback_enabled: cashbackEnabled,
+        deals_enabled: dealsEnabled,
         onboarding_charge: onboardingCharge ? Number(onboardingCharge) : null,
         monthly_charge: monthlyCharge ? Number(monthlyCharge) : null,
         mdr_agreed_cim: mdrAgreedCim ? Number(mdrAgreedCim) : null,
@@ -865,6 +867,8 @@ function AddStorePageInner() {
               onPromotedChange={setPromoted}
               cashbackEnabled={cashbackEnabled}
               onCashbackChange={setCashbackEnabled}
+              dealsEnabled={dealsEnabled}
+              onDealsChange={setDealsEnabled}
               onChange={(next) => {
                 setBookingEnabled(next.booking);
                 setPayBillEnabled(next.payBill);

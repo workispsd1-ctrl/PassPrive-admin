@@ -207,6 +207,7 @@ export default function AddRestaurantPage() {
     is_advertised: false,
     is_promoted: false,
     cashback_enabled: true,
+    deals_enabled: true,
     ad_priority: "",
     ad_badge_text: "",
     ad_starts_at: "",
@@ -421,6 +422,7 @@ export default function AddRestaurantPage() {
         is_advertised: form.is_advertised,
         is_promoted: form.is_promoted,
         cashback_enabled: form.cashback_enabled,
+        deals_enabled: form.deals_enabled,
         ad_priority: form.ad_priority ? Number(form.ad_priority) : undefined,
         ad_badge_text: form.ad_badge_text || undefined,
         ad_starts_at: form.ad_starts_at || undefined,
@@ -623,6 +625,8 @@ export default function AddRestaurantPage() {
           onPromotedChange={(value) => setForm((prev) => ({ ...prev, is_promoted: value }))}
           cashbackEnabled={form.cashback_enabled}
           onCashbackChange={(value) => setForm((prev) => ({ ...prev, cashback_enabled: value }))}
+          dealsEnabled={form.deals_enabled}
+          onDealsChange={(value) => setForm((prev) => ({ ...prev, deals_enabled: value }))}
           onChange={(next) =>
             setForm((prev) => ({
               ...prev,

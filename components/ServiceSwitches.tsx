@@ -14,6 +14,8 @@ type Props = {
   onPromotedChange?: (next: boolean) => void;
   cashbackEnabled?: boolean;
   onCashbackChange?: (next: boolean) => void;
+  dealsEnabled?: boolean;
+  onDealsChange?: (next: boolean) => void;
 };
 
 const ROWS = [
@@ -47,6 +49,8 @@ export default function ServiceSwitches({
   onPromotedChange,
   cashbackEnabled = true,
   onCashbackChange,
+  dealsEnabled = true,
+  onDealsChange,
 }: Props) {
   const toggles = lockToDiscoverable
     ? { discoverable: true, booking: false, payBill: false }
@@ -89,6 +93,19 @@ export default function ServiceSwitches({
             checked={cashbackEnabled}
             disabled={disabled}
             onCheckedChange={onCashbackChange}
+          />
+        </div>
+      ) : null}
+      {onDealsChange ? (
+        <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+          <div>
+            <p className="text-sm font-medium">Deals</p>
+            <p className="text-xs text-muted-foreground">Shows this merchant in the app&apos;s Deals mode with its offers and member deals. Turn off to hide them and block redemption; saved deals are kept.</p>
+          </div>
+          <Switch
+            checked={dealsEnabled}
+            disabled={disabled}
+            onCheckedChange={onDealsChange}
           />
         </div>
       ) : null}

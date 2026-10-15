@@ -475,6 +475,7 @@ export default function StoreDetailPage() {
         on_boarded: !!store.on_boarded,
         is_promoted: !!store.is_promoted,
         cashback_enabled: store.cashback_enabled !== false,
+        deals_enabled: store.deals_enabled !== false,
         logo_url: finalLogoUrl || null,
         cover_image: finalCoverUrl || null,
       });
@@ -684,6 +685,8 @@ export default function StoreDetailPage() {
               onPromotedChange={(value) => setStore({ ...store, is_promoted: value })}
               cashbackEnabled={store.cashback_enabled !== false}
               onCashbackChange={(value) => setStore({ ...store, cashback_enabled: value })}
+              dealsEnabled={store.deals_enabled !== false}
+              onDealsChange={(value) => setStore({ ...store, deals_enabled: value })}
               onChange={(next) =>
                 setStore({
                   ...store,
