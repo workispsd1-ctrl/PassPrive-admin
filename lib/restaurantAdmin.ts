@@ -432,7 +432,7 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function toDateTimeLocal(value: unknown): string | null {
+export function toDateTimeLocal(value: unknown): string | null {
   const raw = asString(value);
   if (!raw) return null;
 

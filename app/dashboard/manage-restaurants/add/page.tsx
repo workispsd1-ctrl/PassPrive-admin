@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import ServiceSwitches from "@/components/ServiceSwitches";
+import OffersEditor from "@/components/OffersEditor";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -39,11 +40,6 @@ import { EMPTY_XLENT_INPUT, XlentPosFields } from "../_components/XlentPos";
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
-const OFFER_TYPE_OPTIONS = [
-  { value: "percentage", label: "Percentage" },
-  { value: "flat", label: "Flat" },
-  { value: "cover_discount", label: "Cover discount" },
-] as const;
 const PARTNER_ROLE = "restaurantpartner" as const;
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -111,28 +107,6 @@ function commaSeparatedToArray(value: string) {
     .filter(Boolean);
 }
 
-function defaultOffer(): RestaurantOfferInput {
-  return {
-    title: "",
-    description: "",
-    badge_text: "",
-    offer_type: "",
-    discount_value: null,
-    min_spend: null,
-    start_at: "",
-    end_at: "",
-    is_active: true,
-    metadata: null,
-  };
-}
-
-function offerAmountLabel(offerType?: string | null) {
-  const normalizedType = offerType?.toLowerCase();
-  if (normalizedType === "percentage" || normalizedType === "percent") return "Discount percentage";
-  if (normalizedType === "cover_discount") return "Cover discount amount";
-  return "Flat amount";
-}
-
 function defaultSubscription(): RestaurantSubscriptionInput {
   return {
     plan_code: "",
@@ -163,7 +137,6 @@ async function getAccessToken() {
 
 export default function AddRestaurantPage() {
   const router = useRouter();
-  const nowDateTimeLocal = formatDateTimeLocal();
   const [loading, setLoading] = useState(false);
   const [moodCategoryOptions, setMoodCategoryOptions] = useState<string[]>([]);
   const [selectedMoodTags, setSelectedMoodTags] = useState<string[]>([]);
@@ -627,6 +600,7 @@ export default function AddRestaurantPage() {
           onCashbackChange={(value) => setForm((prev) => ({ ...prev, cashback_enabled: value }))}
           dealsEnabled={form.deals_enabled}
           onDealsChange={(value) => setForm((prev) => ({ ...prev, deals_enabled: value }))}
+          dealsContent={<OffersEditor offers={offers} onChange={setOffers} />}
           onChange={(next) =>
             setForm((prev) => ({
               ...prev,
@@ -768,30 +742,7 @@ export default function AddRestaurantPage() {
 
       <section className="space-y-4 border-b py-8">
         <h2 className="text-sm font-medium uppercase text-muted-foreground">Offers</h2>
-        {offers.map((offer, index) => (
-          <div key={index} className="grid grid-cols-2 gap-4 rounded-md border border-gray-200 p-4">
-            <Input className={inputClass} placeholder="Title" value={offer.title} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, title: e.target.value } : entry)))} />
-            <Input className={inputClass} placeholder="Badge text" value={offer.badge_text || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, badge_text: e.target.value } : entry)))} />
-            <select className={`${inputClass} rounded-md px-3 py-2`} value={offer.offer_type || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, offer_type: e.target.value } : entry)))}>
-              <option value="">Select offer type</option>
-              {OFFER_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Input type="number" min={0} step="0.01" className={inputClass} placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)))} />
-            <Input type="number" min={0} step="0.01" className={inputClass} placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)))} />
-            <ToggleField label="Active" checked={offer.is_active !== false} onCheckedChange={(value) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, is_active: value } : entry)))} />
-            <Input type="datetime-local" min={nowDateTimeLocal} className={inputClass} value={offer.start_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)))} />
-            <Input type="datetime-local" min={getOfferDateMinimum(offer.start_at)} className={inputClass} value={offer.end_at || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, end_at: e.target.value } : entry)))} />
-            <Textarea className="col-span-2" placeholder="Description" value={offer.description || ""} onChange={(e) => setOffers((previous) => previous.map((entry, entryIndex) => (entryIndex === index ? { ...entry, description: e.target.value } : entry)))} />
-            <div className="col-span-2 flex justify-end">
-              <Button variant="outline" onClick={() => setOffers((previous) => previous.filter((_, entryIndex) => entryIndex !== index))}>Remove offer</Button>
-            </div>
-          </div>
-        ))}
-        <Button variant="outline" onClick={() => setOffers((previous) => [...previous, defaultOffer()])}>Add offer</Button>
+        <OffersEditor offers={offers} onChange={setOffers} />
       </section>
 
       <section className="space-y-4 border-b py-8">

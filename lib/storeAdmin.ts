@@ -1,4 +1,5 @@
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { toDateTimeLocal } from "@/lib/restaurantAdmin";
 
 export const STORE_STORAGE_BUCKET = "stores";
 
@@ -435,8 +436,8 @@ function normalizeOffers(rows: DatabaseRow[]): StoreOfferInput[] {
       offer_type: asString(row.offer_type),
       discount_value: asNumber(row.discount_value),
       min_spend: asNumber(row.min_spend),
-      start_at: asString(row.start_at),
-      end_at: asString(row.end_at),
+      start_at: toDateTimeLocal(row.start_at),
+      end_at: toDateTimeLocal(row.end_at),
       is_active: asBoolean(row.is_active, true),
       metadata:
         row.metadata && typeof row.metadata === "object"

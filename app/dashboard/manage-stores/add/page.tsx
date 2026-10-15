@@ -869,6 +869,19 @@ function AddStorePageInner() {
               onCashbackChange={setCashbackEnabled}
               dealsEnabled={dealsEnabled}
               onDealsChange={setDealsEnabled}
+              dealsContent={
+                <DiscountsSection
+                  openSection="discounts"
+                  onToggle={() => {}}
+                  preserveScroll={preserveScroll}
+                  offers={offersApi.offers}
+                  addOffer={offersApi.addOffer}
+                  removeOffer={offersApi.removeOffer}
+                  toggleOfferExpanded={offersApi.toggleOfferExpanded}
+                  updateOffer={offersApi.updateOffer}
+                  typeLabel={offersApi.typeLabel}
+                />
+              }
               onChange={(next) => {
                 setBookingEnabled(next.booking);
                 setPayBillEnabled(next.payBill);

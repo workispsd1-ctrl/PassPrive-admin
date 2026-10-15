@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import ServiceSwitches from "@/components/ServiceSwitches";
+import OffersEditor from "@/components/OffersEditor";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   RestaurantFlatRecord,
-  RestaurantOfferInput,
   RestaurantSubscriptionInput,
   MERCHANT_PLAN_OPTIONS,
   BOOKING_SERVICE_TYPE_OPTIONS,
@@ -38,11 +38,9 @@ import {
   type ServiceLevel,
   type BookingServiceType,
   buildRestaurantBasePayload,
-  formatDateTimeLocal,
   deleteRestaurantImages,
   fetchRestaurantDetail,
   fetchRestaurantDetailMerged,
-  getOfferDateMinimum,
   replaceRestaurantRelations,
   validateRestaurantOffers,
   uploadRestaurantImages,
@@ -64,11 +62,6 @@ import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsP
 
 const inputClass = "border border-gray-300 focus:border-gray-400 focus:ring-0 bg-white";
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
-const OFFER_TYPE_OPTIONS = [
-  { value: "percentage", label: "Percentage" },
-  { value: "flat", label: "Flat" },
-  { value: "cover_discount", label: "Cover discount" },
-] as const;
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
@@ -119,28 +112,6 @@ function bookingTermsToPayload(value: string) {
   return normalized.length ? normalized : null;
 }
 
-function defaultOffer(): RestaurantOfferInput {
-  return {
-    title: "",
-    description: "",
-    badge_text: "",
-    offer_type: "",
-    discount_value: null,
-    min_spend: null,
-    start_at: "",
-    end_at: "",
-    is_active: true,
-    metadata: null,
-  };
-}
-
-function offerAmountLabel(offerType?: string | null) {
-  const normalizedType = offerType?.toLowerCase();
-  if (normalizedType === "percentage" || normalizedType === "percent") return "Discount percentage";
-  if (normalizedType === "cover_discount") return "Cover discount amount";
-  return "Flat amount";
-}
-
 function defaultSubscription(): RestaurantSubscriptionInput {
   return {
     plan_code: "",
@@ -176,7 +147,6 @@ export default function RestaurantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useSelector((state: RootState) => state.admin);
-  const nowDateTimeLocal = formatDateTimeLocal();
 
   const [restaurant, setRestaurant] = useState<RestaurantFlatRecord | null>(null);
   const [restaurantOriginal, setRestaurantOriginal] = useState<RestaurantFlatRecord | null>(null);
@@ -871,6 +841,13 @@ export default function RestaurantDetailPage() {
               onCashbackChange={(value) => setRestaurant({ ...restaurant, cashback_enabled: value })}
               dealsEnabled={restaurant.deals_enabled}
               onDealsChange={(value) => setRestaurant({ ...restaurant, deals_enabled: value })}
+              dealsContent={
+                <OffersEditor
+                  offers={restaurant.offers}
+                  disabled={!editMode}
+                  onChange={(offers) => setRestaurant({ ...restaurant, offers })}
+                />
+              }
               onChange={(next) =>
                 setRestaurant({
                   ...restaurant,
@@ -1173,34 +1150,11 @@ export default function RestaurantDetailPage() {
       </Section>
 
       <Section title="Offers">
-        {restaurant.offers.map((offer, index) => (
-          <div key={index} className="grid grid-cols-2 gap-4 rounded-md border border-gray-200 p-4 mb-4">
-            <Input className={inputClass} disabled={!editMode} placeholder="Title" value={offer.title} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, title: e.target.value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} placeholder="Badge text" value={offer.badge_text || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, badge_text: e.target.value } : entry)) })} />
-            <select className={`${inputClass} rounded-md px-3 py-2`} disabled={!editMode} value={offer.offer_type || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, offer_type: e.target.value } : entry)) })}>
-              <option value="">Select offer type</option>
-              {OFFER_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <Input className={inputClass} disabled={!editMode} type="number" min={0} step="0.01" placeholder={offerAmountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, discount_value: e.target.value ? Number(e.target.value) : null } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="number" min={0} step="0.01" placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, min_spend: e.target.value ? Number(e.target.value) : null } : entry)) })} />
-            <ToggleField label="Active" checked={offer.is_active !== false} disabled={!editMode} onCheckedChange={(value) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, is_active: value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="datetime-local" min={nowDateTimeLocal} value={offer.start_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, start_at: e.target.value } : entry)) })} />
-            <Input className={inputClass} disabled={!editMode} type="datetime-local" min={getOfferDateMinimum(offer.start_at)} value={offer.end_at || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, end_at: e.target.value } : entry)) })} />
-            <Textarea className="col-span-2" disabled={!editMode} placeholder="Description" value={offer.description || ""} onChange={(e) => setRestaurant({ ...restaurant, offers: restaurant.offers.map((entry, entryIndex) => (entryIndex === index ? { ...entry, description: e.target.value } : entry)) })} />
-            {editMode && (
-              <div className="col-span-2 flex justify-end">
-                <Button variant="outline" onClick={() => setRestaurant({ ...restaurant, offers: restaurant.offers.filter((_, entryIndex) => entryIndex !== index) })}>Remove offer</Button>
-              </div>
-            )}
-          </div>
-        ))}
-        {editMode && (
-          <Button variant="outline" onClick={() => setRestaurant({ ...restaurant, offers: [...restaurant.offers, defaultOffer()] })}>Add offer</Button>
-        )}
+        <OffersEditor
+          offers={restaurant.offers}
+          disabled={!editMode}
+          onChange={(offers) => setRestaurant({ ...restaurant, offers })}
+        />
       </Section>
 
       <Section title="Cashback Boost">

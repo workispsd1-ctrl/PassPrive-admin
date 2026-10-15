@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Switch } from "@/components/ui/switch";
 import { type ServiceToggles } from "@/lib/restaurantAdmin";
 
@@ -16,6 +17,7 @@ type Props = {
   onCashbackChange?: (next: boolean) => void;
   dealsEnabled?: boolean;
   onDealsChange?: (next: boolean) => void;
+  dealsContent?: ReactNode;
 };
 
 const ROWS = [
@@ -51,6 +53,7 @@ export default function ServiceSwitches({
   onCashbackChange,
   dealsEnabled = true,
   onDealsChange,
+  dealsContent,
 }: Props) {
   const toggles = lockToDiscoverable
     ? { discoverable: true, booking: false, payBill: false }
@@ -107,6 +110,12 @@ export default function ServiceSwitches({
             disabled={disabled}
             onCheckedChange={onDealsChange}
           />
+        </div>
+      ) : null}
+      {onDealsChange && dealsEnabled && dealsContent ? (
+        <div className="rounded-md border border-dashed p-3">
+          <p className="mb-3 text-sm font-medium">Offers</p>
+          {dealsContent}
         </div>
       ) : null}
       {onPromotedChange ? (

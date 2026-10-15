@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { MERCHANT_PLAN_OPTIONS, togglesToServiceLevel } from "@/lib/restaurantAdmin";
 import ServiceSwitches from "@/components/ServiceSwitches";
+import OffersEditor from "@/components/OffersEditor";
 import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsPanel";
 
 const STORE_API_BASE =
@@ -687,6 +688,13 @@ export default function StoreDetailPage() {
               onCashbackChange={(value) => setStore({ ...store, cashback_enabled: value })}
               dealsEnabled={store.deals_enabled !== false}
               onDealsChange={(value) => setStore({ ...store, deals_enabled: value })}
+              dealsContent={
+                <OffersEditor
+                  offers={store.offers || []}
+                  disabled={!editMode}
+                  onChange={(offers) => setStore({ ...store, offers })}
+                />
+              }
               onChange={(next) =>
                 setStore({
                   ...store,
@@ -758,6 +766,14 @@ export default function StoreDetailPage() {
             />
           </Field>
         </Grid>
+      </Section>
+
+      <Section title="Offers">
+        <OffersEditor
+          offers={store.offers || []}
+          disabled={!editMode}
+          onChange={(offers) => setStore({ ...store, offers })}
+        />
       </Section>
 
       <Section title="Cashback Boost">
