@@ -230,11 +230,11 @@ function money(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function dealsLabel(perMonth: number | null, perRestaurant: number | null) {
+export function dealsLabel(perMonth: number | null, perMerchant: number | null) {
   const monthly =
-    perMonth == null ? "Unlimited deal reveals/month" : `${perMonth} deal reveals/month`;
-  if (perRestaurant == null) return monthly;
-  return `${monthly} · up to ${perRestaurant} per restaurant`;
+    perMonth == null ? "Unlimited deal redemptions/month" : `${perMonth} deal redemptions/month`;
+  if (perMerchant == null) return monthly;
+  return `${monthly} · up to ${perMerchant} per merchant`;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -672,7 +672,7 @@ export default function PlanEditor({
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-gray-600">
-                    Per restaurant, per month
+                    Per merchant (restaurant or store), per month
                   </label>
                   <Input
                     type="number"

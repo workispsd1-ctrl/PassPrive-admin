@@ -303,7 +303,7 @@ export default function SubscriptionPlansPage() {
                     </td>
                     <td className="px-6 py-3 text-[#5b6473]">
                       {plan.deals_per_month == null ? "Unlimited" : plan.deals_per_month}
-                      <span className="text-gray-400"> · {plan.deals_per_restaurant_per_month == null ? "∞" : plan.deals_per_restaurant_per_month}/restaurant</span>
+                      <span className="text-gray-400"> · {plan.deals_per_restaurant_per_month == null ? "∞" : plan.deals_per_restaurant_per_month}/merchant</span>
                     </td>
                     <td className="px-6 py-3 text-[#5b6473] whitespace-nowrap">
                       {plan.points_expiry_days}d expiry · min {plan.points_min_balance_to_burn}

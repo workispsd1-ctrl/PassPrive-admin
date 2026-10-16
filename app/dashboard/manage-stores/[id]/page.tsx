@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { MERCHANT_PLAN_OPTIONS, togglesToServiceLevel } from "@/lib/restaurantAdmin";
 import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
+import NfcTagCard from "@/components/NfcTagCard";
 import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
 import {
   emptyAuthorisedContact,
@@ -718,12 +719,15 @@ export default function StoreDetailPage() {
               dealsEnabled={store.deals_enabled !== false}
               onDealsChange={(value) => setStore({ ...store, deals_enabled: value })}
               dealsContent={
-                <OffersEditor
-                  offers={store.offers || []}
-                  storeId={store.id}
-                  disabled={!editMode}
-                  onChange={(offers) => setStore({ ...store, offers })}
-                />
+                <div className="space-y-4">
+                  {store.id ? <NfcTagCard kind="store" merchantId={store.id} /> : null}
+                  <OffersEditor
+                    offers={store.offers || []}
+                    storeId={store.id}
+                    disabled={!editMode}
+                    onChange={(offers) => setStore({ ...store, offers })}
+                  />
+                </div>
               }
               onChange={(next) =>
                 setStore({

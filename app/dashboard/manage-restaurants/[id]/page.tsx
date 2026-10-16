@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
+import NfcTagCard from "@/components/NfcTagCard";
 import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
 import RestaurantAccessPanel from "./RestaurantAccessPanel";
 import {
@@ -866,12 +867,15 @@ export default function RestaurantDetailPage() {
               dealsEnabled={restaurant.deals_enabled}
               onDealsChange={(value) => setRestaurant({ ...restaurant, deals_enabled: value })}
               dealsContent={
-                <OffersEditor
-                  offers={restaurant.offers}
-                  restaurantId={restaurant.id}
-                  disabled={!editMode}
-                  onChange={(offers) => setRestaurant({ ...restaurant, offers })}
-                />
+                <div className="space-y-4">
+                  {restaurant.id ? <NfcTagCard kind="restaurant" merchantId={restaurant.id} /> : null}
+                  <OffersEditor
+                    offers={restaurant.offers}
+                    restaurantId={restaurant.id}
+                    disabled={!editMode}
+                    onChange={(offers) => setRestaurant({ ...restaurant, offers })}
+                  />
+                </div>
               }
               onChange={(next) =>
                 setRestaurant({
