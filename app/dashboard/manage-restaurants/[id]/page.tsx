@@ -868,6 +868,7 @@ export default function RestaurantDetailPage() {
               dealsContent={
                 <OffersEditor
                   offers={restaurant.offers}
+                  restaurantId={restaurant.id}
                   disabled={!editMode}
                   onChange={(offers) => setRestaurant({ ...restaurant, offers })}
                 />
@@ -1191,6 +1192,7 @@ export default function RestaurantDetailPage() {
       <Section title="Offers">
         <OffersEditor
           offers={restaurant.offers}
+          restaurantId={restaurant.id}
           disabled={!editMode}
           onChange={(offers) => setRestaurant({ ...restaurant, offers })}
         />
@@ -1206,6 +1208,7 @@ export default function RestaurantDetailPage() {
 
       <Section title="Deals">
         <DealsSection
+          restaurantId={restaurant.id}
           deals={deals}
           onChange={setDeals}
           editMode={editMode}

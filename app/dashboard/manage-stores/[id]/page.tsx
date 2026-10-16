@@ -720,6 +720,7 @@ export default function StoreDetailPage() {
               dealsContent={
                 <OffersEditor
                   offers={store.offers || []}
+                  storeId={store.id}
                   disabled={!editMode}
                   onChange={(offers) => setStore({ ...store, offers })}
                 />
@@ -800,6 +801,7 @@ export default function StoreDetailPage() {
       <Section title="Offers">
         <OffersEditor
           offers={store.offers || []}
+          storeId={store.id}
           disabled={!editMode}
           onChange={(offers) => setStore({ ...store, offers })}
         />

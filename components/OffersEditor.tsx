@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTimeLocal, getOfferDateMinimum } from "@/lib/restaurantAdmin";
+import { RedeemPinBadge, pinRefOf, useRedeemPins } from "@/components/RedeemPin";
 
 export type EditableOffer = {
   title?: string | null;
@@ -55,12 +56,17 @@ export default function OffersEditor<T extends EditableOffer>({
   offers,
   onChange,
   disabled = false,
+  restaurantId,
+  storeId,
 }: {
   offers: T[];
   onChange: (next: T[]) => void;
   disabled?: boolean;
+  restaurantId?: string | null;
+  storeId?: string | null;
 }) {
   const nowDateTimeLocal = formatDateTimeLocal();
+  const pins = useRedeemPins(storeId ? "store_offer" : "restaurant_offer", storeId || restaurantId, disabled);
   const update = (index: number, patch: Partial<EditableOffer>) =>
     onChange(offers.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)));
 
@@ -84,6 +90,7 @@ export default function OffersEditor<T extends EditableOffer>({
             <span className="text-sm">Active</span>
             <Switch checked={offer.is_active !== false} disabled={disabled} onCheckedChange={(value) => update(index, { is_active: value })} />
           </div>
+          {restaurantId || storeId ? <RedeemPinBadge pin={pins[pinRefOf(offer.metadata)]} /> : null}
           <Input className={inputClass} disabled={disabled} type="datetime-local" min={nowDateTimeLocal} value={offer.start_at || ""} onChange={(e) => update(index, { start_at: e.target.value })} />
           <Input className={inputClass} disabled={disabled} type="datetime-local" min={getOfferDateMinimum(offer.start_at)} value={offer.end_at || ""} onChange={(e) => update(index, { end_at: e.target.value })} />
           <Textarea className="col-span-2" disabled={disabled} placeholder="Description" value={offer.description || ""} onChange={(e) => update(index, { description: e.target.value })} />

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { RedeemPinBadge, useRedeemPins } from "@/components/RedeemPin";
 import {
   DAY_OF_WEEK_OPTIONS,
   DEAL_BENEFIT_LABELS,
@@ -62,17 +63,20 @@ function Toggle({
 }
 
 export default function DealsSection({
+  restaurantId,
   deals,
   onChange,
   editMode,
   tierOptions,
 }: {
+  restaurantId?: string | null;
   deals: RestaurantDealInput[];
   onChange: (next: RestaurantDealInput[]) => void;
   editMode: boolean;
   /** Tier slugs from the configured subscription plans. */
   tierOptions: string[];
 }) {
+  const pins = useRedeemPins("deal", restaurantId, editMode);
   const update = (index: number, patch: Partial<RestaurantDealInput>) =>
     onChange(deals.map((deal, i) => (i === index ? { ...deal, ...patch } : deal)));
 
@@ -495,6 +499,7 @@ export default function DealsSection({
                 disabled={!editMode}
                 onCheckedChange={(value) => update(dealIndex, { is_active: value })}
               />
+              <RedeemPinBadge pin={deal.id ? pins[deal.id] : null} />
               <Field label="Priority — lower wins">
                 <Input
                   className={inputClass}

@@ -686,8 +686,8 @@ export default function PlanEditor({
                 </div>
               </div>
               <p className="rounded bg-blue-50 px-2 py-1.5 text-[11px] text-blue-800">
-                Enforced when the app calls reveal_deal(). Blank means unlimited. Revealing the
-                same deal again in the same month does not count twice.
+                Enforced when a member redeems a deal with the merchant PIN. Blank means unlimited. Revealing a
+                deal is free; every PIN redemption counts.
               </p>
             </Section>
 
