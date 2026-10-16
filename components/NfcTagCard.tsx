@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-const NFC_LINK_BASE = "https://passprive.com/nfc/";
-
 export default function NfcTagCard({ kind, merchantId }: { kind: "restaurant" | "store"; merchantId: string }) {
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,7 +24,7 @@ export default function NfcTagCard({ kind, merchantId }: { kind: "restaurant" | 
     };
   }, [kind, merchantId]);
 
-  const link = token ? `${NFC_LINK_BASE}${token}` : "";
+  const link = token || "";
 
   const copy = async () => {
     if (!link) return;
@@ -36,7 +34,7 @@ export default function NfcTagCard({ kind, merchantId }: { kind: "restaurant" | 
   };
 
   const regenerate = async () => {
-    if (!window.confirm("Regenerate the NFC link? Tags written with the old link will stop working until they are re-written.")) return;
+    if (!window.confirm("Regenerate the NFC tag code? Stickers written with the old code will stop working until they are re-written.")) return;
     setBusy(true);
     const { data, error } = await supabaseBrowser.rpc("rotate_merchant_nfc_tag", { p_kind: kind, p_id: merchantId });
     setBusy(false);
@@ -53,7 +51,7 @@ export default function NfcTagCard({ kind, merchantId }: { kind: "restaurant" | 
         <span className="text-sm font-medium text-gray-800">NFC redeem tag</span>
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={copy} disabled={!link}>
-            {copied ? "Copied" : "Copy link"}
+            {copied ? "Copied" : "Copy code"}
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={regenerate} disabled={busy}>
             Regenerate
@@ -61,10 +59,12 @@ export default function NfcTagCard({ kind, merchantId }: { kind: "restaurant" | 
         </div>
       </div>
       <code className="block break-all rounded bg-white px-2 py-1 text-xs text-gray-700">{link || "Generating…"}</code>
-      <p className="text-xs text-gray-600">
-        Write this link to an NFC sticker (NTAG213/215) with any NFC writer app as a URL record and place it at the counter.
-        Members tap their phone on it to redeem deals here.
-      </p>
+      <ol className="list-decimal space-y-0.5 pl-4 text-xs text-gray-600">
+        <li>Install the free “NFC Tools” app on your phone and open the Write tab.</li>
+        <li>Tap Add a record → Text, paste this code and tap OK.</li>
+        <li>Tap Write, then hold the phone on a blank NTAG213/215 sticker until it says Write complete.</li>
+        <li>Stick it at the counter. Members open Redeem Deal in PassPrivé, tap “Tap here” and hold their phone on it.</li>
+      </ol>
     </div>
   );
 }
