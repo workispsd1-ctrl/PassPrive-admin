@@ -19,6 +19,7 @@ import PlanEditor, {
   TYPE_OPTIONS,
   cashbackLabel,
   emptyPlan,
+  pointsRulesError,
   type SubscriptionPlan,
 } from "./PlanEditor";
 
@@ -130,6 +131,11 @@ export default function SubscriptionPlansPage() {
       showToast({ title: "error", description: "Tier is required" });
       return;
     }
+    const pointsError = pointsRulesError(plan);
+    if (pointsError) {
+      showToast({ title: "error", description: pointsError });
+      return;
+    }
     const payload = {
       plan_name: plan.plan_name,
       amount: plan.amount ?? "",
@@ -143,6 +149,11 @@ export default function SubscriptionPlansPage() {
       benefits: plan.benefits ?? [],
       deals_per_month: plan.deals_per_month,
       deals_per_restaurant_per_month: plan.deals_per_restaurant_per_month,
+      points_expiry_days: plan.points_expiry_days,
+      points_min_balance_to_burn: plan.points_min_balance_to_burn,
+      points_max_burn_per_use: plan.points_max_burn_per_use,
+      points_max_burns_per_window: plan.points_max_burns_per_window,
+      points_burn_window_days: plan.points_burn_window_days,
       cashback: plan.cashback,
       cashback_label: cashbackLabel(plan.cashback),
       cta_label: plan.cta_label?.trim() || null,
@@ -256,6 +267,7 @@ export default function SubscriptionPlansPage() {
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Duration</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Tags</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Reveals / month</th>
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Privé Credits</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Live</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Sort</th>
                   <th className="px-6 py-3 text-right text-[12px] font-semibold text-[#1D293D]">Actions</th>
@@ -293,6 +305,10 @@ export default function SubscriptionPlansPage() {
                       {plan.deals_per_month == null ? "Unlimited" : plan.deals_per_month}
                       <span className="text-gray-400"> · {plan.deals_per_restaurant_per_month == null ? "∞" : plan.deals_per_restaurant_per_month}/restaurant</span>
                     </td>
+                    <td className="px-6 py-3 text-[#5b6473] whitespace-nowrap">
+                      {plan.points_expiry_days}d expiry · min {plan.points_min_balance_to_burn}
+                      <span className="text-gray-400"> · {plan.points_max_burn_per_use}/use · {plan.points_max_burns_per_window}× per {plan.points_burn_window_days}d</span>
+                    </td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex h-2 w-2 rounded-full ${plan.is_active ? "bg-green-500" : "bg-gray-300"}`} />
                     </td>
@@ -310,7 +326,7 @@ export default function SubscriptionPlansPage() {
                   </tr>
                 ))}
                 {plans.length === 0 && (
-                  <tr><td colSpan={9} className="text-center py-6 text-gray-500">No customer plans found</td></tr>
+                  <tr><td colSpan={10} className="text-center py-6 text-gray-500">No customer plans found</td></tr>
                 )}
               </tbody>
             </table>

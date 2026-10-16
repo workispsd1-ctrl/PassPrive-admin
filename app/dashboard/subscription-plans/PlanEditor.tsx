@@ -42,6 +42,11 @@ export type SubscriptionPlan = {
   benefits: string[];
   deals_per_month: number | null;
   deals_per_restaurant_per_month: number | null;
+  points_expiry_days: number;
+  points_min_balance_to_burn: number;
+  points_max_burn_per_use: number;
+  points_max_burns_per_window: number;
+  points_burn_window_days: number;
   cashback: number | null;
   cashback_label: string | null;
   cta_label: string | null;
@@ -53,7 +58,7 @@ export type SubscriptionPlan = {
 };
 
 export const PLAN_COLUMNS =
-  "id, plan_name, amount, original_amount, type, product_id, price_id, sort_order, tier, tags, benefits, deals_per_month, deals_per_restaurant_per_month, cashback, cashback_label, cta_label, card_bg_url, badge_url, hero_bg_url, theme, is_active";
+  "id, plan_name, amount, original_amount, type, product_id, price_id, sort_order, tier, tags, benefits, deals_per_month, deals_per_restaurant_per_month, points_expiry_days, points_min_balance_to_burn, points_max_burn_per_use, points_max_burns_per_window, points_burn_window_days, cashback, cashback_label, cta_label, card_bg_url, badge_url, hero_bg_url, theme, is_active";
 
 export const TYPE_OPTIONS = [
   { value: "free", label: "Free (no expiry)" },
@@ -153,6 +158,11 @@ export function emptyPlan(sortOrder: number): SubscriptionPlan {
     benefits: [],
     deals_per_month: null,
     deals_per_restaurant_per_month: null,
+    points_expiry_days: 14,
+    points_min_balance_to_burn: 15,
+    points_max_burn_per_use: 50,
+    points_max_burns_per_window: 1,
+    points_burn_window_days: 30,
     cashback: null,
     cashback_label: "",
     cta_label: "",
@@ -172,6 +182,32 @@ async function uploadPlanImage(file: File, folder: string) {
     .upload(path, file, { upsert: true, cacheControl: "3600" });
   if (error) throw error;
   return supabaseBrowser.storage.from(PLAN_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+export const POINTS_LIMITS = {
+  points_expiry_days: { min: 1, max: 3650 },
+  points_min_balance_to_burn: { min: 0, max: 1000000 },
+  points_max_burn_per_use: { min: 0, max: 1000000 },
+  points_max_burns_per_window: { min: 0, max: 1000 },
+  points_burn_window_days: { min: 1, max: 365 },
+} as const;
+
+export function pointsRulesError(plan: SubscriptionPlan): string | null {
+  for (const [key, range] of Object.entries(POINTS_LIMITS)) {
+    const value = plan[key as keyof typeof POINTS_LIMITS];
+    if (!Number.isInteger(value) || value < range.min || value > range.max) {
+      return `Privé Credits: ${key.replace(/_/g, " ")} must be a whole number between ${range.min} and ${range.max}`;
+    }
+  }
+  if (plan.points_max_burns_per_window > 0 && plan.points_max_burn_per_use <= 0) {
+    return "Privé Credits: max per use must be above 0 when uses are allowed";
+  }
+  return null;
+}
+
+function intOr(value: string, fallback: number) {
+  const parsed = Number(value);
+  return value.trim() !== "" && Number.isFinite(parsed) ? Math.round(parsed) : fallback;
 }
 
 function numOrNull(value: string) {
@@ -652,6 +688,67 @@ export default function PlanEditor({
               <p className="rounded bg-blue-50 px-2 py-1.5 text-[11px] text-blue-800">
                 Enforced when the app calls reveal_deal(). Blank means unlimited. Revealing the
                 same deal again in the same month does not count twice.
+              </p>
+            </Section>
+
+            <Section title="Privé Credits — earning & burning">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-gray-600">Points expire after (days)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={plan.points_expiry_days}
+                    onChange={(e) => set({ points_expiry_days: intOr(e.target.value, 0) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-gray-600">Min balance to start burning</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={plan.points_min_balance_to_burn}
+                    onChange={(e) => set({ points_min_balance_to_burn: intOr(e.target.value, 0) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-gray-600">Max points per use</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={plan.points_max_burn_per_use}
+                    onChange={(e) => set({ points_max_burn_per_use: intOr(e.target.value, 0) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-gray-600">Uses allowed per window</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={plan.points_max_burns_per_window}
+                    onChange={(e) => set({ points_max_burns_per_window: intOr(e.target.value, 0) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-gray-600">Window (rolling days)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={plan.points_burn_window_days}
+                    onChange={(e) => set({ points_burn_window_days: intOr(e.target.value, 0) })}
+                  />
+                </div>
+              </div>
+              <p className="rounded bg-blue-50 px-2 py-1.5 text-[11px] text-blue-800">
+                New points expire after the days set on the member&apos;s plan when they earn them. Points are
+                used soonest-to-expire first. Burning needs the minimum balance, is capped per use, and is
+                limited to the uses allowed in the last rolling window. 0 uses disables burning. Changes
+                apply immediately; already-earned points keep their expiry date.
               </p>
             </Section>
 
