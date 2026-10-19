@@ -195,7 +195,7 @@ export default function AddRestaurantPage() {
     is_advertised: false,
     is_promoted: false,
     cashback_enabled: true,
-    deals_enabled: true,
+    deals_enabled: false,
     brn: "",
     registered_name: "",
     ad_priority: "",
