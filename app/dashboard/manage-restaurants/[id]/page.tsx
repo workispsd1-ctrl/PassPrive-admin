@@ -460,6 +460,10 @@ export default function RestaurantDetailPage() {
         cover_image: coverImage,
         booking_terms: bookingTermsToPayload(bookingTermsToTextarea(restaurant.booking_terms)),
       });
+      // Only send the owner when it was edited here, so a stale tab can't wipe credentials created elsewhere.
+      if (restaurant.owner_user_id === restaurantOriginal?.owner_user_id) {
+        delete (basePayload as { owner_user_id?: unknown }).owner_user_id;
+      }
 
       const relationsPayload = {
         cuisines: restaurant.cuisines,

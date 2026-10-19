@@ -13,6 +13,7 @@ interface ReceiptClaim {
   id: string;
   user_id: string;
   restaurant_id: string | null;
+  store_id: string | null;
   image_path: string;
   bill_amount: string | null;
   currency_code: string;
@@ -27,6 +28,7 @@ interface ReceiptClaim {
   submitted_at: string;
   reviewed_at: string | null;
   restaurants?: { name: string | null } | null;
+  stores?: { name: string | null } | null;
   users?: { full_name: string | null; email: string | null } | null;
 }
 
@@ -45,7 +47,7 @@ const REJECT_REASONS = [
 ];
 
 const SELECT =
-  "id, user_id, restaurant_id, image_path, bill_amount, currency_code, purchase_date, status, reward_amount, reward_percent, rejection_reason, amount_source, receipt_number, ocr_text, submitted_at, reviewed_at, restaurants(name), users:users!receipt_claims_user_id_fkey(full_name, email)";
+  "id, user_id, restaurant_id, store_id, image_path, bill_amount, currency_code, purchase_date, status, reward_amount, reward_percent, rejection_reason, amount_source, receipt_number, ocr_text, submitted_at, reviewed_at, restaurants(name), stores(name), users:users!receipt_claims_user_id_fkey(full_name, email)";
 
 function money(amount: string | null, currency = "MUR") {
   if (amount === null || amount === undefined) return "—";
@@ -198,7 +200,7 @@ export default function ReceiptClaimsPage() {
               <div className="space-y-3">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="text-lg font-semibold text-gray-900">
-                    {claim.restaurants?.name || "Unknown merchant"}
+                    {claim.restaurants?.name || claim.stores?.name || "Unknown merchant"}
                   </span>
                   <span className="text-sm text-gray-500">
                     {claim.users?.full_name || claim.users?.email || claim.user_id.slice(0, 8)}

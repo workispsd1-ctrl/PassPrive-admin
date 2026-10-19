@@ -67,15 +67,23 @@ export async function fetchRestaurantAccess(restaurantId: string): Promise<Resta
       : Promise.resolve({ data: [], error: null }),
     supabaseBrowser
       .from("restaurant_staff")
-      .select("user_id, users:user_id(id, full_name, email)")
+      .select("user_id")
       .eq("restaurant_id", restaurantId)
       .eq("role", "restaurant_admin"),
   ]);
   for (const r of [masterRes, branchesRes, staffRes]) if (r.error) throw r.error;
 
-  const branchAdmins = (staffRes.data || [])
-    .map((row: { users: AccessUser | AccessUser[] | null }) => (Array.isArray(row.users) ? row.users[0] : row.users))
-    .filter(Boolean) as AccessUser[];
+  // restaurant_staff.user_id references auth.users, so PostgREST can't embed public.users; look them up separately.
+  const adminIds = (staffRes.data || []).map((row: { user_id: string }) => row.user_id);
+  let branchAdmins: AccessUser[] = [];
+  if (adminIds.length) {
+    const { data, error: usersError } = await supabaseBrowser
+      .from("users")
+      .select("id, full_name, email")
+      .in("id", adminIds);
+    if (usersError) throw usersError;
+    branchAdmins = (data as AccessUser[]) || [];
+  }
 
   return {
     master: (masterRes.data as AccessUser | null) ?? null,

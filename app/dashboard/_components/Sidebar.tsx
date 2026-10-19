@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   ArrowLeftRight,
   BookOpen,
+  MonitorSmartphone,
   Target,
   Zap,
   Gift,
@@ -82,6 +83,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Cashback Boosts", href: "/dashboard/cashback-boosts", icon: Zap },
   { title: "Receipt Claims", href: "/dashboard/receipt-claims", icon: Target },
   { title: "Upgrade Requests", href: "/dashboard/upgrade-requests", icon: Target },
+  { title: "POS Terminals", href: "/dashboard/pos-terminals", icon: MonitorSmartphone },
   { title: "Transaction Milestones", href: "/dashboard/transaction-milestones", icon: Target },
   //{ title: "Promocode", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
   { title: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight },
@@ -289,6 +291,11 @@ export default function Sidebar({
       title: "Upgrade Requests",
       href: "/dashboard/upgrade-requests",
       icon: Target,
+    },
+    {
+      title: "POS Terminals",
+      href: "/dashboard/pos-terminals",
+      icon: MonitorSmartphone,
     },
 
     //{ title: "Promo Code", href: "/dashboard/promo-code", iconSrc: "/request_quote.png" },
