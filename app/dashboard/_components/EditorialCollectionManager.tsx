@@ -144,20 +144,14 @@ function toIsoOrNull(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === "string") {
-        resolve(result);
-        return;
-      }
-      reject(new Error("Unable to read the selected image."));
-    };
-    reader.onerror = () => reject(new Error("Unable to read the selected image."));
-    reader.readAsDataURL(file);
-  });
+async function uploadEditorialImage(file: File) {
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const path = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabaseBrowser.storage
+    .from("editorial-collections")
+    .upload(path, file, { contentType: file.type || undefined, cacheControl: "31536000" });
+  if (error) throw new Error(error.message || "Unable to upload the selected image.");
+  return supabaseBrowser.storage.from("editorial-collections").getPublicUrl(path).data.publicUrl;
 }
 
 function ImageUploadField({
@@ -189,8 +183,8 @@ function ImageUploadField({
     if (!file) return;
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      onUpload(dataUrl);
+      const publicUrl = await uploadEditorialImage(file);
+      onUpload(publicUrl);
       event.target.value = "";
     } catch (error: unknown) {
       showToast({
