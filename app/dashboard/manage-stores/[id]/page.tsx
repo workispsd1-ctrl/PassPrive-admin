@@ -513,6 +513,16 @@ export default function StoreDetailPage() {
       const isPreferred = merchantType === "Preferred";
       basePayload.merchant_type = merchantType;
       basePayload.mdr_rate = asNullableNumber(store.mdr_rate);
+      basePayload.merchant_plan = store.merchant_plan === "paid" ? "paid" : "free";
+      basePayload.booking_enabled = store.booking_enabled === true;
+      basePayload.pay_bill_enabled = store.pay_bill_enabled === true;
+      basePayload.service_level = togglesToServiceLevel({
+        booking: store.booking_enabled === true,
+        payBill: store.pay_bill_enabled === true,
+      });
+      basePayload.onboarding_charge = asNullableNumber(store.onboarding_charge);
+      basePayload.monthly_charge = asNullableNumber(store.monthly_charge);
+      basePayload.mdr_agreed_cim = asNullableNumber(store.mdr_agreed_cim);
       basePayload.brn = asTrimmedString(store.brn);
       basePayload.registered_name = asTrimmedString(store.registered_name);
       basePayload.merchant_total_rate = isPreferred
