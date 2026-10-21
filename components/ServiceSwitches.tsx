@@ -8,8 +8,8 @@ type Props = {
   value: ServiceToggles;
   onChange: (next: ServiceToggles) => void;
   disabled?: boolean;
-  /** Product stores sell over the counter: discoverable only, no booking, no pay bill. */
-  lockToDiscoverable?: boolean;
+  /** Product stores sell over the counter: no booking, pay bill allowed. */
+  lockBooking?: boolean;
   lockReason?: string;
   promoted?: boolean;
   onPromotedChange?: (next: boolean) => void;
@@ -45,7 +45,7 @@ export default function ServiceSwitches({
   value,
   onChange,
   disabled,
-  lockToDiscoverable = false,
+  lockBooking = false,
   lockReason,
   promoted,
   onPromotedChange,
@@ -55,9 +55,7 @@ export default function ServiceSwitches({
   onDealsChange,
   dealsContent,
 }: Props) {
-  const toggles = lockToDiscoverable
-    ? { discoverable: true, booking: false, payBill: false }
-    : value;
+  const toggles = lockBooking ? { ...value, booking: false } : value;
 
   const setToggle = (key: "booking" | "payBill", next: boolean) => {
     onChange({ ...toggles, [key]: next });
@@ -65,7 +63,7 @@ export default function ServiceSwitches({
 
   return (
     <div className="space-y-2">
-      {lockToDiscoverable && lockReason ? (
+      {lockBooking && lockReason ? (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{lockReason}</p>
       ) : null}
       {ROWS.map((row) => (
@@ -79,7 +77,7 @@ export default function ServiceSwitches({
           </div>
           <Switch
             checked={toggles[row.key]}
-            disabled={disabled || row.locked || (lockToDiscoverable && !row.locked)}
+            disabled={disabled || row.locked || (lockBooking && row.key === "booking")}
             onCheckedChange={(next) =>
               row.locked ? undefined : setToggle(row.key as "booking" | "payBill", next)
             }

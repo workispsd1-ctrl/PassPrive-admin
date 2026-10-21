@@ -882,8 +882,8 @@ function AddStorePageInner() {
             <ServiceSwitches
               value={{ discoverable: true, booking: bookingEnabled, payBill: payBillEnabled }}
               disabled={loading}
-              lockToDiscoverable={form.store_type !== "SERVICE"}
-              lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
+              lockBooking={form.store_type !== "SERVICE"}
+              lockReason="Product stores sell over the counter, so booking is a Service-store capability. Pay bill is available."
               promoted={promoted}
               onPromotedChange={setPromoted}
               cashbackEnabled={cashbackEnabled}

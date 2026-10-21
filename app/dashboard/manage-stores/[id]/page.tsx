@@ -710,8 +710,8 @@ export default function StoreDetailPage() {
                 payBill: store.pay_bill_enabled === true,
               }}
               disabled={!editMode}
-              lockToDiscoverable={(store.store_type || "PRODUCT") !== "SERVICE"}
-              lockReason="Product stores sell over the counter — booking and pay bill are Service-store capabilities."
+              lockBooking={(store.store_type || "PRODUCT") !== "SERVICE"}
+              lockReason="Product stores sell over the counter, so booking is a Service-store capability. Pay bill is available."
               promoted={!!store.is_promoted}
               onPromotedChange={(value) => setStore({ ...store, is_promoted: value })}
               cashbackEnabled={store.cashback_enabled !== false}
