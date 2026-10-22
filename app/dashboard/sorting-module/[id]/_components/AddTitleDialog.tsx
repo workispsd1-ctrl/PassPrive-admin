@@ -20,6 +20,7 @@ const SCREEN_SECTIONS: Record<string, ScreenCatalog> = {
       "shop-this-weekend",
       "family-feast",
       "new-kick-in-stores",
+      "malls",
       "plan-your-salon-visit",
       "now-trending",
       "whats-hot",
@@ -29,6 +30,7 @@ const SCREEN_SECTIONS: Record<string, ScreenCatalog> = {
       "fresh-spots": "New Dining Spots",
       "offers-for-you": "Offers for you",
       "foodie-frontrow-classic": "Foodie Frontrow",
+      malls: "Explore Malls",
     },
   },
   DineinHome: {

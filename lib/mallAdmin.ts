@@ -23,13 +23,34 @@ export type MallRecord = {
   google_place_id: string | null;
   total_floors: number | null;
   parking_available: boolean;
-  opening_hours: unknown;
+  amenities: string[];
+  opening_hours: MallHours | null;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number | null;
   created_at?: string;
   updated_at?: string;
 };
+
+export type MallDayHours = { open: string; close: string; closed: boolean };
+export type MallHours = Record<string, MallDayHours>;
+
+export const MALL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+export const MALL_AMENITIES: { key: string; label: string }[] = [
+  { key: "parking", label: "Free Parking" },
+  { key: "wheelchair", label: "Wheelchair Access" },
+  { key: "ev_charging", label: "EV Charging" },
+  { key: "wifi", label: "Free WiFi" },
+  { key: "restrooms", label: "Restrooms" },
+  { key: "baby_care", label: "Baby Care Room" },
+  { key: "prayer_room", label: "Prayer Room" },
+  { key: "atm", label: "ATM" },
+  { key: "food_court", label: "Food Court" },
+  { key: "kids_play", label: "Kids Play Area" },
+  { key: "cinema", label: "Cinema" },
+  { key: "valet", label: "Valet Parking" },
+];
 
 export type MallStoreInfo = {
   id: string;
@@ -90,6 +111,8 @@ export function emptyMall(): Partial<MallRecord> {
     google_place_id: "",
     total_floors: null,
     parking_available: false,
+    amenities: [],
+    opening_hours: null,
     is_active: true,
     is_featured: false,
     sort_order: null,
@@ -156,7 +179,9 @@ export function buildMallPayload(mall: Partial<MallRecord>) {
     lng: asNum(mall.lng),
     google_place_id: asStr(mall.google_place_id),
     total_floors: asNum(mall.total_floors),
-    parking_available: !!mall.parking_available,
+    amenities: Array.isArray(mall.amenities) ? mall.amenities : [],
+    parking_available: Array.isArray(mall.amenities) ? mall.amenities.includes("parking") : !!mall.parking_available,
+    opening_hours: mall.opening_hours ?? null,
     is_active: mall.is_active !== false,
     is_featured: !!mall.is_featured,
     sort_order: asNum(mall.sort_order),

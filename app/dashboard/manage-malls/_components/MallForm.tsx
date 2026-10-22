@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { showToast } from "@/hooks/useToast";
-import { uploadMallImage, slugifyMall, type MallRecord } from "@/lib/mallAdmin";
+import { uploadMallImage, slugifyMall, MALL_DAYS, MALL_AMENITIES, type MallRecord, type MallDayHours } from "@/lib/mallAdmin";
 
 type Props = {
   value: Partial<MallRecord>;
@@ -88,6 +88,17 @@ export default function MallForm({ value, onChange, disabled }: Props) {
   );
 
   const input = "w-full";
+
+  const hours = value.opening_hours || {};
+  const dayHours = (day: string): MallDayHours => hours[day] || { open: "", close: "", closed: false };
+  const setDay = (day: string, patch: Partial<MallDayHours>) =>
+    set("opening_hours", { ...hours, [day]: { ...dayHours(day), ...patch } });
+  const copyToAll = () =>
+    set("opening_hours", Object.fromEntries(MALL_DAYS.map((d) => [d, { ...dayHours(MALL_DAYS[0]) }])));
+
+  const amenities = Array.isArray(value.amenities) ? value.amenities : [];
+  const toggleAmenity = (key: string, on: boolean) =>
+    set("amenities", on ? [...amenities.filter((a) => a !== key), key] : amenities.filter((a) => a !== key));
 
   return (
     <div className="space-y-4">
@@ -196,6 +207,70 @@ export default function MallForm({ value, onChange, disabled }: Props) {
         </Field>
       </Section>
 
+      <div className="rounded-xl border border-gray-100 bg-white p-4 md:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-800">Opening Hours</h2>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={copyToAll}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+          >
+            Copy {MALL_DAYS[0]} to all days
+          </button>
+        </div>
+        <div className="space-y-2">
+          {MALL_DAYS.map((day) => {
+            const h = dayHours(day);
+            return (
+              <div key={day} className="grid grid-cols-[110px_1fr_1fr_auto] items-center gap-3">
+                <span className="text-sm text-gray-700">{day}</span>
+                <Input
+                  type="time"
+                  disabled={disabled || h.closed}
+                  value={h.open}
+                  onChange={(e) => setDay(day, { open: e.target.value })}
+                />
+                <Input
+                  type="time"
+                  disabled={disabled || h.closed}
+                  value={h.close}
+                  onChange={(e) => setDay(day, { close: e.target.value })}
+                />
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    disabled={disabled}
+                    checked={h.closed}
+                    onChange={(e) => setDay(day, e.target.checked ? { closed: true, open: "", close: "" } : { closed: false })}
+                  />
+                  Closed
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-100 bg-white p-4 md:p-5">
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">Amenities</h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          {MALL_AMENITIES.map((a) => (
+            <label key={a.key} className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                disabled={disabled}
+                checked={amenities.includes(a.key)}
+                onChange={(e) => toggleAmenity(a.key, e.target.checked)}
+              />
+              {a.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
       <Section title="System">
         <Field label="Sort Order">
           <Input
@@ -214,10 +289,6 @@ export default function MallForm({ value, onChange, disabled }: Props) {
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-700">Featured</span>
             <Switch checked={!!value.is_featured} disabled={disabled} onCheckedChange={(v) => set("is_featured", v)} />
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-700">Parking</span>
-            <Switch checked={!!value.parking_available} disabled={disabled} onCheckedChange={(v) => set("parking_available", v)} />
           </div>
         </div>
       </Section>
