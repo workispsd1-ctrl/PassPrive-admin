@@ -722,6 +722,8 @@ export default function StoreDetailPage() {
               disabled={!editMode}
               lockBooking={(store.store_type || "PRODUCT") !== "SERVICE"}
               lockReason="Product stores sell over the counter, so booking is a Service-store capability. Pay bill is available."
+              lockPayBill={store.merchant_plan !== "paid"}
+              payBillLockReason="Pay bill needs the Paid partner plan. Change the Merchant Plan to Paid partner to turn it on."
               promoted={!!store.is_promoted}
               onPromotedChange={(value) => setStore({ ...store, is_promoted: value })}
               cashbackEnabled={store.cashback_enabled !== false}

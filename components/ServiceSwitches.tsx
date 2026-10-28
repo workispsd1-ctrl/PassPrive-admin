@@ -11,6 +11,9 @@ type Props = {
   /** Product stores sell over the counter: no booking, pay bill allowed. */
   lockBooking?: boolean;
   lockReason?: string;
+  /** Pay bill needs a paid plan; the database turns it off otherwise. */
+  lockPayBill?: boolean;
+  payBillLockReason?: string;
   promoted?: boolean;
   onPromotedChange?: (next: boolean) => void;
   cashbackEnabled?: boolean;
@@ -47,6 +50,8 @@ export default function ServiceSwitches({
   disabled,
   lockBooking = false,
   lockReason,
+  lockPayBill = false,
+  payBillLockReason,
   promoted,
   onPromotedChange,
   cashbackEnabled = true,
@@ -55,7 +60,11 @@ export default function ServiceSwitches({
   onDealsChange,
   dealsContent,
 }: Props) {
-  const toggles = lockBooking ? { ...value, booking: false } : value;
+  const toggles = {
+    ...value,
+    ...(lockBooking ? { booking: false } : {}),
+    ...(lockPayBill ? { payBill: false } : {}),
+  };
 
   const setToggle = (key: "booking" | "payBill", next: boolean) => {
     onChange({ ...toggles, [key]: next });
@@ -65,6 +74,9 @@ export default function ServiceSwitches({
     <div className="space-y-2">
       {lockBooking && lockReason ? (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{lockReason}</p>
+      ) : null}
+      {lockPayBill && payBillLockReason ? (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{payBillLockReason}</p>
       ) : null}
       {ROWS.map((row) => (
         <div
@@ -77,7 +89,12 @@ export default function ServiceSwitches({
           </div>
           <Switch
             checked={toggles[row.key]}
-            disabled={disabled || row.locked || (lockBooking && row.key === "booking")}
+            disabled={
+              disabled ||
+              row.locked ||
+              (lockBooking && row.key === "booking") ||
+              (lockPayBill && row.key === "payBill")
+            }
             onCheckedChange={(next) =>
               row.locked ? undefined : setToggle(row.key as "booking" | "payBill", next)
             }

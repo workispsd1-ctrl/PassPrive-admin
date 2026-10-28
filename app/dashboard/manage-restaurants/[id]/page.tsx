@@ -867,6 +867,8 @@ export default function RestaurantDetailPage() {
                 payBill: restaurant.pay_bill_enabled,
               }}
               disabled={!editMode}
+              lockPayBill={restaurant.merchant_plan !== "paid"}
+              payBillLockReason="Pay bill needs the Paid partner plan. Change the Merchant Plan to Paid partner to turn it on."
               promoted={restaurant.is_promoted}
               onPromotedChange={(value) => setRestaurant({ ...restaurant, is_promoted: value })}
               cashbackEnabled={restaurant.cashback_enabled}

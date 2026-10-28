@@ -639,6 +639,8 @@ export default function AddRestaurantPage() {
             booking: form.booking_enabled,
             payBill: form.pay_bill_enabled,
           }}
+          lockPayBill={form.merchant_plan !== "paid"}
+          payBillLockReason="Pay bill needs the Paid partner plan. Change the Merchant Plan to Paid partner to turn it on."
           promoted={form.is_promoted}
           onPromotedChange={(value) => setForm((prev) => ({ ...prev, is_promoted: value }))}
           cashbackEnabled={form.cashback_enabled}
