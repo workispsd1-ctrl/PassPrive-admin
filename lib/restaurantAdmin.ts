@@ -1387,7 +1387,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     ad_starts_at: localInputToIso(input.ad_starts_at),
     ad_ends_at: localInputToIso(input.ad_ends_at),
     ad_badge_text: asString(input.ad_badge_text),
-    booking_terms: input.booking_terms && input.booking_terms.length ? input.booking_terms : null,
+    booking_terms: Array.isArray(input.booking_terms) ? input.booking_terms : [],
     merchant_plan: (asString(input.merchant_plan) as MerchantPlan | null) ?? "free",
     service_level: (asString(input.service_level) as ServiceLevel | null) ?? "discoverable",
     pay_bill_enabled: input.pay_bill_enabled === true,

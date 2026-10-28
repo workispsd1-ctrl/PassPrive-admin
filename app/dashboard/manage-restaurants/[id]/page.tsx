@@ -481,7 +481,10 @@ export default function RestaurantDetailPage() {
       // Call API PATCH to update primary DB in a single request (bypasses RLS via service role)
       try {
         const token = await getTokenClient();
-        if (token) {
+        if (!token) {
+          throw new Error("Your session has expired. Please sign in again.");
+        }
+        {
           const relationsRows = {
             tags: buildTagRows(restaurant.id, relationsPayload),
             media: buildMediaRows(restaurant.id, relationsPayload),

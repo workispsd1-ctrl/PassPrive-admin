@@ -14,7 +14,7 @@ interface ReceiptClaim {
   user_id: string;
   restaurant_id: string | null;
   store_id: string | null;
-  image_path: string;
+  image_path: string | null;
   bill_amount: string | null;
   currency_code: string;
   purchase_date: string | null;
@@ -90,10 +90,10 @@ export default function ReceiptClaimsPage() {
 
     const signed: Record<string, string> = {};
     await Promise.all(
-      rows.map(async (claim) => {
+      rows.filter((claim) => claim.image_path).map(async (claim) => {
         const { data: file } = await supabase.storage
           .from("receipts")
-          .createSignedUrl(claim.image_path, 3600);
+          .createSignedUrl(claim.image_path as string, 3600);
         if (file?.signedUrl) signed[claim.id] = file.signedUrl;
       })
     );

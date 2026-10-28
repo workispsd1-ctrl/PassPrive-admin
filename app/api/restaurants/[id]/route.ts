@@ -301,10 +301,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       await Promise.all(tasks);
     }
 
-    return NextResponse.json({
-      ok: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined,
-    });
+    if (errors.length > 0) {
+      return NextResponse.json({ ok: false, errors }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to sync restaurant details";
     return NextResponse.json({ error: message }, { status: 500 });
