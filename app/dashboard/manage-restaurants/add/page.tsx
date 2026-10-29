@@ -358,6 +358,7 @@ export default function AddRestaurantPage() {
 
     setLoading(true);
     let createdRestaurantId: string | null = null;
+    let createdPartnerId: string | null = null;
 
     try {
       console.log("[AddRestaurant] handleSubmit start", {
@@ -381,6 +382,7 @@ export default function AddRestaurantPage() {
         phone: form.phone || undefined,
         role: PARTNER_ROLE,
       });
+      if (ownerMode === "new") createdPartnerId = partner.id;
 
       const slug = await buildUniqueRestaurantSlug(
         `${form.name} ${form.area} ${form.city}`.trim() || form.name
@@ -513,6 +515,13 @@ export default function AddRestaurantPage() {
         if (cleanupError) {
           console.error("[AddRestaurant] restaurant cleanup error", cleanupError);
         }
+      }
+      if (createdPartnerId) {
+        const token = await getAccessToken().catch(() => null);
+        await fetch(`/api/admin-users/${createdPartnerId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
       }
 
       showToast({

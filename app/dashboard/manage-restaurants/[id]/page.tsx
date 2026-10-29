@@ -673,28 +673,25 @@ export default function RestaurantDetailPage() {
         on_boarded: true,
       };
 
-      // Update primary database via API (bypasses RLS)
-      try {
-        const primaryRes = await fetch(`/api/restaurants/${restaurant.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            basePayload: credsPayload,
-            syncPrimaryOnly: true,
-          }),
-        });
-        if (!primaryRes.ok) {
-          throw new Error("Failed to update credentials status");
-        }
-      } catch (patchErr) {
-        console.error("Failed to update credentials status on database", patchErr);
-        throw patchErr;
+      const primaryRes = await fetch(`/api/restaurants/${restaurant.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          basePayload: credsPayload,
+          syncPrimaryOnly: true,
+        }),
+      }).catch(() => null);
+      if (!primaryRes?.ok) {
+        const errData = await primaryRes?.json().catch(() => null);
+        await fetch(`/api/admin-users/${userId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+        throw new Error(errData?.errors?.join(" | ") || errData?.error || "Login could not be linked to the restaurant");
       }
-
-
 
       const refreshed = await fetchRestaurantDetailMerged(restaurant.id);
       setRestaurant(cloneRestaurant(refreshed));

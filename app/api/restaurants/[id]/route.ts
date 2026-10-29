@@ -250,17 +250,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const targetDb = syncPrimaryOnly ? supabaseAdmin : supabaseAdminSecond;
     const errors: string[] = [];
 
-    // 1. Sync primary/base restaurant fields
     if (basePayload) {
-      const { error: baseError } = await targetDb
+      const { data: updated, error: baseError } = await targetDb
         .from("restaurants")
-        .upsert({ id, ...basePayload });
+        .update(basePayload)
+        .eq("id", id)
+        .select("id");
       if (baseError) {
         errors.push(`Base record sync error: ${baseError.message}`);
+      } else if (!updated?.length) {
+        errors.push("Base record sync error: restaurant not found");
       }
     }
 
-    // 2. Sync relations if provided
     if (relations) {
       const replaceTableRows = async (table: string, rows: Record<string, unknown>[]) => {
         const { error: delError } = await targetDb

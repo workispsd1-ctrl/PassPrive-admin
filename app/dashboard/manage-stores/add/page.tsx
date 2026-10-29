@@ -476,9 +476,11 @@ function AddStorePageInner() {
 
     let uploadedUrls: string[] = [];
     let createdStoreId: string | null = null;
+    let createdOwnerId: string | null = null;
 
     try {
-      const ownerUserId = await resolveStoreOwnerId(); // auth user id
+      const ownerUserId = await resolveStoreOwnerId();
+      if (!hasOwnerInQuery) createdOwnerId = ownerUserId;
       const storeId = uuid(); // store uuid (branch id)
       createdStoreId = storeId;
 
@@ -755,9 +757,15 @@ function AddStorePageInner() {
       if (createdStoreId) {
         try {
           await supabaseBrowser.from("stores").delete().eq("id", createdStoreId);
-        } catch {
-          // Keep the original error surfaced to the user.
-        }
+        } catch {}
+      }
+
+      if (createdOwnerId) {
+        const token = await getAccessToken().catch(() => null);
+        await fetch(`/api/admin-users/${createdOwnerId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
       }
 
       showToast({
