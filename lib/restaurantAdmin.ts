@@ -1627,6 +1627,22 @@ async function replaceRows(table: string, restaurantId: string, rows: Record<str
 }
 
 
+async function saveSubscriptionRows(restaurantId: string, rows: Record<string, unknown>[]) {
+  const { getTokenClient } = await import("@/lib/getTokenClient");
+  const token = await getTokenClient();
+  if (!token) throw new Error("Your session has expired. Please sign in again.");
+
+  const response = await fetch(`/api/restaurants/${restaurantId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ relations: { subscription: rows }, syncPrimaryOnly: true }),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.errors?.join(", ") || result?.error || "Failed to save the subscription.");
+  }
+}
+
 export async function replaceRestaurantRelations(
   restaurantId: string,
   input: RestaurantRelationsInput
@@ -1635,11 +1651,7 @@ export async function replaceRestaurantRelations(
     replaceRows("restaurant_tags", restaurantId, buildTagRows(restaurantId, input)),
     replaceRows("restaurant_media_assets", restaurantId, buildMediaRows(restaurantId, input)),
     replaceRows("restaurant_offers", restaurantId, buildOfferRows(restaurantId, input.offers)),
-    replaceRows(
-      "restaurant_subscriptions",
-      restaurantId,
-      buildSubscriptionRows(restaurantId, input.subscription)
-    ),
+    saveSubscriptionRows(restaurantId, buildSubscriptionRows(restaurantId, input.subscription)),
   ];
 
   if (input.opening_hours && Object.keys(input.opening_hours).length > 0) {
