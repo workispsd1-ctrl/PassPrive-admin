@@ -31,6 +31,16 @@ export async function createLogin(input: { email: string; password: string; full
   return json.user as { id: string; email: string; role: string };
 }
 
+export async function loginRoleForEmail(email: string): Promise<string | null> {
+  const { data, error } = await supabaseBrowser
+    .from("users")
+    .select("role")
+    .ilike("email", email.trim().replace(/[\\%_]/g, (c) => `\\${c}`))
+    .maybeSingle();
+  if (error) throw error;
+  return data ? String(data.role || "").toLowerCase() : null;
+}
+
 export async function findMasterByEmail(email: string): Promise<AccessUser> {
   const { data, error } = await supabaseBrowser
     .from("users")

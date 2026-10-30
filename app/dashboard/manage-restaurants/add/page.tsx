@@ -12,7 +12,7 @@ import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
 import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
 import { emptyAuthorisedContact, saveAuthorisedContact } from "@/lib/merchantContacts";
-import { addBranchAdmin, findMasterByEmail } from "@/lib/restaurantAccess";
+import { addBranchAdmin, findMasterByEmail, loginRoleForEmail } from "@/lib/restaurantAccess";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -374,6 +374,23 @@ export default function AddRestaurantPage() {
           subscriptionEnabled,
         },
       });
+
+      if (ownerMode === "new") {
+        const existingRole = await loginRoleForEmail(partnerEmail);
+        if (existingRole === PARTNER_ROLE) {
+          setMasterEmail(partnerEmail.trim().toLowerCase());
+          setOwnerMode("existing");
+          showToast({
+            type: "error",
+            title: "This email already has a partner login",
+            description: "Switched to Branch of an existing master. Press save again to add this restaurant under that login.",
+          });
+          return;
+        }
+        if (existingRole) {
+          throw new Error(`This email is already used by a ${existingRole} account. Use a different partner email.`);
+        }
+      }
 
       const partner = ownerMode === "existing" ? await findMasterByEmail(masterEmail) : await createPartnerViaBackend({
         email: partnerEmail.trim().toLowerCase(),
