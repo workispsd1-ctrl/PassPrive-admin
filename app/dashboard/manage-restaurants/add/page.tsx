@@ -420,6 +420,7 @@ export default function AddRestaurantPage() {
         is_pure_veg: form.is_pure_veg,
         on_boarded: form.on_boarded,
         booking_enabled: form.booking_enabled,
+        booking_mode: form.booking_enabled ? "on" : "off",
         avg_duration_minutes: form.avg_duration_minutes ? Number(form.avg_duration_minutes) : 90,
         max_bookings_per_slot: form.max_bookings_per_slot ? Number(form.max_bookings_per_slot) : undefined,
         advance_booking_days: form.advance_booking_days ? Number(form.advance_booking_days) : 30,

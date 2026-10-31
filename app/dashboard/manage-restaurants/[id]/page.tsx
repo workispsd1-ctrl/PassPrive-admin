@@ -887,11 +887,27 @@ export default function RestaurantDetailPage() {
                 setRestaurant({
                   ...restaurant,
                   booking_enabled: next.booking,
+                  booking_mode: next.booking === restaurant.booking_enabled ? restaurant.booking_mode : next.booking ? "on" : "off",
                   pay_bill_enabled: next.payBill,
                   service_level: togglesToServiceLevel(next),
                 })
               }
             />
+          </Field>
+          <Field label="Book a table setting">
+            <select
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              disabled={!editMode}
+              value={restaurant.booking_mode}
+              onChange={(e) => setRestaurant({ ...restaurant, booking_mode: e.target.value as "inherit" | "on" | "off" })}
+            >
+              <option value="inherit">Follow global setting</option>
+              <option value="on">Always on for this restaurant</option>
+              <option value="off">Always off for this restaurant</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The global switch is in Platform Settings. A restaurant set to on or off ignores it.
+            </p>
           </Field>
           {isSuperadmin && (
             <Field label="Order & Collect">

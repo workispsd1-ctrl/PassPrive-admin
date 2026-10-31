@@ -338,6 +338,7 @@ export type RestaurantFlatRecord = {
   owner_user_id: string | null;
   is_pure_veg: boolean;
   booking_enabled: boolean;
+  booking_mode: "inherit" | "on" | "off";
   merchant_type: MerchantType | null;
   merchant_plan: MerchantPlan;
   service_level: ServiceLevel;
@@ -713,6 +714,7 @@ export function normalizeRestaurantRecord({
     owner_user_id: asString(restaurant?.owner_user_id),
     is_pure_veg: asBoolean(restaurant?.is_pure_veg),
     booking_enabled: restaurant?.booking_enabled !== false,
+    booking_mode: restaurant?.booking_mode === "on" || restaurant?.booking_mode === "off" ? restaurant.booking_mode : "inherit",
     avg_duration_minutes: asNumber(restaurant?.avg_duration_minutes),
     max_bookings_per_slot: asNumberFromKeys(restaurantRow, ["max_bookings_per_slot", "max_booking_per_slot"]),
     advance_booking_days: asNumber(restaurant?.advance_booking_days),
@@ -922,6 +924,7 @@ export function mergeRestaurantRecords(
     registered_name: primary.registered_name || secondary.registered_name,
     is_pure_veg: primary.is_pure_veg || secondary.is_pure_veg,
     booking_enabled: primary.booking_enabled || secondary.booking_enabled,
+    booking_mode: primary.booking_mode,
     modification_available: primary.modification_available || secondary.modification_available,
     cancellation_available: primary.cancellation_available || secondary.cancellation_available,
     cover_charge_enabled: primary.cover_charge_enabled || secondary.cover_charge_enabled,
@@ -1367,6 +1370,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     owner_user_id: asString(input.owner_user_id),
     is_pure_veg: Boolean(input.is_pure_veg),
     booking_enabled: input.booking_enabled !== false,
+    booking_mode: input.booking_mode ?? "inherit",
     avg_duration_minutes: asNumber(input.avg_duration_minutes),
     max_bookings_per_slot: asNumber(input.max_bookings_per_slot),
     advance_booking_days: asNumber(input.advance_booking_days),
@@ -1409,6 +1413,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     is_active: input.is_active !== false,
     is_pure_veg: Boolean(input.is_pure_veg),
     booking_enabled: input.booking_enabled !== false,
+    booking_mode: input.booking_mode ?? "inherit",
     modification_available: Boolean(input.modification_available),
     cancellation_available: Boolean(input.cancellation_available),
     cover_charge_enabled: Boolean(input.cover_charge_enabled),
