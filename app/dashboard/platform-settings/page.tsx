@@ -10,6 +10,7 @@ type Settings = {
   booking_global_enabled: boolean;
   booking_reward_amount: number;
   booking_reward_enabled: boolean;
+  booking_reward_min_bill: number;
   updated_at: string;
   rewards: { pending: number; released_amount: number };
   counts: { inherit: number; on: number; off: number; bookable: number };
@@ -26,6 +27,7 @@ export default function PlatformSettingsPage() {
   const [globalOn, setGlobalOn] = useState(false);
   const [amount, setAmount] = useState("");
   const [rewardOn, setRewardOn] = useState(true);
+  const [minBill, setMinBill] = useState("");
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -42,6 +44,7 @@ export default function PlatformSettingsPage() {
       setGlobalOn(next.booking_global_enabled);
       setAmount(String(Number(next.booking_reward_amount)));
       setRewardOn(next.booking_reward_enabled);
+      setMinBill(String(Number(next.booking_reward_min_bill)));
     });
     return () => {
       alive = false;
@@ -50,14 +53,17 @@ export default function PlatformSettingsPage() {
 
   const amountNum = Number(amount);
   const amountValid = amount.trim() !== "" && Number.isFinite(amountNum) && amountNum >= 0 && amountNum <= 1000;
+  const minBillNum = Number(minBill);
+  const minBillValid = minBill.trim() !== "" && Number.isFinite(minBillNum) && minBillNum >= 0 && minBillNum <= 100000;
   const changed =
     !!settings &&
     (globalOn !== settings.booking_global_enabled ||
       rewardOn !== settings.booking_reward_enabled ||
+      minBillNum !== Number(settings.booking_reward_min_bill) ||
       amountNum !== Number(settings.booking_reward_amount));
 
   const save = async () => {
-    if (!settings || !amountValid) return;
+    if (!settings || !amountValid || !minBillValid) return;
     if (globalOn !== settings.booking_global_enabled) {
       const affected = settings.counts.inherit;
       const verb = globalOn ? "turn ON" : "turn OFF";
@@ -71,6 +77,7 @@ export default function PlatformSettingsPage() {
       p_booking_global_enabled: globalOn,
       p_booking_reward_amount: Math.round(amountNum * 100) / 100,
       p_booking_reward_enabled: rewardOn,
+      p_booking_reward_min_bill: Math.round(minBillNum * 100) / 100,
     });
     setBusy(false);
     if (error) {
@@ -157,11 +164,27 @@ export default function PlatformSettingsPage() {
               />
               {!amountValid ? <span className="text-xs text-red-600">Enter 0 to 1000</span> : null}
             </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Minimum bill to prove the visit: MUR</span>
+                <input
+                  value={minBill}
+                  onChange={(e) => setMinBill(e.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  className="h-10 w-32 rounded-md border px-3 text-sm"
+                  disabled={busy}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A scanned receipt or an app bill payment only unlocks the reward if the bill is at least this much. Stops a tiny payment
+                being used to claim the cashback.
+              </p>
+            </div>
           </section>
 
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Last saved {stamp(settings.updated_at)}</span>
-            <Button onClick={save} disabled={busy || !changed || !amountValid}>
+            <Button onClick={save} disabled={busy || !changed || !amountValid || !minBillValid}>
               {busy ? "Saving..." : "Save changes"}
             </Button>
           </div>
