@@ -365,6 +365,8 @@ export type RestaurantFlatRecord = {
   is_advertised: boolean;
   is_promoted: boolean;
   cashback_enabled: boolean;
+  cashback_mode: "inherit" | "on" | "off";
+  booking_reward_mode: "inherit" | "on" | "off";
   deals_enabled: boolean;
   brn: string;
   registered_name: string;
@@ -729,6 +731,8 @@ export function normalizeRestaurantRecord({
     is_advertised: asBoolean(restaurant?.is_advertised),
     is_promoted: asBoolean(restaurant?.is_promoted),
     cashback_enabled: restaurant?.cashback_enabled !== false,
+    cashback_mode: restaurant?.cashback_mode === "on" || restaurant?.cashback_mode === "off" ? restaurant.cashback_mode : "inherit",
+    booking_reward_mode: restaurant?.booking_reward_mode === "on" || restaurant?.booking_reward_mode === "off" ? restaurant.booking_reward_mode : "inherit",
     deals_enabled: restaurant?.deals_enabled !== false,
     brn: asString(restaurant?.brn) ?? "",
     registered_name: asString(restaurant?.registered_name) ?? "",
@@ -919,6 +923,8 @@ export function mergeRestaurantRecords(
     is_advertised: primary.is_advertised || secondary.is_advertised,
     is_promoted: primary.is_promoted || secondary.is_promoted,
     cashback_enabled: primary.cashback_enabled,
+    cashback_mode: primary.cashback_mode,
+    booking_reward_mode: primary.booking_reward_mode,
     deals_enabled: primary.deals_enabled,
     brn: primary.brn || secondary.brn,
     registered_name: primary.registered_name || secondary.registered_name,
@@ -1384,6 +1390,8 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     is_advertised: Boolean(input.is_advertised),
     is_promoted: Boolean(input.is_promoted),
     cashback_enabled: input.cashback_enabled !== false,
+    cashback_mode: input.cashback_mode ?? "inherit",
+    booking_reward_mode: input.booking_reward_mode ?? "inherit",
     deals_enabled: input.deals_enabled !== false,
     brn: asString(input.brn),
     registered_name: asString(input.registered_name),
@@ -1420,6 +1428,8 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     is_advertised: Boolean(input.is_advertised),
     is_promoted: Boolean(input.is_promoted),
     cashback_enabled: input.cashback_enabled !== false,
+    cashback_mode: input.cashback_mode ?? "inherit",
+    booking_reward_mode: input.booking_reward_mode ?? "inherit",
     deals_enabled: input.deals_enabled !== false,
     brn: asString(input.brn),
     registered_name: asString(input.registered_name),

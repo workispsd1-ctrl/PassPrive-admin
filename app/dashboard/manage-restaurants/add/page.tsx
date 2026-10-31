@@ -443,6 +443,7 @@ export default function AddRestaurantPage() {
         is_advertised: form.is_advertised,
         is_promoted: form.is_promoted,
         cashback_enabled: form.cashback_enabled,
+        cashback_mode: form.cashback_enabled ? "inherit" : "off",
         deals_enabled: form.deals_enabled,
         brn: form.brn,
         registered_name: form.registered_name,

@@ -502,6 +502,8 @@ export default function StoreDetailPage() {
         on_boarded: !!store.on_boarded,
         is_promoted: !!store.is_promoted,
         cashback_enabled: store.cashback_enabled !== false,
+        cashback_mode: store.cashback_mode ?? "inherit",
+        booking_mode: store.booking_mode ?? "inherit",
         deals_enabled: store.deals_enabled !== false,
         logo_url: finalLogoUrl || null,
         cover_image: finalCoverUrl || null,
@@ -727,7 +729,7 @@ export default function StoreDetailPage() {
               promoted={!!store.is_promoted}
               onPromotedChange={(value) => setStore({ ...store, is_promoted: value })}
               cashbackEnabled={store.cashback_enabled !== false}
-              onCashbackChange={(value) => setStore({ ...store, cashback_enabled: value })}
+              onCashbackChange={(value) => setStore({ ...store, cashback_enabled: value, cashback_mode: value ? "on" : "off" })}
               dealsEnabled={store.deals_enabled !== false}
               onDealsChange={(value) => setStore({ ...store, deals_enabled: value })}
               dealsContent={
@@ -745,11 +747,44 @@ export default function StoreDetailPage() {
                 setStore({
                   ...store,
                   booking_enabled: next.booking,
+                  booking_mode: next.booking === (store.booking_enabled === true) ? store.booking_mode : next.booking ? "on" : "off",
                   pay_bill_enabled: next.payBill,
                   service_level: togglesToServiceLevel(next),
                 })
               }
             />
+          </Field>
+          {(store.store_type || "PRODUCT") === "SERVICE" && (
+            <Field label="Book a table setting">
+              <select
+                className="h-10 w-full rounded-md border px-3 text-sm"
+                disabled={!editMode}
+                value={store.booking_mode ?? "inherit"}
+                onChange={(e) => setStore({ ...store, booking_mode: e.target.value as "inherit" | "on" | "off" })}
+              >
+                <option value="inherit">Follow global setting</option>
+                <option value="on">Always on for this store</option>
+                <option value="off">Always off for this store</option>
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The global switch for service stores is in Platform Settings. A store set to on or off ignores it.
+              </p>
+            </Field>
+          )}
+          <Field label="Cashback setting">
+            <select
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              disabled={!editMode}
+              value={store.cashback_mode ?? "inherit"}
+              onChange={(e) => setStore({ ...store, cashback_mode: e.target.value as "inherit" | "on" | "off" })}
+            >
+              <option value="inherit">Follow global setting</option>
+              <option value="on">Always on for this merchant</option>
+              <option value="off">Always off for this merchant</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The global cashback switch is in Platform Settings. A merchant set to on or off ignores it.
+            </p>
           </Field>
           {store.merchant_plan === "paid" && (
             <>

@@ -118,6 +118,8 @@ export type StoreFlatRecord = Record<string, unknown> & {
   is_advertised: boolean;
   is_promoted: boolean;
   cashback_enabled: boolean;
+  cashback_mode?: "inherit" | "on" | "off";
+  booking_mode?: "inherit" | "on" | "off";
   deals_enabled: boolean;
   brn: string;
   registered_name: string;
@@ -631,6 +633,8 @@ function normalizeStore({
     is_advertised: asBoolean(store.is_advertised),
     is_promoted: asBoolean(store.is_promoted),
     cashback_enabled: store.cashback_enabled !== false,
+    cashback_mode: store.cashback_mode === "on" || store.cashback_mode === "off" ? store.cashback_mode : "inherit",
+    booking_mode: store.booking_mode === "on" || store.booking_mode === "off" ? store.booking_mode : "inherit",
     deals_enabled: store.deals_enabled !== false,
     brn: asString(store.brn) ?? "",
     registered_name: asString(store.registered_name) ?? "",
@@ -793,6 +797,8 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("is_advertised", typeof store.is_advertised === "boolean" ? store.is_advertised : undefined);
   assign("is_promoted", typeof store.is_promoted === "boolean" ? store.is_promoted : undefined);
   assign("cashback_enabled", typeof store.cashback_enabled === "boolean" ? store.cashback_enabled : undefined);
+  assign("booking_mode", store.booking_mode === "inherit" || store.booking_mode === "on" || store.booking_mode === "off" ? store.booking_mode : undefined);
+  assign("cashback_mode", store.cashback_mode === "inherit" || store.cashback_mode === "on" || store.cashback_mode === "off" ? store.cashback_mode : undefined);
   assign("deals_enabled", typeof store.deals_enabled === "boolean" ? store.deals_enabled : undefined);
   assign("brn", typeof store.brn === "string" ? asString(store.brn) : undefined);
   assign("registered_name", typeof store.registered_name === "string" ? asString(store.registered_name) : undefined);

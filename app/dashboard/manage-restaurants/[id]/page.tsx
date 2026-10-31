@@ -869,7 +869,7 @@ export default function RestaurantDetailPage() {
               promoted={restaurant.is_promoted}
               onPromotedChange={(value) => setRestaurant({ ...restaurant, is_promoted: value })}
               cashbackEnabled={restaurant.cashback_enabled}
-              onCashbackChange={(value) => setRestaurant({ ...restaurant, cashback_enabled: value })}
+              onCashbackChange={(value) => setRestaurant({ ...restaurant, cashback_enabled: value, cashback_mode: value ? "on" : "off" })}
               dealsEnabled={restaurant.deals_enabled}
               onDealsChange={(value) => setRestaurant({ ...restaurant, deals_enabled: value })}
               dealsContent={
@@ -893,6 +893,36 @@ export default function RestaurantDetailPage() {
                 })
               }
             />
+          </Field>
+          <Field label="Cashback setting">
+            <select
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              disabled={!editMode}
+              value={restaurant.cashback_mode ?? "inherit"}
+              onChange={(e) => setRestaurant({ ...restaurant, cashback_mode: e.target.value as "inherit" | "on" | "off" })}
+            >
+              <option value="inherit">Follow global setting</option>
+              <option value="on">Always on for this merchant</option>
+              <option value="off">Always off for this merchant</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The global cashback switch is in Platform Settings. A merchant set to on or off ignores it.
+            </p>
+          </Field>
+          <Field label="Table booking cashback">
+            <select
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              disabled={!editMode}
+              value={restaurant.booking_reward_mode ?? "inherit"}
+              onChange={(e) => setRestaurant({ ...restaurant, booking_reward_mode: e.target.value as "inherit" | "on" | "off" })}
+            >
+              <option value="inherit">Follow global setting</option>
+              <option value="on">Always give booking cashback here</option>
+              <option value="off">Never give booking cashback here</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Guests earn the booking cashback set in Platform Settings. The Earn Privé Credits master switch overrides this.
+            </p>
           </Field>
           <Field label="Book a table setting">
             <select
