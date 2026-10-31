@@ -9,7 +9,9 @@ import { Switch } from "@/components/ui/switch";
 type Settings = {
   booking_global_enabled: boolean;
   booking_reward_amount: number;
+  booking_reward_enabled: boolean;
   updated_at: string;
+  rewards: { pending: number; released_amount: number };
   counts: { inherit: number; on: number; off: number; bookable: number };
 };
 
@@ -23,6 +25,7 @@ export default function PlatformSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [globalOn, setGlobalOn] = useState(false);
   const [amount, setAmount] = useState("");
+  const [rewardOn, setRewardOn] = useState(true);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -38,6 +41,7 @@ export default function PlatformSettingsPage() {
       setSettings(next);
       setGlobalOn(next.booking_global_enabled);
       setAmount(String(Number(next.booking_reward_amount)));
+      setRewardOn(next.booking_reward_enabled);
     });
     return () => {
       alive = false;
@@ -47,7 +51,10 @@ export default function PlatformSettingsPage() {
   const amountNum = Number(amount);
   const amountValid = amount.trim() !== "" && Number.isFinite(amountNum) && amountNum >= 0 && amountNum <= 1000;
   const changed =
-    !!settings && (globalOn !== settings.booking_global_enabled || amountNum !== Number(settings.booking_reward_amount));
+    !!settings &&
+    (globalOn !== settings.booking_global_enabled ||
+      rewardOn !== settings.booking_reward_enabled ||
+      amountNum !== Number(settings.booking_reward_amount));
 
   const save = async () => {
     if (!settings || !amountValid) return;
@@ -56,10 +63,14 @@ export default function PlatformSettingsPage() {
       const verb = globalOn ? "turn ON" : "turn OFF";
       if (!window.confirm(`This will ${verb} Book a table for ${affected} restaurants that follow the global setting. Continue?`)) return;
     }
+    if (!rewardOn && settings.booking_reward_enabled) {
+      if (!window.confirm("Stop table booking cashback? New bookings will not earn Privé Credits. Rewards already pending still unlock after the visit.")) return;
+    }
     setBusy(true);
     const { data, error } = await supabaseBrowser.rpc("admin_update_platform_settings", {
       p_booking_global_enabled: globalOn,
       p_booking_reward_amount: Math.round(amountNum * 100) / 100,
+      p_booking_reward_enabled: rewardOn,
     });
     setBusy(false);
     if (error) {
@@ -117,12 +128,22 @@ export default function PlatformSettingsPage() {
           </section>
 
           <section className="space-y-3 rounded-xl border bg-white p-5">
-            <div>
+            <div className="flex items-start justify-between gap-4">
               <h2 className="font-semibold">Table booking cashback</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{rewardOn ? "On" : "Stopped"}</span>
+                <Switch checked={rewardOn} onCheckedChange={setRewardOn} disabled={busy} />
+              </div>
+            </div>
+            <div>
               <p className="text-sm text-muted-foreground">
                 Privé Credits a guest earns for each table booked in the app. It shows as pending when the booking is confirmed and is
                 credited once the visit is proven (receipt scan, bill paid through PassPrive, or the restaurant marks it complete) within 2 days.
-                Set to 0 to stop new rewards. Changes apply to bookings confirmed from now on.
+                Turn the switch off to stop new rewards; rewards already pending still unlock after the visit. Changes apply to bookings
+                confirmed from now on.
+              </p>
+              <p className="mt-2 text-sm">
+                {settings.rewards.pending} pending now · MUR {Number(settings.rewards.released_amount).toLocaleString("en-US")} credited so far
               </p>
             </div>
             <div className="flex items-center gap-2">
