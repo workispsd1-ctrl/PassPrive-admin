@@ -81,6 +81,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Promotional Cards", href: "/dashboard/promotional-cards", iconSrc: "/highlight.png" },
   { title: "Bank Offers", href: "/dashboard/offers-for-you", iconSrc: "/request_quote.png" },
   { title: "Gift Events", href: "/dashboard/gift-events", icon: Gift },
+  { title: "Treasure Hunts", href: "/dashboard/treasure-hunts", icon: Target },
   { title: "Subscriptions", href: "/dashboard/subscription-plans", iconSrc: "/subscriptions.png" },
   { title: "Cashback Boosts", href: "/dashboard/cashback-boosts", icon: Zap },
   { title: "Receipt Claims", href: "/dashboard/receipt-claims", icon: Target },

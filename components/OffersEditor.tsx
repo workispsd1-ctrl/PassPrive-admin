@@ -52,6 +52,31 @@ function amountLabel(offerType?: string | null) {
 
 const toNumber = (value: string) => (value ? Number(value) : null);
 
+const TIER_FIELDS = [
+  { key: "free", label: "Free up to %", share: 0.25 },
+  { key: "plus", label: "Plus up to %", share: 0.5 },
+  { key: "black", label: "Black up to %", share: 1 },
+] as const;
+
+const isPercentType = (offerType?: string | null) => {
+  const type = offerType?.toLowerCase();
+  return type === "percentage" || type === "percent";
+};
+
+function tierPercents(offer: EditableOffer): Record<string, number> {
+  const raw = offer.metadata?.tier_percents;
+  return raw && typeof raw === "object" ? (raw as Record<string, number>) : {};
+}
+
+function tierOrderWarning(offer: EditableOffer) {
+  const set = tierPercents(offer);
+  const value = (key: string, share: number) =>
+    Number(set[key]) || (Number(offer.discount_value) || 0) * share;
+  const [free, plus, black] = TIER_FIELDS.map((field) => value(field.key, field.share));
+  if (free > plus || plus > black) return "Each tier should be at least as high as the tier below it.";
+  return null;
+}
+
 export default function OffersEditor<T extends EditableOffer>({
   offers,
   onChange,
@@ -69,6 +94,16 @@ export default function OffersEditor<T extends EditableOffer>({
   const pins = useRedeemPins(storeId ? "store_offer" : "restaurant_offer", storeId || restaurantId, disabled);
   const update = (index: number, patch: Partial<EditableOffer>) =>
     onChange(offers.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)));
+  const updateTier = (index: number, tier: string, value: number | null) => {
+    const offer = offers[index];
+    const next = { ...tierPercents(offer) };
+    if (value && value > 0) next[tier] = Math.min(100, value);
+    else delete next[tier];
+    const metadata = { ...(offer.metadata || {}) };
+    if (Object.keys(next).length) metadata.tier_percents = next;
+    else delete metadata.tier_percents;
+    update(index, { metadata });
+  };
 
   return (
     <div className="space-y-4">
@@ -85,6 +120,33 @@ export default function OffersEditor<T extends EditableOffer>({
             ))}
           </select>
           <Input className={inputClass} disabled={disabled} type="number" min={0} step="0.01" placeholder={amountLabel(offer.offer_type)} value={offer.discount_value ?? ""} onChange={(e) => update(index, { discount_value: toNumber(e.target.value) })} />
+          {isPercentType(offer.offer_type) ? (
+            <div className="col-span-2 space-y-2 rounded-md border border-gray-200 p-3">
+              <p className="text-sm font-medium">Deal reveal % by plan</p>
+              <p className="text-xs text-gray-500">
+                Each member reveals a random % up to their plan&apos;s cap: Free from 1%, Plus from the Free cap, Black from the Plus cap. Leave empty to use ¼, ½ and the full discount.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {TIER_FIELDS.map((field) => (
+                  <label key={field.key} className="space-y-1 text-xs text-gray-600">
+                    <span>{field.label}</span>
+                    <Input
+                      className={inputClass}
+                      disabled={disabled}
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      placeholder={offer.discount_value ? String(Number((offer.discount_value * field.share).toFixed(2))) : ""}
+                      value={tierPercents(offer)[field.key] ?? ""}
+                      onChange={(e) => updateTier(index, field.key, toNumber(e.target.value))}
+                    />
+                  </label>
+                ))}
+              </div>
+              {tierOrderWarning(offer) ? <p className="text-xs text-red-600">{tierOrderWarning(offer)}</p> : null}
+            </div>
+          ) : null}
           <Input className={inputClass} disabled={disabled} type="number" min={0} step="0.01" placeholder="Minimum spend" value={offer.min_spend ?? ""} onChange={(e) => update(index, { min_spend: toNumber(e.target.value) })} />
           <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
             <span className="text-sm">Active</span>
