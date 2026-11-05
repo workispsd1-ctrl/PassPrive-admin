@@ -40,6 +40,7 @@ export async function loadTierPlans() {
 
   return (data || [])
     .filter((row) => typeof row.tier === "string" && row.tier.trim())
+    .filter((row, i, rows) => rows.findIndex((r) => r.tier === row.tier) === i)
     .map((row) => ({
       tier: String(row.tier).trim(),
       plan_name: String(row.plan_name ?? "").trim(),

@@ -1246,6 +1246,7 @@ export default function RestaurantDetailPage() {
       </Section>
 
       <Section title="Offers">
+        {restaurant.id ? <div className="mb-4"><NfcTagCard kind="restaurant" merchantId={restaurant.id} /></div> : null}
         <OffersEditor
           offers={restaurant.offers}
           restaurantId={restaurant.id}

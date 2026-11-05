@@ -19,6 +19,11 @@ type Settings = {
   booking_reward_enabled: boolean;
   booking_reward_amount: number;
   booking_reward_min_bill: number;
+  referral_enabled: boolean;
+  referral_reward_amount: number;
+  referral_min_bill: number;
+  referral_referee_amount: number;
+  referral_max_total: number;
   updated_at: string;
   counts: {
     restaurants: { booking: ModeCounts; cashback: ModeCounts; reward: ModeCounts };
@@ -26,6 +31,7 @@ type Settings = {
     stores: { cashback: ModeCounts };
   };
   rewards: { pending: number; released_amount: number };
+  referrals: { pending: number; rewarded: number; credited_amount: number };
 };
 
 type Flags = Pick<
@@ -38,6 +44,7 @@ type Flags = Pick<
   | "cashback_earn_enabled"
   | "cashback_burn_enabled"
   | "booking_reward_enabled"
+  | "referral_enabled"
 >;
 
 const FLAG_KEYS: (keyof Flags)[] = [
@@ -49,6 +56,7 @@ const FLAG_KEYS: (keyof Flags)[] = [
   "cashback_earn_enabled",
   "cashback_burn_enabled",
   "booking_reward_enabled",
+  "referral_enabled",
 ];
 
 const LABELS: Record<keyof Flags, string> = {
@@ -60,6 +68,7 @@ const LABELS: Record<keyof Flags, string> = {
   cashback_earn_enabled: "Earn Privé Credits (master)",
   cashback_burn_enabled: "Use Privé Credits (master)",
   booking_reward_enabled: "Table booking cashback",
+  referral_enabled: "Refer a friend",
 };
 
 function stamp(value: string | null | undefined) {
@@ -118,6 +127,10 @@ export default function PlatformSettingsPage() {
   const [flags, setFlags] = useState<Flags | null>(null);
   const [amount, setAmount] = useState("");
   const [minBill, setMinBill] = useState("");
+  const [refAmount, setRefAmount] = useState("");
+  const [refMinBill, setRefMinBill] = useState("");
+  const [refReferee, setRefReferee] = useState("");
+  const [refCap, setRefCap] = useState("");
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -134,6 +147,10 @@ export default function PlatformSettingsPage() {
       setFlags(Object.fromEntries(FLAG_KEYS.map((k) => [k, next[k]])) as Flags);
       setAmount(String(Number(next.booking_reward_amount)));
       setMinBill(String(Number(next.booking_reward_min_bill)));
+      setRefAmount(String(Number(next.referral_reward_amount)));
+      setRefMinBill(String(Number(next.referral_min_bill)));
+      setRefReferee(String(Number(next.referral_referee_amount)));
+      setRefCap(String(Number(next.referral_max_total)));
     });
     return () => {
       alive = false;
@@ -144,17 +161,30 @@ export default function PlatformSettingsPage() {
   const minBillNum = Number(minBill);
   const amountValid = amount.trim() !== "" && Number.isFinite(amountNum) && amountNum >= 0 && amountNum <= 1000;
   const minBillValid = minBill.trim() !== "" && Number.isFinite(minBillNum) && minBillNum >= 0 && minBillNum <= 100000;
+  const refAmountNum = Number(refAmount);
+  const refMinBillNum = Number(refMinBill);
+  const refAmountValid = refAmount.trim() !== "" && Number.isFinite(refAmountNum) && refAmountNum >= 0 && refAmountNum <= 10000;
+  const refMinBillValid = refMinBill.trim() !== "" && Number.isFinite(refMinBillNum) && refMinBillNum >= 0 && refMinBillNum <= 100000;
+  const refRefereeNum = Number(refReferee);
+  const refRefereeValid = refReferee.trim() !== "" && Number.isFinite(refRefereeNum) && refRefereeNum >= 0 && refRefereeNum <= 10000;
+  const refCapNum = Number(refCap);
+  const refCapValid = refCap.trim() !== "" && Number.isFinite(refCapNum) && refCapNum >= 0 && refCapNum <= 1000000;
+  const allValid = amountValid && minBillValid && refAmountValid && refMinBillValid && refRefereeValid && refCapValid;
   const changedFlags = settings && flags ? FLAG_KEYS.filter((k) => flags[k] !== settings[k]) : [];
   const changed =
     !!settings &&
     (changedFlags.length > 0 ||
       amountNum !== Number(settings.booking_reward_amount) ||
-      minBillNum !== Number(settings.booking_reward_min_bill));
+      minBillNum !== Number(settings.booking_reward_min_bill) ||
+      refAmountNum !== Number(settings.referral_reward_amount) ||
+      refMinBillNum !== Number(settings.referral_min_bill) ||
+      refRefereeNum !== Number(settings.referral_referee_amount) ||
+      refCapNum !== Number(settings.referral_max_total));
 
   const set = (key: keyof Flags) => (value: boolean) => setFlags((prev) => (prev ? { ...prev, [key]: value } : prev));
 
   const save = async () => {
-    if (!settings || !flags || !amountValid || !minBillValid) return;
+    if (!settings || !flags || !allValid) return;
     if (changedFlags.length) {
       const lines = changedFlags.map((k) => `• ${LABELS[k]}: ${flags[k] ? "ON" : "OFF"}`).join("\n");
       if (!window.confirm(`Confirm these changes. Merchants set to "Follow global setting" are updated straight away:\n\n${lines}`)) return;
@@ -165,6 +195,10 @@ export default function PlatformSettingsPage() {
         ...flags,
         booking_reward_amount: Math.round(amountNum * 100) / 100,
         booking_reward_min_bill: Math.round(minBillNum * 100) / 100,
+        referral_reward_amount: Math.round(refAmountNum * 100) / 100,
+        referral_min_bill: Math.round(refMinBillNum * 100) / 100,
+        referral_referee_amount: Math.round(refRefereeNum * 100) / 100,
+        referral_max_total: Math.round(refCapNum * 100) / 100,
       },
     });
     setBusy(false);
@@ -323,9 +357,83 @@ export default function PlatformSettingsPage() {
             </div>
           </section>
 
+          <section className="space-y-3 rounded-xl border bg-gray-50 p-5">
+            <h2 className="font-semibold">Refer a friend</h2>
+            <Row
+              title="Referral rewards"
+              description="Every guest has a code in the app. A new guest enters a friend's code when signing up (or from Profile before their first bill). Once their first bill paid through PassPrive reaches the minimum below, both are credited: the guest who invited them and the new guest. Off: the badge and sign-up field disappear and no new codes can be entered; referrals already joined still pay out."
+              checked={flags.referral_enabled}
+              onChange={set("referral_enabled")}
+              disabled={busy}
+            >
+              <p className="mt-2 text-sm">
+                {settings.referrals.pending} waiting for a first bill · {settings.referrals.rewarded} rewarded · MUR{" "}
+                {Number(settings.referrals.credited_amount).toLocaleString("en-US")} credited so far
+              </p>
+            </Row>
+            <div className="grid gap-4 rounded-lg border bg-white p-4 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-sm font-medium">Reward for the guest who invites (Privé Credits)</span>
+                <input
+                  value={refAmount}
+                  onChange={(e) => setRefAmount(e.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  className="h-10 w-full rounded-md border px-3 text-sm"
+                  disabled={busy}
+                />
+                <span className="block text-xs text-muted-foreground">
+                  Shown on the app badge. Applies to friends who join from now on; friends already joined keep the amount shown when they joined.
+                </span>
+                {!refAmountValid ? <span className="text-xs text-red-600">Enter 0 to 10000</span> : null}
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm font-medium">Reward for the new guest (Privé Credits)</span>
+                <input
+                  value={refReferee}
+                  onChange={(e) => setRefReferee(e.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  className="h-10 w-full rounded-md border px-3 text-sm"
+                  disabled={busy}
+                />
+                <span className="block text-xs text-muted-foreground">
+                  Welcome credits for the guest who signed up with a code. 0 turns the welcome reward off.
+                </span>
+                {!refRefereeValid ? <span className="text-xs text-red-600">Enter 0 to 10000</span> : null}
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm font-medium">Most one guest can earn from referrals (MUR)</span>
+                <input
+                  value={refCap}
+                  onChange={(e) => setRefCap(e.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  className="h-10 w-full rounded-md border px-3 text-sm"
+                  disabled={busy}
+                />
+                <span className="block text-xs text-muted-foreground">
+                  Shown in the app as &ldquo;Collect up to&rdquo;. Once a guest reaches it they stop earning, but friends who join with their code still get their welcome reward. 0 means no limit.
+                </span>
+                {!refCapValid ? <span className="text-xs text-red-600">Enter 0 to 1000000</span> : null}
+              </label>
+              <label className="space-y-1">
+                <span className="text-sm font-medium">Minimum first bill (MUR)</span>
+                <input
+                  value={refMinBill}
+                  onChange={(e) => setRefMinBill(e.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  className="h-10 w-full rounded-md border px-3 text-sm"
+                  disabled={busy}
+                />
+                <span className="block text-xs text-muted-foreground">
+                  The friend&apos;s bill must be at least this much before the reward is paid.
+                </span>
+                {!refMinBillValid ? <span className="text-xs text-red-600">Enter 0 to 100000</span> : null}
+              </label>
+            </div>
+          </section>
+
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Last saved {stamp(settings.updated_at)}</span>
-            <Button onClick={save} disabled={busy || !changed || !amountValid || !minBillValid}>
+            <Button onClick={save} disabled={busy || !changed || !allValid}>
               {busy ? "Saving..." : "Save changes"}
             </Button>
           </div>

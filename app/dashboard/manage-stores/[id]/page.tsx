@@ -850,6 +850,7 @@ export default function StoreDetailPage() {
       </Section>
 
       <Section title="Offers">
+        {store.id ? <div className="mb-4"><NfcTagCard kind="store" merchantId={store.id} /></div> : null}
         <OffersEditor
           offers={store.offers || []}
           storeId={store.id}

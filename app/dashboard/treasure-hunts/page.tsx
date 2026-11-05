@@ -12,29 +12,32 @@ import { cn } from "@/lib/utils";
 const BUCKET = "treasure-hunts";
 const MAX_ICON_BYTES = 300 * 1024;
 
-const APP_SCREENS: { route: string; label: string }[] = [
-  { route: "Home", label: "Home (all tabs)" },
-  { route: "RestaurantDetails", label: "Restaurant page" },
-  { route: "StoreDetails", label: "Store page" },
-  { route: "ServiceStoreDetails", label: "Salon & spa page" },
-  { route: "MallDetails", label: "Mall page" },
-  { route: "TouristPlaceDetails", label: "Tourist place page" },
-  { route: "GlobalSearch", label: "Search" },
-  { route: "OfferRestaurants", label: "Offer results" },
-  { route: "StoreCategoryResults", label: "Store category results" },
-  { route: "Deals", label: "Deals" },
-  { route: "Profile", label: "Profile" },
-  { route: "Membership", label: "Membership" },
-  { route: "PriveCredits", label: "Privé Credits" },
-  { route: "Wallet", label: "Wallet" },
-  { route: "SavedRestaurants", label: "Saved places" },
-  { route: "YourBookings", label: "Your bookings" },
-  { route: "CollectStamps", label: "Collect stamps" },
+type Place = { slot: string; label: string; kind: "element" | "page" };
+
+const PLACES: Place[] = [
+  { slot: "home-header", label: "Home · top bar", kind: "element" },
+  { slot: "wallet-button", label: "Home · credits button", kind: "element" },
+  { slot: "home-categories", label: "Home · category icons", kind: "element" },
+  { slot: "home-top", label: "Home · banners & rails", kind: "page" },
+  { slot: "category-bar", label: "Dining, Shopping, Wellness · icon bar", kind: "element" },
+  { slot: "dining-top", label: "Dining · banners & rails", kind: "page" },
+  { slot: "shopping-top", label: "Shopping · banners & rails", kind: "page" },
+  { slot: "wellness-top", label: "Wellness · banners & rails", kind: "page" },
+  { slot: "merchant-page", label: "Any restaurant, store or salon page", kind: "page" },
+  { slot: "merchant-card", label: "Any merchant page · info card", kind: "element" },
+  { slot: "deals", label: "Deals", kind: "page" },
+  { slot: "profile", label: "Profile", kind: "page" },
+  { slot: "prive-credits", label: "Privé Credits", kind: "page" },
+  { slot: "wallet", label: "Wallet", kind: "page" },
+  { slot: "stamps", label: "Collect stamps", kind: "page" },
+  { slot: "bookings", label: "Your bookings", kind: "page" },
+  { slot: "sheet", label: "Any pop-up sheet (filters, log out…)", kind: "element" },
 ];
 
-const SCREEN_LABEL = Object.fromEntries(APP_SCREENS.map((s) => [s.route, s.label]));
+const PLACE_LABEL = Object.fromEntries(PLACES.map((p) => [p.slot, p.label]));
+const PAGE_BANDS = 4;
 
-type Spot = { id: string; screen: string; x: number; y: number };
+type Spot = { id: string; slot: string; x: number; y: number };
 
 type Hunt = {
   id: string;
@@ -60,39 +63,44 @@ function statusOf(h: Hunt): Status {
   return { label: "Live", tone: "bg-emerald-100 text-emerald-800" };
 }
 
-function makeSpots(count: number, screens: string[]): Spot[] {
+function shuffle<T>(items: T[]) {
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
+function makeSpots(count: number, slots: string[]): Spot[] {
   const rand = (min: number, max: number) => Math.round((min + Math.random() * (max - min)) * 10) / 10;
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${i + 1}-${Math.random().toString(36).slice(2, 8)}`,
-    screen: screens[Math.floor(Math.random() * screens.length)],
-    x: rand(8, 92),
-    y: rand(15, 85),
-  }));
+  const chosen = PLACES.filter((p) => slots.includes(p.slot));
+  const cells: Omit<Spot, "id">[] = [];
+  chosen.forEach((p) => {
+    if (p.kind === "element") cells.push({ slot: p.slot, x: rand(10, 90), y: rand(20, 80) });
+    if (p.kind === "page")
+      for (let band = 0; band < PAGE_BANDS; band += 1) {
+        const size = 100 / PAGE_BANDS;
+        cells.push({ slot: p.slot, x: rand(8, 92), y: rand(Math.max(6, band * size + 3), Math.min(94, (band + 1) * size - 3)) });
+      }
+  });
+  const picked = shuffle(cells).slice(0, count);
+  const pages = chosen.filter((p) => p.kind === "page");
+  const pool = pages.length ? pages : chosen;
+  while (picked.length < count && pool.length) {
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    picked.push({ slot: p.slot, x: rand(8, 92), y: rand(6, 94) });
+  }
+  return picked.map((cell, i) => ({ id: `${i + 1}-${Math.random().toString(36).slice(2, 8)}`, ...cell }));
 }
 
 function breakdown(spots: Spot[]) {
   const counts = new Map<string, number>();
-  spots.forEach((s) => counts.set(s.screen, (counts.get(s.screen) || 0) + 1));
+  spots.forEach((s) => counts.set(s.slot, (counts.get(s.slot) || 0) + 1));
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-function LemonIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <path
-        d="M4.6 14.6c-1.3-3.7.8-8.2 4.7-9.7 2.7-1 5.5-.6 7.6 1 .6-.3 1.4-.3 1.9.2s.5 1.3.2 1.9c1.6 2.1 2 4.9 1 7.6-1.5 3.9-6 6-9.7 4.7-.6.3-1.4.3-1.9-.2s-.5-1.3-.2-1.9z"
-        fill="#F6D33C"
-        stroke="#C9A20A"
-        strokeWidth={0.9}
-      />
-      <path d="M17.6 5.3c.3-1.9 1.8-3.1 3.6-3.2-.1 1.8-1.3 3.2-3.2 3.5z" fill="#5E9F3B" />
-      <ellipse cx={9.6} cy={10} rx={2.2} ry={1.1} fill="#fff" opacity={0.55} transform="rotate(-40 9.6 10)" />
-    </svg>
-  );
-}
-
 function HuntIcon({ url, className }: { url: string | null; className?: string }) {
-  return url ? <img src={url} alt="" className={cn("object-contain", className)} /> : <LemonIcon className={className} />;
+  return <img src={url || "/lemon.png"} alt="" className={cn("object-contain", className)} />;
 }
 
 function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: React.ReactNode }) {
@@ -120,7 +128,7 @@ export default function TreasureHuntsPage() {
   const [points, setPoints] = useState("50");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [screens, setScreens] = useState<string[]>(APP_SCREENS.map((s) => s.route));
+  const [places, setPlaces] = useState<string[]>(PLACES.map((p) => p.slot));
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [fileKey, setFileKey] = useState(0);
 
@@ -128,6 +136,12 @@ export default function TreasureHuntsPage() {
   useEffect(() => () => {
     if (iconPreview) URL.revokeObjectURL(iconPreview);
   }, [iconPreview]);
+
+  useEffect(() => {
+    const onFocus = () => document.visibilityState === "visible" && setReloadKey((k) => k + 1);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -160,14 +174,15 @@ export default function TreasureHuntsPage() {
     count: Number.isInteger(countNum) && countNum >= 1 && countNum <= 500 ? null : "Enter 1 to 500",
     points: pointsNum > 0 && pointsNum <= 10000 ? null : "Enter 1 to 10,000",
     dates: startsAt && endsAt && startsAt >= endsAt ? "End must be after start" : null,
-    screens: screens.length ? null : "Pick at least one screen",
+    places: places.length ? null : "Pick at least one place",
     icon: iconFile && iconFile.size > MAX_ICON_BYTES ? "Use an image under 300 KB" : null,
   };
   const valid = Object.values(errors).every((e) => !e);
-  const perScreen = screens.length && countNum > 0 ? Math.max(1, Math.round(countNum / screens.length)) : 0;
 
   const create = async () => {
     if (!valid) return;
+    const running = hunts?.find((h) => h.is_active);
+    if (running && !window.confirm(`"${running.title}" is on now. Creating this hunt switches it off. Continue?`)) return;
     setBusy(true);
     try {
       let icon_url: string | null = null;
@@ -178,16 +193,21 @@ export default function TreasureHuntsPage() {
         if (error) throw error;
         icon_url = supabaseBrowser.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
       }
+      if (running) {
+        const off = await supabaseBrowser.from("treasure_hunts").update({ is_active: false }).eq("is_active", true);
+        if (off.error) throw off.error;
+      }
       const { error } = await supabaseBrowser.from("treasure_hunts").insert({
+        is_active: true,
         title: title.trim(),
         icon_url,
         reward_points: Math.round(pointsNum * 100) / 100,
-        spots: makeSpots(countNum, screens),
+        spots: makeSpots(countNum, places),
         starts_at: mauritiusInputToIso(startsAt),
         ends_at: mauritiusInputToIso(endsAt),
       });
       if (error) throw error;
-      showToast({ type: "success", title: "Hunt created", description: "It stays off until you switch it on." });
+      showToast({ type: "success", title: "Hunt created", description: startsAt ? "It goes live at the start time." : "It is live in the app now." });
       setIconFile(null);
       setFileKey((k) => k + 1);
       setStartsAt("");
@@ -200,11 +220,12 @@ export default function TreasureHuntsPage() {
     }
   };
 
-  const run = async (fn: () => PromiseLike<{ error: { message: string } | null }>, failTitle: string) => {
+  const run = async (fn: () => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>, failTitle: string) => {
     setBusy(true);
-    const { error } = await fn();
+    const { data, error } = await fn();
     setBusy(false);
-    if (error) showToast({ type: "error", title: failTitle, description: error.message });
+    if (error || !data?.length)
+      showToast({ type: "error", title: failTitle, description: error?.message || "Your account is not allowed to change hunts." });
     setReloadKey((k) => k + 1);
   };
 
@@ -212,38 +233,40 @@ export default function TreasureHuntsPage() {
     if (on && !window.confirm(`Switch on "${hunt.title}"? Any other hunt that is on gets switched off.`)) return;
     await run(async () => {
       if (on) await supabaseBrowser.from("treasure_hunts").update({ is_active: false }).eq("is_active", true);
-      return supabaseBrowser.from("treasure_hunts").update({ is_active: on, updated_at: new Date().toISOString() }).eq("id", hunt.id);
+      return supabaseBrowser.from("treasure_hunts").update({ is_active: on, updated_at: new Date().toISOString() }).eq("id", hunt.id).select("id");
     }, "Could not update");
   };
 
   const reshuffle = (hunt: Hunt) => {
-    if (!window.confirm(`Move all ${hunt.spots.length} icons to new random places on the same screens? Every guest's progress on this hunt restarts from 0.`)) return;
-    const huntScreens = [...new Set(hunt.spots.map((s) => s.screen))];
+    if (!window.confirm(`Move all ${hunt.spots.length} icons to new random places? Every guest's progress on this hunt restarts from 0.`)) return;
+    const known = [...new Set(hunt.spots.map((s) => s.slot))].filter((slot) => PLACE_LABEL[slot]);
+    const huntPlaces = known.length ? known : PLACES.map((p) => p.slot);
     run(
       () =>
         supabaseBrowser
           .from("treasure_hunts")
-          .update({ spots: makeSpots(hunt.spots.length, huntScreens), updated_at: new Date().toISOString() })
-          .eq("id", hunt.id),
+          .update({ spots: makeSpots(hunt.spots.length, huntPlaces), updated_at: new Date().toISOString() })
+          .eq("id", hunt.id)
+          .select("id"),
       "Could not reshuffle"
     );
   };
 
   const remove = (hunt: Hunt) => {
     if (!window.confirm(`Delete "${hunt.title}" and its find history? Credits already given stay in guests' wallets.`)) return;
-    run(() => supabaseBrowser.from("treasure_hunts").delete().eq("id", hunt.id), "Could not delete");
+    run(() => supabaseBrowser.from("treasure_hunts").delete().eq("id", hunt.id).select("id"), "Could not delete");
   };
 
-  const toggleScreen = (route: string) =>
-    setScreens((prev) => (prev.includes(route) ? prev.filter((s) => s !== route) : [...prev, route]));
+  const togglePlace = (slot: string) =>
+    setPlaces((prev) => (prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot]));
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <div>
         <h1 className="text-xl font-semibold">Treasure Hunts</h1>
         <p className="text-sm text-muted-foreground">
-          Hide small icons at random places in the app. A guest who taps every one gets the Privé Credits reward, once per hunt. Only
-          one hunt can be on at a time.
+          Hide small icons at random places in the app. A guest who taps every one gets the Privé Credits reward, once per hunt. A new
+          hunt runs on its dates straight away; use its switch to pause it. Only one hunt can be on at a time.
         </p>
       </div>
 
@@ -296,25 +319,25 @@ export default function TreasureHuntsPage() {
 
         <div className="space-y-2">
           <div className="flex items-baseline justify-between gap-4">
-            <span className="text-sm font-medium">Screens to hide icons on</span>
+            <span className="text-sm font-medium">Places to hide icons</span>
             <div className="flex gap-3 text-xs">
-              <button type="button" className="underline" onClick={() => setScreens(APP_SCREENS.map((s) => s.route))} disabled={busy}>
+              <button type="button" className="underline" onClick={() => setPlaces(PLACES.map((p) => p.slot))} disabled={busy}>
                 Select all
               </button>
-              <button type="button" className="underline" onClick={() => setScreens([])} disabled={busy}>
+              <button type="button" className="underline" onClick={() => setPlaces([])} disabled={busy}>
                 Clear
               </button>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {APP_SCREENS.map((s) => {
-              const on = screens.includes(s.route);
+            {PLACES.map((s) => {
+              const on = places.includes(s.slot);
               return (
                 <button
-                  key={s.route}
+                  key={s.slot}
                   type="button"
                   aria-pressed={on}
-                  onClick={() => toggleScreen(s.route)}
+                  onClick={() => togglePlace(s.slot)}
                   disabled={busy}
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs transition-colors",
@@ -326,11 +349,11 @@ export default function TreasureHuntsPage() {
               );
             })}
           </div>
-          {errors.screens ? (
-            <p className="text-xs text-red-600">{errors.screens}</p>
+          {errors.places ? (
+            <p className="text-xs text-red-600">{errors.places}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              About {perScreen} per screen, scattered at random. Icons stay clear of the top and bottom bars.
+              Icons are spread out: at most one per bar, button or pop-up, and up to four at different depths down each page. They scroll with the content, and every place exists for every guest, so all icons can always be found.
             </p>
           )}
         </div>
@@ -395,7 +418,7 @@ export default function TreasureHuntsPage() {
                     <dt className="text-xs text-muted-foreground">Hidden on</dt>
                     <dd className="text-xs leading-5 text-gray-700">
                       {breakdown(h.spots)
-                        .map(([screen, n]) => `${SCREEN_LABEL[screen] || screen} ${n}`)
+                        .map(([slot, n]) => `${PLACE_LABEL[slot] || "Old placement"} ${n}`)
                         .join(" · ")}
                     </dd>
                   </div>
