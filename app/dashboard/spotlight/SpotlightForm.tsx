@@ -12,6 +12,7 @@ import {
   Store,
   CalendarDays,
 } from "lucide-react";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 interface SpotlightItem {
   id?: string;
@@ -121,12 +122,14 @@ export default function SpotlightForm({ editingItem, onCancel, onDone }: Props) 
 
       let res = await fetch(buildUrl(apiPath), {
         method: editingItem?.id ? "PUT" : "POST",
+        headers: { Authorization: `Bearer ${await getTokenClient()}` },
         body: form,
       });
 
       if (res.status === 404) {
         res = await fetch(buildUrl(fallbackPath), {
           method: editingItem?.id ? "PUT" : "POST",
+          headers: { Authorization: `Bearer ${await getTokenClient()}` },
           body: form,
         });
       }

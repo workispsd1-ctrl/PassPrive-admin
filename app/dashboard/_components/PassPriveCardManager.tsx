@@ -31,6 +31,7 @@ import {
 import { showToast } from "@/hooks/useToast";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -294,6 +295,7 @@ export default function PassPriveCardManager({
           method: editingCard ? "PUT" : "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${await getTokenClient()}`,
           },
           body: JSON.stringify(payload),
         });
@@ -337,6 +339,7 @@ export default function PassPriveCardManager({
       } else {
         const response = await fetch(`${API_BASE}${apiPath}/${deletingCard.id}`, {
           method: "DELETE",
+          headers: { Authorization: `Bearer ${await getTokenClient()}` },
         });
 
         if (!response.ok) {

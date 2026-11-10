@@ -49,6 +49,7 @@ import {
 import { showToast } from "@/hooks/useToast";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { SearchAndFilter } from "@/components/userComponents/SearchAndFilter";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
@@ -417,6 +418,7 @@ export default function PassPriveItemsManager({
           method: editingItem ? "PUT" : "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${await getTokenClient()}`,
           },
           body: JSON.stringify(payload),
         });
@@ -454,6 +456,7 @@ export default function PassPriveItemsManager({
       } else {
         const response = await fetch(`${API_BASE}${apiPath}/${cardId}/items/${deletingItem.id}`, {
           method: "DELETE",
+          headers: { Authorization: `Bearer ${await getTokenClient()}` },
         });
 
         if (!response.ok) {
@@ -512,6 +515,7 @@ export default function PassPriveItemsManager({
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${await getTokenClient()}`,
           },
           body: JSON.stringify({
             item_ids: items.map((item) => item.id),

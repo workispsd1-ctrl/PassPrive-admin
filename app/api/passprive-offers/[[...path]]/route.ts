@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { authorizeAdmin } from "@/app/api/support-admin/_lib";
 
 // GET handler
 export async function GET(
@@ -113,6 +114,8 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ path?: string[] }> }
 ) {
+  const auth = await authorizeAdmin(request);
+  if (auth.error) return auth.error;
   const params = await context.params;
   const path = params.path || [];
 
@@ -181,6 +184,8 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ path?: string[] }> }
 ) {
+  const auth = await authorizeAdmin(request);
+  if (auth.error) return auth.error;
   const params = await context.params;
   const path = params.path || [];
 
@@ -241,6 +246,8 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ path?: string[] }> }
 ) {
+  const auth = await authorizeAdmin(request);
+  if (auth.error) return auth.error;
   const params = await context.params;
   const path = params.path || [];
 

@@ -10,6 +10,7 @@ import {
   Filter,
   Search,
 } from "lucide-react";
+import { getTokenClient } from "@/lib/getTokenClient";
 
 const MODULE_BADGE = {
   global: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
@@ -100,9 +101,9 @@ export default function SpotlightList({ onEdit }) {
     if (!ok) return;
 
     try {
-      let res = await fetch(buildUrl(`/api/spotlight/${id}`), { method: "DELETE" });
+      let res = await fetch(buildUrl(`/api/spotlight/${id}`), { method: "DELETE", headers: { Authorization: `Bearer ${await getTokenClient()}` } });
       if (res.status === 404) {
-        res = await fetch(buildUrl(`/spotlight/${id}`), { method: "DELETE" });
+        res = await fetch(buildUrl(`/spotlight/${id}`), { method: "DELETE", headers: { Authorization: `Bearer ${await getTokenClient()}` } });
       }
 
       if (!res.ok) {
