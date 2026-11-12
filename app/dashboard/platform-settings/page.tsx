@@ -20,6 +20,7 @@ type Settings = {
   booking_reward_amount: number;
   booking_reward_min_bill: number;
   referral_enabled: boolean;
+  repeat_reward_enabled: boolean;
   referral_reward_amount: number;
   referral_min_bill: number;
   referral_referee_amount: number;
@@ -45,6 +46,7 @@ type Flags = Pick<
   | "cashback_burn_enabled"
   | "booking_reward_enabled"
   | "referral_enabled"
+  | "repeat_reward_enabled"
 >;
 
 const FLAG_KEYS: (keyof Flags)[] = [
@@ -57,6 +59,7 @@ const FLAG_KEYS: (keyof Flags)[] = [
   "cashback_burn_enabled",
   "booking_reward_enabled",
   "referral_enabled",
+  "repeat_reward_enabled",
 ];
 
 const LABELS: Record<keyof Flags, string> = {
@@ -69,6 +72,7 @@ const LABELS: Record<keyof Flags, string> = {
   cashback_burn_enabled: "Use Privé Credits (master)",
   booking_reward_enabled: "Table booking cashback",
   referral_enabled: "Refer a friend",
+  repeat_reward_enabled: "Repeat rewards (stamps)",
 };
 
 function stamp(value: string | null | undefined) {
@@ -312,6 +316,17 @@ export default function PlatformSettingsPage() {
             >
               <Counts counts={settings.counts.service_stores.cashback} liveLabel="Cashback on now" />
             </Row>
+          </section>
+
+          <section className="space-y-3 rounded-xl border bg-gray-50 p-5">
+            <h2 className="font-semibold">Repeat rewards</h2>
+            <Row
+              title="Repeat rewards (stamps)"
+              description="Default for restaurants and stores on Follow global setting. Off: stamp cards, the Home Collect Stamps banner and loyalty offers disappear from the app, and no repeat-visit discount is applied on bills. Merchants set to On keep it; merchants set to Off never have it."
+              checked={flags.repeat_reward_enabled}
+              onChange={set("repeat_reward_enabled")}
+              disabled={busy}
+            />
           </section>
 
           <section className="space-y-3 rounded-xl border bg-gray-50 p-5">

@@ -146,6 +146,15 @@ export default function DealsSection({
                   onChange={(e) => update(dealIndex, { badge_text: e.target.value })}
                 />
               </Field>
+              <Field label="Applies to">
+                <Input
+                  className={inputClass}
+                  disabled={!editMode}
+                  placeholder="e.g. lunch — leave blank for total bill"
+                  value={deal.applies_to ?? ""}
+                  onChange={(e) => update(dealIndex, { applies_to: e.target.value })}
+                />
+              </Field>
             </div>
 
             <Textarea

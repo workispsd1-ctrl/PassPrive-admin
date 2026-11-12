@@ -924,6 +924,21 @@ export default function RestaurantDetailPage() {
               Guests earn the booking cashback set in Platform Settings. The Earn Privé Credits master switch overrides this.
             </p>
           </Field>
+          <Field label="Repeat rewards (stamps)">
+            <select
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              disabled={!editMode}
+              value={restaurant.repeat_reward_mode ?? "inherit"}
+              onChange={(e) => setRestaurant({ ...restaurant, repeat_reward_mode: e.target.value as "inherit" | "on" | "off" })}
+            >
+              <option value="inherit">Follow global setting</option>
+              <option value="on">Always on for this restaurant</option>
+              <option value="off">Always off for this restaurant</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The global repeat rewards switch is in Platform Settings. The restaurant still needs repeat rewards in its subscription.
+            </p>
+          </Field>
           <Field label="Book a table setting">
             <select
               className="h-10 w-full rounded-md border px-3 text-sm"

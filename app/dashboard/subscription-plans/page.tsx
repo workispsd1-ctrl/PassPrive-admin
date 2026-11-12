@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { Plus } from "lucide-react";
@@ -110,6 +110,17 @@ export default function SubscriptionPlansPage() {
   };
 
   useEffect(() => { fetchPlans(); }, []);
+
+  const groupedPlans = useMemo(() => {
+    const groups = new Map<string, SubscriptionPlan[]>();
+    for (const plan of plans) {
+      const key = plan.tier || plan.id;
+      groups.set(key, [...(groups.get(key) || []), plan]);
+    }
+    return [...groups.values()].flatMap((rows) =>
+      rows.map((plan, i) => ({ ...plan, groupStart: i === 0, groupSize: rows.length }))
+    );
+  }, [plans]);
   useEffect(() => { if (activeTab === "partner") fetchPartnerPlans(); }, [activeTab]);
 
   const handleDeletePlan = async () => {
@@ -261,7 +272,7 @@ export default function SubscriptionPlansPage() {
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-white">
                 <tr className="border-b border-gray-200">
-                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Plan Name</th>
+                  <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Billing option</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Tier</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Amount (MUR)</th>
                   <th className="px-6 py-3 text-left text-[12px] font-semibold text-[#1D293D]">Duration</th>
@@ -274,9 +285,22 @@ export default function SubscriptionPlansPage() {
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {plans.map((plan, idx) => (
-                  <tr key={plan.id} className={`border-b border-gray-200 hover:bg-white/20 transition text-sm ${idx !== plans.length - 1 ? "border-b" : ""}`}>
-                    <td className="px-6 py-3 font-medium text-[#1D293D]">{plan.plan_name}</td>
+                {groupedPlans.map((plan, idx) => (
+                  <Fragment key={plan.id}>
+                  {plan.groupStart ? (
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <td colSpan={10} className="px-6 py-2 text-[12px] font-semibold text-[#1D293D]">
+                        {plan.plan_name}
+                        <span className="ml-2 font-normal text-gray-500">
+                          {plan.groupSize > 1
+                            ? `${plan.groupSize} billing options \u00b7 benefits, deal limits, cashback and Priv\u00e9 Credits rules stay in sync`
+                            : "1 billing option"}
+                        </span>
+                      </td>
+                    </tr>
+                  ) : null}
+                  <tr className={`border-b border-gray-200 hover:bg-white/20 transition text-sm ${idx !== groupedPlans.length - 1 ? "border-b" : ""}`}>
+                    <td className="px-6 py-3 pl-10 font-medium text-[#1D293D]">{TYPE_LABELS[plan.type] ?? plan.type}</td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
                         plan.tier === "black" ? "bg-gray-900 text-amber-300"
@@ -324,6 +348,7 @@ export default function SubscriptionPlansPage() {
                       </div>
                     </td>
                   </tr>
+                  </Fragment>
                 ))}
                 {plans.length === 0 && (
                   <tr><td colSpan={10} className="text-center py-6 text-gray-500">No customer plans found</td></tr>

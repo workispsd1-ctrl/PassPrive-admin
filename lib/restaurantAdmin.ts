@@ -27,6 +27,7 @@ export type RestaurantOfferInput = {
   title: string;
   description?: string | null;
   badge_text?: string | null;
+  applies_to?: string | null;
   offer_type?: string | null;
   discount_value?: number | null;
   min_spend?: number | null;
@@ -85,6 +86,7 @@ export type RestaurantDealInput = {
   title: string;
   description?: string | null;
   badge_text?: string | null;
+  applies_to?: string | null;
   image_url?: string | null;
   terms?: string[];
   deal_type: string;
@@ -367,6 +369,7 @@ export type RestaurantFlatRecord = {
   cashback_enabled: boolean;
   cashback_mode: "inherit" | "on" | "off";
   booking_reward_mode: "inherit" | "on" | "off";
+  repeat_reward_mode: "inherit" | "on" | "off";
   deals_enabled: boolean;
   brn: string;
   registered_name: string;
@@ -651,6 +654,7 @@ function normalizeOfferRow(row: DatabaseRow): RestaurantOfferInput {
     title: asString(row?.title) ?? "",
     description: asString(row?.description),
     badge_text: asString(row?.badge_text),
+    applies_to: asString(row?.applies_to),
     offer_type: uiOfferType || normalizedOfferType,
     discount_value: asNumber(row?.discount_value),
     min_spend: asNumber(row?.min_spend),
@@ -733,6 +737,7 @@ export function normalizeRestaurantRecord({
     cashback_enabled: restaurant?.cashback_enabled !== false,
     cashback_mode: restaurant?.cashback_mode === "on" || restaurant?.cashback_mode === "off" ? restaurant.cashback_mode : "inherit",
     booking_reward_mode: restaurant?.booking_reward_mode === "on" || restaurant?.booking_reward_mode === "off" ? restaurant.booking_reward_mode : "inherit",
+    repeat_reward_mode: restaurant?.repeat_reward_mode === "on" || restaurant?.repeat_reward_mode === "off" ? restaurant.repeat_reward_mode : "inherit",
     deals_enabled: restaurant?.deals_enabled !== false,
     brn: asString(restaurant?.brn) ?? "",
     registered_name: asString(restaurant?.registered_name) ?? "",
@@ -925,6 +930,7 @@ export function mergeRestaurantRecords(
     cashback_enabled: primary.cashback_enabled,
     cashback_mode: primary.cashback_mode,
     booking_reward_mode: primary.booking_reward_mode,
+    repeat_reward_mode: primary.repeat_reward_mode,
     deals_enabled: primary.deals_enabled,
     brn: primary.brn || secondary.brn,
     registered_name: primary.registered_name || secondary.registered_name,
@@ -1392,6 +1398,7 @@ export function buildRestaurantBasePayload(input: Partial<RestaurantFlatRecord>)
     cashback_enabled: input.cashback_enabled !== false,
     cashback_mode: input.cashback_mode ?? "inherit",
     booking_reward_mode: input.booking_reward_mode ?? "inherit",
+    repeat_reward_mode: input.repeat_reward_mode ?? "inherit",
     deals_enabled: input.deals_enabled !== false,
     brn: asString(input.brn),
     registered_name: asString(input.registered_name),
@@ -1430,6 +1437,7 @@ export function buildRestaurantInsertPayload(input: Partial<RestaurantFlatRecord
     cashback_enabled: input.cashback_enabled !== false,
     cashback_mode: input.cashback_mode ?? "inherit",
     booking_reward_mode: input.booking_reward_mode ?? "inherit",
+    repeat_reward_mode: input.repeat_reward_mode ?? "inherit",
     deals_enabled: input.deals_enabled !== false,
     brn: asString(input.brn),
     registered_name: asString(input.registered_name),
@@ -1577,6 +1585,7 @@ export function buildOfferRows(restaurantId: string, offers: RestaurantOfferInpu
       title: asString(offer.title) ?? "",
       description: asString(offer.description),
       badge_text: asString(offer.badge_text),
+      applies_to: asString(offer.applies_to),
       offer_type:
         (() => {
           const offerType = asString(offer.offer_type)?.toLowerCase();
@@ -1757,6 +1766,7 @@ export function defaultDeal(): RestaurantDealInput {
     title: "",
     description: null,
     badge_text: null,
+    applies_to: null,
     image_url: null,
     terms: [],
     deal_type: "percentage",
@@ -1806,6 +1816,7 @@ export function normalizeDealRow(row: DatabaseRow, tierRows: DatabaseRow[]): Res
     title: asString(row?.title) ?? "",
     description: asString(row?.description),
     badge_text: asString(row?.badge_text),
+    applies_to: asString(row?.applies_to),
     image_url: asString(row?.image_url),
     terms: asStringArray(row?.terms),
     deal_type: asString(row?.deal_type) ?? "percentage",
@@ -1984,6 +1995,7 @@ export function buildDealRows(restaurantId: string, deals: RestaurantDealInput[]
       title,
       description: asString(deal.description),
       badge_text: asString(deal.badge_text),
+      applies_to: asString(deal.applies_to),
       image_url: asString(deal.image_url),
       terms: asStringArray(deal.terms),
       deal_type: deal.deal_type,

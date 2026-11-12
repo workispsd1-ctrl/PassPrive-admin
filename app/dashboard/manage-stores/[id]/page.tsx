@@ -503,6 +503,7 @@ export default function StoreDetailPage() {
         is_promoted: !!store.is_promoted,
         cashback_enabled: store.cashback_enabled !== false,
         cashback_mode: store.cashback_mode ?? "inherit",
+        repeat_reward_mode: store.repeat_reward_mode ?? "inherit",
         booking_mode: store.booking_mode ?? "inherit",
         deals_enabled: store.deals_enabled !== false,
         logo_url: finalLogoUrl || null,
@@ -540,6 +541,7 @@ export default function StoreDetailPage() {
           title: typeof offer.title === "string" ? offer.title : null,
           description: typeof offer.description === "string" ? offer.description : null,
           badge_text: typeof offer.badge_text === "string" ? offer.badge_text : null,
+          applies_to: typeof offer.applies_to === "string" ? offer.applies_to : null,
           offer_type: typeof offer.offer_type === "string" ? offer.offer_type : null,
           discount_value:
             typeof offer.discount_value === "number" ? offer.discount_value : null,
@@ -784,6 +786,21 @@ export default function StoreDetailPage() {
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
               The global cashback switch is in Platform Settings. A merchant set to on or off ignores it.
+            </p>
+          </Field>
+          <Field label="Repeat rewards (stamps)">
+            <select
+              className="h-10 w-full rounded-md border px-3 text-sm"
+              disabled={!editMode}
+              value={store.repeat_reward_mode ?? "inherit"}
+              onChange={(e) => setStore({ ...store, repeat_reward_mode: e.target.value as "inherit" | "on" | "off" })}
+            >
+              <option value="inherit">Follow global setting</option>
+              <option value="on">Always on for this store</option>
+              <option value="off">Always off for this store</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The global repeat rewards switch is in Platform Settings. The store still needs repeat rewards in its subscription.
             </p>
           </Field>
           {store.merchant_plan === "paid" && (

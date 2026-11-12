@@ -11,6 +11,7 @@ export type EditableOffer = {
   title?: string | null;
   description?: string | null;
   badge_text?: string | null;
+  applies_to?: string | null;
   offer_type?: string | null;
   discount_value?: number | null;
   min_spend?: number | null;
@@ -33,6 +34,7 @@ export function emptyOffer(): EditableOffer {
     title: "",
     description: "",
     badge_text: "",
+    applies_to: "",
     offer_type: "",
     discount_value: null,
     min_spend: null,
@@ -111,6 +113,7 @@ export default function OffersEditor<T extends EditableOffer>({
         <div key={index} className="grid grid-cols-2 gap-4 rounded-md border border-gray-200 p-4">
           <Input className={inputClass} disabled={disabled} placeholder="Title" value={offer.title || ""} onChange={(e) => update(index, { title: e.target.value })} />
           <Input className={inputClass} disabled={disabled} placeholder="Badge text (e.g. Flat 20% OFF)" value={offer.badge_text || ""} onChange={(e) => update(index, { badge_text: e.target.value })} />
+          <Input className={inputClass} disabled={disabled} placeholder="Applies to (e.g. sunglasses) — blank = total bill" value={offer.applies_to || ""} onChange={(e) => update(index, { applies_to: e.target.value })} />
           <select className={`${inputClass} rounded-md px-3 py-2`} disabled={disabled} value={offer.offer_type || ""} onChange={(e) => update(index, { offer_type: e.target.value })}>
             <option value="">Select offer type</option>
             {OFFER_TYPE_OPTIONS.map((option) => (

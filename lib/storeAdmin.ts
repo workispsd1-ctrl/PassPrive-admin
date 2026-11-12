@@ -25,6 +25,7 @@ export type StoreOfferInput = {
   title?: string | null;
   description?: string | null;
   badge_text?: string | null;
+  applies_to?: string | null;
   offer_type?: string | null;
   discount_value?: number | null;
   min_spend?: number | null;
@@ -119,6 +120,7 @@ export type StoreFlatRecord = Record<string, unknown> & {
   is_promoted: boolean;
   cashback_enabled: boolean;
   cashback_mode?: "inherit" | "on" | "off";
+  repeat_reward_mode?: "inherit" | "on" | "off";
   booking_mode?: "inherit" | "on" | "off";
   deals_enabled: boolean;
   brn: string;
@@ -437,6 +439,7 @@ function normalizeOffers(rows: DatabaseRow[]): StoreOfferInput[] {
       title: asString(row.title),
       description: asString(row.description),
       badge_text: asString(row.badge_text),
+      applies_to: asString(row.applies_to),
       offer_type: asString(row.offer_type),
       discount_value: asNumber(row.discount_value),
       min_spend: asNumber(row.min_spend),
@@ -634,6 +637,7 @@ function normalizeStore({
     is_promoted: asBoolean(store.is_promoted),
     cashback_enabled: store.cashback_enabled !== false,
     cashback_mode: store.cashback_mode === "on" || store.cashback_mode === "off" ? store.cashback_mode : "inherit",
+    repeat_reward_mode: store.repeat_reward_mode === "on" || store.repeat_reward_mode === "off" ? store.repeat_reward_mode : "inherit",
     booking_mode: store.booking_mode === "on" || store.booking_mode === "off" ? store.booking_mode : "inherit",
     deals_enabled: store.deals_enabled !== false,
     brn: asString(store.brn) ?? "",
@@ -799,6 +803,7 @@ export function buildStorePayload(store: Partial<StoreFlatRecord> & Record<strin
   assign("cashback_enabled", typeof store.cashback_enabled === "boolean" ? store.cashback_enabled : undefined);
   assign("booking_mode", store.booking_mode === "inherit" || store.booking_mode === "on" || store.booking_mode === "off" ? store.booking_mode : undefined);
   assign("cashback_mode", store.cashback_mode === "inherit" || store.cashback_mode === "on" || store.cashback_mode === "off" ? store.cashback_mode : undefined);
+  assign("repeat_reward_mode", store.repeat_reward_mode === "inherit" || store.repeat_reward_mode === "on" || store.repeat_reward_mode === "off" ? store.repeat_reward_mode : undefined);
   assign("deals_enabled", typeof store.deals_enabled === "boolean" ? store.deals_enabled : undefined);
   assign("brn", typeof store.brn === "string" ? asString(store.brn) : undefined);
   assign("registered_name", typeof store.registered_name === "string" ? asString(store.registered_name) : undefined);
@@ -873,6 +878,7 @@ function buildStoreOfferRows(storeId: string, offers: StoreRelationsInput["offer
       title: asString(offer.title),
       description: asString(offer.description),
       badge_text: asString(offer.badge_text),
+      applies_to: asString(offer.applies_to),
       offer_type: asString(offer.offer_type),
       discount_value: asNumber(offer.discount_value),
       min_spend: asNumber(offer.min_spend),
