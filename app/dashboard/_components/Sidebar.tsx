@@ -86,6 +86,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Cashback Boosts", href: "/dashboard/cashback-boosts", icon: Zap },
   { title: "Receipt Claims", href: "/dashboard/receipt-claims", icon: Target },
   { title: "Upgrade Requests", href: "/dashboard/upgrade-requests", icon: Target },
+  { title: "Booking Requests", href: "/dashboard/booking-requests", icon: Target },
   { title: "POS Terminals", href: "/dashboard/pos-terminals", icon: MonitorSmartphone },
   { title: "Settlements", href: "/dashboard/settlements", icon: Banknote },
   { title: "Platform Settings", href: "/dashboard/platform-settings", icon: SlidersHorizontal },
@@ -295,6 +296,11 @@ export default function Sidebar({
     {
       title: "Upgrade Requests",
       href: "/dashboard/upgrade-requests",
+      icon: Target,
+    },
+    {
+      title: "Booking Requests",
+      href: "/dashboard/booking-requests",
       icon: Target,
     },
     {
