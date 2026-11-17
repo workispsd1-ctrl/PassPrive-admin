@@ -10,6 +10,7 @@ import {
   createMasterForRestaurant,
   fetchRestaurantAccess,
   findMasterByEmail,
+  loginRoleForEmail,
   removeBranchAdmin,
   searchRestaurantsToAttach,
   setRestaurantMaster,
@@ -75,12 +76,30 @@ export default function RestaurantAccessPanel({ restaurantId }: { restaurantId: 
   };
 
   const createMaster = async () => {
-    if (!newMaster.full_name.trim() || !newMaster.email.trim() || newMaster.password.length < 8) {
-      showToast({ type: "error", title: "Name, email and an 8+ character password are required" });
+    if (!newMaster.email.trim()) {
+      showToast({ type: "error", title: "Enter the master's login email" });
       return;
     }
-    const ok = await run(() => createMasterForRestaurant(restaurantId, newMaster), "Master login created");
-    if (ok) setNewMaster({ full_name: "", email: "", password: "" });
+    setBusy(true);
+    try {
+      const existingRole = await loginRoleForEmail(newMaster.email);
+      if (!existingRole && (!newMaster.full_name.trim() || newMaster.password.length < 8)) {
+        showToast({ type: "error", title: "New logins need a name and an 8+ character password" });
+        return;
+      }
+      const { existing } = await createMasterForRestaurant(restaurantId, newMaster);
+      showToast({
+        type: "success",
+        title: existing ? "Existing master assigned" : "Master login created",
+        description: existing ? "Their current password is unchanged." : undefined,
+      });
+      setNewMaster({ full_name: "", email: "", password: "" });
+      await load();
+    } catch (error: unknown) {
+      showToast({ type: "error", title: "Could not save", description: error instanceof Error ? error.message : "" });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const saveLogin = async () => {
@@ -145,11 +164,11 @@ export default function RestaurantAccessPanel({ restaurantId }: { restaurantId: 
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-            <Input className={inputClass} placeholder="Master name" value={newMaster.full_name} onChange={(e) => setNewMaster({ ...newMaster, full_name: e.target.value })} />
+            <Input className={inputClass} placeholder="Master name (new login only)" value={newMaster.full_name} onChange={(e) => setNewMaster({ ...newMaster, full_name: e.target.value })} />
             <Input className={inputClass} type="email" autoComplete="off" placeholder="Master login email" value={newMaster.email} onChange={(e) => setNewMaster({ ...newMaster, email: e.target.value })} />
-            <Input className={inputClass} type="password" autoComplete="new-password" placeholder="Password (min 8)" value={newMaster.password} onChange={(e) => setNewMaster({ ...newMaster, password: e.target.value })} />
+            <Input className={inputClass} type="password" autoComplete="new-password" placeholder="Password (new login only, min 8)" value={newMaster.password} onChange={(e) => setNewMaster({ ...newMaster, password: e.target.value })} />
             <Button type="button" disabled={busy} onClick={createMaster}>
-              Create master login
+              Create or assign master
             </Button>
           </div>
         )}

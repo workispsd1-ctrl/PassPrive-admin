@@ -150,6 +150,7 @@ export default function AddRestaurantPage() {
   const [partnerPassword, setPartnerPassword] = useState("");
   const [ownerMode, setOwnerMode] = useState<"new" | "existing">("new");
   const [masterEmail, setMasterEmail] = useState("");
+  const [masterName, setMasterName] = useState("");
   const [branchAdmin, setBranchAdmin] = useState({ full_name: "", email: "", password: "" });
 
   useEffect(() => {
@@ -299,13 +300,13 @@ export default function AddRestaurantPage() {
       showToast({ type: "error", title: "Restaurant name is required" });
       return;
     }
+    if (branchAdmin.email.trim() && (!branchAdmin.full_name.trim() || branchAdmin.password.length < 8)) {
+      showToast({ type: "error", title: "Branch partner needs a name and an 8+ character password" });
+      return;
+    }
     if (ownerMode === "existing") {
       if (!masterEmail.trim()) {
         showToast({ type: "error", title: "Master account email is required" });
-        return;
-      }
-      if (branchAdmin.email.trim() && (!branchAdmin.full_name.trim() || branchAdmin.password.length < 8)) {
-        showToast({ type: "error", title: "Branch partner needs a name and an 8+ character password" });
         return;
       }
     } else {
@@ -395,7 +396,7 @@ export default function AddRestaurantPage() {
       const partner = ownerMode === "existing" ? await findMasterByEmail(masterEmail) : await createPartnerViaBackend({
         email: partnerEmail.trim().toLowerCase(),
         password: partnerPassword,
-        full_name: form.name.trim(),
+        full_name: masterName.trim() || form.name.trim(),
         phone: form.phone || undefined,
         role: PARTNER_ROLE,
       });
@@ -476,7 +477,7 @@ export default function AddRestaurantPage() {
       }
 
       createdRestaurantId = restaurant.id;
-      if (ownerMode === "existing" && branchAdmin.email.trim()) {
+      if (branchAdmin.email.trim()) {
         await addBranchAdmin(restaurant.id, branchAdmin);
       }
       await saveAuthorisedContact("restaurant", restaurant.id, contact);
@@ -719,7 +720,7 @@ export default function AddRestaurantPage() {
         <div className="flex gap-4 text-sm">
           <label className="flex items-center gap-2">
             <input type="radio" checked={ownerMode === "new"} onChange={() => setOwnerMode("new")} />
-            New restaurant (creates a master login)
+            New master (creates the master login)
           </label>
           <label className="flex items-center gap-2">
             <input type="radio" checked={ownerMode === "existing"} onChange={() => setOwnerMode("existing")} />
@@ -729,20 +730,18 @@ export default function AddRestaurantPage() {
         {ownerMode === "existing" ? (
           <div className="space-y-3">
             <Input type="email" className={inputClass} placeholder="Master account login email" value={masterEmail} onChange={(e) => setMasterEmail(e.target.value)} />
-            <p className="text-xs text-muted-foreground">Optional: a login for whoever runs this branch. They will manage only this branch.</p>
-            <div className="grid grid-cols-3 gap-3">
-              <Input className={inputClass} placeholder="Branch partner name" value={branchAdmin.full_name} onChange={(e) => setBranchAdmin({ ...branchAdmin, full_name: e.target.value })} />
-              <Input type="email" className={inputClass} placeholder="Branch partner email" value={branchAdmin.email} onChange={(e) => setBranchAdmin({ ...branchAdmin, email: e.target.value })} />
-              <Input type="password" className={inputClass} placeholder="Password (min 8)" value={branchAdmin.password} onChange={(e) => setBranchAdmin({ ...branchAdmin, password: e.target.value })} />
-            </div>
           </div>
         ) : (
         <>
-        <Input type="email" className={inputClass} placeholder="Partner Email (login)" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} />
+        <p className="text-xs text-muted-foreground">
+          The master (brand owner) sees and manages every branch. This restaurant becomes their first branch.
+        </p>
+        <Input className={inputClass} placeholder="Master name (defaults to the restaurant name)" value={masterName} onChange={(e) => setMasterName(e.target.value)} />
+        <Input type="email" className={inputClass} placeholder="Master Email (login)" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} />
         <div className="space-y-1 relative">
-          <label className="text-sm font-medium">Partner Password</label>
+          <label className="text-sm font-medium">Master Password</label>
           <div className="relative">
-            <Input type={showPassword ? "text" : "password"} value={partnerPassword} onChange={(e) => setPartnerPassword(e.target.value)} className="pr-10" placeholder="Partner Password" />
+            <Input type={showPassword ? "text" : "password"} value={partnerPassword} onChange={(e) => setPartnerPassword(e.target.value)} className="pr-10" placeholder="Master Password" />
             <span className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </span>
@@ -750,6 +749,14 @@ export default function AddRestaurantPage() {
         </div>
         </>
         )}
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Optional: a login for whoever runs this branch. They will see and manage only this branch.</p>
+          <div className="grid grid-cols-3 gap-3">
+            <Input className={inputClass} placeholder="Branch partner name" value={branchAdmin.full_name} onChange={(e) => setBranchAdmin({ ...branchAdmin, full_name: e.target.value })} />
+            <Input type="email" className={inputClass} placeholder="Branch partner email" value={branchAdmin.email} onChange={(e) => setBranchAdmin({ ...branchAdmin, email: e.target.value })} />
+            <Input type="password" className={inputClass} placeholder="Password (min 8)" value={branchAdmin.password} onChange={(e) => setBranchAdmin({ ...branchAdmin, password: e.target.value })} />
+          </div>
+        </div>
       </section>
 
       <section className="space-y-4 border-b py-8">

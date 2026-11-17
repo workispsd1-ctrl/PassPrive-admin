@@ -106,6 +106,7 @@ function EmptyState({ searchTerm }: { searchTerm: string }) {
 
 function RestaurantsPageContent() {
   const router = useRouter();
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -215,9 +216,27 @@ function RestaurantsPageContent() {
         </div>
       </div>
 
+      {addMenuOpen && (
+        <div className="fixed bottom-24 right-6 z-50 w-48 overflow-hidden rounded-xl border bg-white shadow-lg">
+          <button
+            type="button"
+            className="block w-full px-4 py-3 text-left text-sm hover:bg-gray-50"
+            onClick={() => router.push("/dashboard/manage-restaurants/add")}
+          >
+            Add restaurant
+          </button>
+          <button
+            type="button"
+            className="block w-full border-t px-4 py-3 text-left text-sm hover:bg-gray-50"
+            onClick={() => router.push("/dashboard/manage-restaurants/masters/new")}
+          >
+            Add master &amp; branches
+          </button>
+        </div>
+      )}
       <Button
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#FF4800] text-white shadow-lg hover:bg-[#D43B00]"
-        onClick={() => router.push("/dashboard/manage-restaurants/add")}
+        onClick={() => setAddMenuOpen((open) => !open)}
       >
         <Plus className="h-6 w-6" />
       </Button>

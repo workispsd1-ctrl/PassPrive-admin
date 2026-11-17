@@ -41,6 +41,16 @@ export async function loginRoleForEmail(email: string): Promise<string | null> {
   return data ? String(data.role || "").toLowerCase() : null;
 }
 
+export async function fetchMasterBranches(masterId: string): Promise<BranchRow[]> {
+  const { data, error } = await supabaseBrowser
+    .from("restaurants")
+    .select("id, name, area, city, is_active")
+    .eq("owner_user_id", masterId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data as BranchRow[]) || [];
+}
+
 export async function findMasterByEmail(email: string): Promise<AccessUser> {
   const { data, error } = await supabaseBrowser
     .from("users")
@@ -50,7 +60,7 @@ export async function findMasterByEmail(email: string): Promise<AccessUser> {
   if (error) throw error;
   if (!data) throw new Error("No account found with that email.");
   if (String(data.role || "").toLowerCase() !== "restaurantpartner") {
-    throw new Error("That account is not a restaurant master (restaurantpartner) login.");
+    throw new Error(`That email already belongs to a ${data.role || "non-merchant"} account, so it can't be a restaurant master. Use a different email.`);
   }
   return { id: data.id, full_name: data.full_name, email: data.email };
 }
@@ -139,25 +149,34 @@ export async function updateLoginCredentials(userId: string, input: { email?: st
   if (!res.ok) throw new Error(json?.error || "Failed to update the login.");
 }
 
+export async function ensureMaster(input: { full_name: string; email: string; password: string }) {
+  const email = input.email.trim().toLowerCase();
+  if (await loginRoleForEmail(email)) {
+    const master = await findMasterByEmail(email);
+    return { id: master.id, existing: true };
+  }
+  const user = await createLogin({ ...input, email, role: "restaurantpartner" });
+  return { id: user.id, existing: false };
+}
+
 export async function createMasterForRestaurant(
   restaurantId: string,
   input: { full_name: string; email: string; password: string },
-) {
-  const user = await createLogin({ ...input, email: input.email.trim().toLowerCase(), role: "restaurantpartner" });
-  await setRestaurantMaster(restaurantId, user.id);
-  return user;
+): Promise<{ existing: boolean }> {
+  const master = await ensureMaster(input);
+  await setRestaurantMaster(restaurantId, master.id);
+  return { existing: master.existing };
 }
 
-export async function searchRestaurantsToAttach(query: string, masterId: string): Promise<(BranchRow & { owner_user_id: string | null })[]> {
+export async function searchRestaurantsToAttach(query: string, masterId?: string): Promise<(BranchRow & { owner_user_id: string | null })[]> {
   const q = query.trim().replace(/[\\%_,()]/g, (c) => `\\${c}`);
   if (q.length < 2) return [];
-  const { data, error } = await supabaseBrowser
+  let request = supabaseBrowser
     .from("restaurants")
     .select("id, name, area, city, is_active, owner_user_id")
-    .ilike("name", `%${q}%`)
-    .or(`owner_user_id.is.null,owner_user_id.neq.${masterId}`)
-    .order("name")
-    .limit(10);
+    .ilike("name", `%${q}%`);
+  if (masterId) request = request.or(`owner_user_id.is.null,owner_user_id.neq.${masterId}`);
+  const { data, error } = await request.order("name").limit(10);
   if (error) throw error;
   return (data as (BranchRow & { owner_user_id: string | null })[]) || [];
 }
