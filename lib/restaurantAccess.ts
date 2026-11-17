@@ -128,3 +128,36 @@ export async function removeBranchAdmin(restaurantId: string, userId: string) {
     .eq("role", "restaurant_admin");
   if (error) throw error;
 }
+
+export async function updateLoginCredentials(userId: string, input: { email?: string; password?: string }) {
+  const res = await fetch(`${API_BASE}/api/auth/users/${userId}/credentials`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${await accessToken()}` },
+    body: JSON.stringify({ email: input.email?.trim() || undefined, password: input.password || undefined }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(json?.error || "Failed to update the login.");
+}
+
+export async function createMasterForRestaurant(
+  restaurantId: string,
+  input: { full_name: string; email: string; password: string },
+) {
+  const user = await createLogin({ ...input, email: input.email.trim().toLowerCase(), role: "restaurantpartner" });
+  await setRestaurantMaster(restaurantId, user.id);
+  return user;
+}
+
+export async function searchRestaurantsToAttach(query: string, masterId: string): Promise<(BranchRow & { owner_user_id: string | null })[]> {
+  const q = query.trim().replace(/[\\%_,()]/g, (c) => `\\${c}`);
+  if (q.length < 2) return [];
+  const { data, error } = await supabaseBrowser
+    .from("restaurants")
+    .select("id, name, area, city, is_active, owner_user_id")
+    .ilike("name", `%${q}%`)
+    .or(`owner_user_id.is.null,owner_user_id.neq.${masterId}`)
+    .order("name")
+    .limit(10);
+  if (error) throw error;
+  return (data as (BranchRow & { owner_user_id: string | null })[]) || [];
+}

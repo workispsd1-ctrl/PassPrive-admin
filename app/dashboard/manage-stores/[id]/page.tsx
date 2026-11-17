@@ -15,6 +15,7 @@ import ServiceSwitches from "@/components/ServiceSwitches";
 import OffersEditor from "@/components/OffersEditor";
 import NfcTagCard from "@/components/NfcTagCard";
 import BusinessRegistrationFields from "@/components/BusinessRegistrationFields";
+import MipsCredentialsPanel from "@/components/MipsCredentialsPanel";
 import {
   emptyAuthorisedContact,
   fetchAuthorisedContact,
@@ -1116,6 +1117,12 @@ export default function StoreDetailPage() {
           }}
         />
       </Section>
+
+      {store.id && (
+        <Section title="MiPS Payments">
+          <MipsCredentialsPanel kind="store" merchantId={String(store.id)} />
+        </Section>
+      )}
 
       <Section title="Contact">
         <Grid>

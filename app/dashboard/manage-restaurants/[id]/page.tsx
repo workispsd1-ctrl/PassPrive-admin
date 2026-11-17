@@ -65,6 +65,7 @@ import {
 } from "@/lib/restaurantAdmin";
 import DealsSection from "./DealsSection";
 import { XlentPosPanel } from "../_components/XlentPos";
+import MipsCredentialsPanel from "@/components/MipsCredentialsPanel";
 import MerchantBoostsPanel from "@/app/dashboard/cashback-boosts/MerchantBoostsPanel";
 
 
@@ -408,7 +409,7 @@ export default function RestaurantDetailPage() {
         ...foodReplacedUrls,
         ...ambienceReplacedUrls,
         ...menuReplacedUrls,
-      ]);
+      ], restaurant.id);
 
       const [
         newFoodUrls,
@@ -1189,6 +1190,10 @@ export default function RestaurantDetailPage() {
         <Field label="Booking Terms">
           <Textarea className={inputClass} disabled={!editMode} value={bookingTermsToTextarea(restaurant.booking_terms)} onChange={(e) => setRestaurant({ ...restaurant, booking_terms: bookingTermsToPayload(e.target.value) || [] })} />
         </Field>
+      </Section>
+
+      <Section title="MiPS Payments">
+        <MipsCredentialsPanel kind="restaurant" merchantId={restaurant.id} canEdit={isAdmin} />
       </Section>
 
       <Section title="XL-ENT POS (CashMag)">

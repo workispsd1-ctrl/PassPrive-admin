@@ -1331,8 +1331,23 @@ export async function uploadRestaurantImages(
   }
 }
 
-export async function deleteRestaurantImages(publicUrls: string[]) {
-  const paths = publicUrls
+export async function deleteRestaurantImages(publicUrls: string[], keepForRestaurantId?: string) {
+  const candidates = Array.from(new Set(publicUrls.filter(Boolean)));
+  if (!candidates.length) return;
+
+  const { data: refs, error: refsError } = await supabaseBrowser
+    .from("restaurant_media_assets")
+    .select("file_url, restaurant_id")
+    .in("file_url", candidates);
+  if (refsError) throw refsError;
+  const usedElsewhere = new Set(
+    (refs || [])
+      .filter((row: { restaurant_id: string }) => row.restaurant_id !== keepForRestaurantId)
+      .map((row: { file_url: string }) => row.file_url),
+  );
+
+  const paths = candidates
+    .filter((url) => !usedElsewhere.has(url))
     .map((url) => extractStoragePath(url))
     .filter((value): value is string => Boolean(value));
 

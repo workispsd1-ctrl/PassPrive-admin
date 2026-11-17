@@ -21,6 +21,7 @@ type Settings = {
   booking_reward_min_bill: number;
   referral_enabled: boolean;
   repeat_reward_enabled: boolean;
+  order_collect_enabled: boolean;
   referral_reward_amount: number;
   referral_min_bill: number;
   referral_referee_amount: number;
@@ -47,6 +48,7 @@ type Flags = Pick<
   | "booking_reward_enabled"
   | "referral_enabled"
   | "repeat_reward_enabled"
+  | "order_collect_enabled"
 >;
 
 const FLAG_KEYS: (keyof Flags)[] = [
@@ -60,6 +62,7 @@ const FLAG_KEYS: (keyof Flags)[] = [
   "booking_reward_enabled",
   "referral_enabled",
   "repeat_reward_enabled",
+  "order_collect_enabled",
 ];
 
 const LABELS: Record<keyof Flags, string> = {
@@ -73,6 +76,7 @@ const LABELS: Record<keyof Flags, string> = {
   booking_reward_enabled: "Table booking cashback",
   referral_enabled: "Refer a friend",
   repeat_reward_enabled: "Repeat rewards (stamps)",
+  order_collect_enabled: "Order & Collect",
 };
 
 function stamp(value: string | null | undefined) {
@@ -325,6 +329,17 @@ export default function PlatformSettingsPage() {
               description="Default for restaurants and stores on Follow global setting. Off: stamp cards, the Home Collect Stamps banner and loyalty offers disappear from the app, and no repeat-visit discount is applied on bills. Merchants set to On keep it; merchants set to Off never have it."
               checked={flags.repeat_reward_enabled}
               onChange={set("repeat_reward_enabled")}
+              disabled={busy}
+            />
+          </section>
+
+          <section className="space-y-3 rounded-xl border bg-gray-50 p-5">
+            <h2 className="font-semibold">Order &amp; Collect</h2>
+            <Row
+              title="Order & Collect"
+              description="Master switch. On: restaurants with Order & Collect enabled on their own page show add buttons and the cart checkout. Off: every restaurant shows its menu items (or menu image) under a plain Menu heading, with no ordering."
+              checked={flags.order_collect_enabled}
+              onChange={set("order_collect_enabled")}
               disabled={busy}
             />
           </section>
